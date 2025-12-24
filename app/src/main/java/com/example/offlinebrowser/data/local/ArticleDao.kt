@@ -16,6 +16,9 @@ interface ArticleDao {
     @Query("SELECT * FROM articles WHERE feedId = :feedId AND url = :url LIMIT 1")
     suspend fun getArticleByUrl(feedId: Int, url: String): Article?
 
+    @Query("SELECT * FROM articles WHERE id = :id")
+    suspend fun getArticleById(id: Int): Article?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertArticle(article: Article)
 

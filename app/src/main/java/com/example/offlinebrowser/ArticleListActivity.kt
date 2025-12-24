@@ -30,7 +30,7 @@ class ArticleListActivity : AppCompatActivity() {
                 // Allow viewing if we have any content (RSS description or full cached HTML)
                 if (article.content.isNotEmpty()) {
                     val intent = Intent(this, ArticleViewerActivity::class.java)
-                    intent.putExtra("CONTENT", article.content)
+                    intent.putExtra("ARTICLE_ID", article.id)
                     startActivity(intent)
                 }
             },
