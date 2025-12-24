@@ -37,7 +37,7 @@ class SyncWorker(appContext: Context, workerParams: WorkerParameters) :
 
         try {
             // Note: In a real app we might want to parallelize this or handle partial failures better
-            kotlinx.coroutines.flow.firstOrNull(feeds)?.forEach { feed ->
+            feeds.firstOrNull()?.forEach { feed ->
                 try {
                     feedRepository.syncFeed(feed)
                 } catch (e: Exception) {
@@ -46,7 +46,7 @@ class SyncWorker(appContext: Context, workerParams: WorkerParameters) :
             }
 
             // Sync Weather
-            kotlinx.coroutines.flow.firstOrNull(weatherRepository.allWeather)?.forEach { weather ->
+            weatherRepository.allWeather.firstOrNull()?.forEach { weather ->
                 try {
                     weatherRepository.updateWeather(weather)
                 } catch (e: Exception) {
