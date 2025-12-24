@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <CheckBox
+        android:id="@+id/cbWifiOnly"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="WiFi Only (Never use cell data)" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Allowed WiFi SSIDs (comma separated):"
+        android:layout_marginTop="16dp"/>
+
+    <EditText
+        android:id="@+id/etSsids"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="e.g. MyHomeWifi, WorkWifi" />
+
+    <Button
+        android:id="@+id/btnRequestPerm"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Grant Location Permission (Required for SSID)"
+        android:layout_marginTop="8dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Refresh Interval (minutes):"
+        android:layout_marginTop="16dp"/>
+
+    <EditText
+        android:id="@+id/etInterval"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="number"
+        android:hint="60" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Feed Limit (Item Count):"
+        android:layout_marginTop="16dp"/>
+
+    <EditText
+        android:id="@+id/etLimitCount"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="number"
+        android:hint="50" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Feed Limit (Days):"
+        android:layout_marginTop="16dp"/>
+
+    <EditText
+        android:id="@+id/etLimitDays"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="number"
+        android:hint="30" />
+
+    <Button
+        android:id="@+id/btnSave"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Save Settings"
+        android:layout_marginTop="24dp"/>
+
+</LinearLayout>

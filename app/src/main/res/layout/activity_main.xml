@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <EditText
+        android:id="@+id/etUrl"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="URL (RSS or Mastodon Feed)" />
+
+    <Button
+        android:id="@+id/btnSettings"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Settings" />
+
+    <Button
+        android:id="@+id/btnAddRss"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Add RSS Feed" />
+
+    <Button
+        android:id="@+id/btnAddMastodon"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Add Mastodon Feed" />
+
+    <Button
+        android:id="@+id/btnAddHtml"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Add HTML Page" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Feeds:"
+        android:layout_marginTop="16dp"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvFeeds"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <Button
+        android:id="@+id/btnWeather"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Weather" />
+
+</LinearLayout>

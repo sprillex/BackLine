@@ -1,0 +1,59 @@
+package com.example.offlinebrowser.ui
+
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Button
+import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
+import androidx.recyclerview.widget.RecyclerView
+import com.example.offlinebrowser.R
+import com.example.offlinebrowser.data.model.Weather
+
+class WeatherAdapter(
+    private val onRefresh: (Weather) -> Unit
+) : ListAdapter<Weather, WeatherAdapter.WeatherViewHolder>(WeatherDiffCallback()) {
+
+    class WeatherViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val tvName: TextView = itemView.findViewById(R.id.tvName)
+        val tvCoords: TextView = itemView.findViewById(R.id.tvCoords)
+        val tvData: TextView = itemView.findViewById(R.id.tvData)
+        val btnRefresh: Button = itemView.findViewById(R.id.btnRefresh)
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): WeatherViewHolder {
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_weather, parent, false)
+        return WeatherViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: WeatherViewHolder, position: Int) {
+        val weather = getItem(position)
+        holder.tvName.text = weather.locationName
+        holder.tvCoords.text = "${weather.latitude}, ${weather.longitude}"
+
+        if (weather.dataJson.isNotEmpty()) {
+            try {
+                val gson = com.google.gson.Gson()
+                val response = gson.fromJson(weather.dataJson, com.example.offlinebrowser.data.model.WeatherResponse::class.java)
+                if (response?.currentWeather != null) {
+                    holder.tvData.text = "Temp: ${response.currentWeather.temperature}°"
+                } else {
+                    holder.tvData.text = "Data cached (No current weather)"
+                }
+            } catch (e: Exception) {
+                 e.printStackTrace()
+                 holder.tvData.text = "Error parsing data"
+            }
+        } else {
+             holder.tvData.text = "No data"
+        }
+
+        holder.btnRefresh.setOnClickListener { onRefresh(weather) }
+    }
+}
+
+class WeatherDiffCallback : DiffUtil.ItemCallback<Weather>() {
+    override fun areItemsTheSame(oldItem: Weather, newItem: Weather): Boolean = oldItem.id == newItem.id
+    override fun areContentsTheSame(oldItem: Weather, newItem: Weather): Boolean = oldItem == newItem
+}
