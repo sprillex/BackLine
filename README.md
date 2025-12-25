@@ -28,9 +28,13 @@
  ### 3. The Bindery (ZIM Files)
 
  *   Click the "The Bindery (ZIM)" button on the main screen.
- *   Enter the URL of your Bindery instance (e.g., `http://192.168.1.178:5002/`).
+ *   **Secure Connection**:
+     *   If your Bindery instance uses a self-signed certificate, click "Scan QR Code".
+     *   Scan the QR code provided by the server (containing IP, Port, and Certificate Fingerprint).
+     *   The app will verify the server's identity and add it to the trusted list.
+ *   Enter the URL (e.g., `https://192.168.1.5:8080/`) or it will be auto-filled after scanning.
  *   Click "Connect" to load the list of available modules.
- *   Browse the list and click "Download ZIM" on any module to download the corresponding `.zim` file to your device's Downloads folder.
+ *   Browse the list and click "Download ZIM" on any module to download the corresponding `.zim` file to your device's app-specific storage (`Android/data/com.example.offlinebrowser/files/`).
 
  ### 4. Settings
 
