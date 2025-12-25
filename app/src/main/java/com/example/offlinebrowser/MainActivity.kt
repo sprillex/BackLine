@@ -49,7 +49,12 @@ class MainActivity : AppCompatActivity() {
                  startActivity(intent)
             },
             onSyncClick = { feed -> viewModel.syncFeed(feed) },
-            onDeleteClick = { feed -> viewModel.deleteFeed(feed) }
+            onDeleteClick = { feed -> viewModel.deleteFeed(feed) },
+            onEditClick = { feed ->
+                val intent = Intent(this, EditFeedActivity::class.java)
+                intent.putExtra("FEED_ID", feed.id)
+                startActivity(intent)
+            }
         )
 
         rvFeeds.layoutManager = LinearLayoutManager(this)

@@ -52,6 +52,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun updateFeed(feed: Feed) = viewModelScope.launch {
+        feedRepository.updateFeed(feed)
+    }
+
+    suspend fun getFeedById(id: Int): Feed? {
+        return feedRepository.getFeedById(id)
+    }
+
     fun getArticlesForFeed(feedId: Int): StateFlow<List<Article>> {
         return articleRepository.getArticlesForFeed(feedId)
              .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())

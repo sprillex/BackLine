@@ -31,11 +31,15 @@ class FeedRepository(
         feedDao.updateFeed(feed)
     }
 
+    suspend fun getFeedById(id: Int): Feed? {
+        return feedDao.getFeedById(id)
+    }
+
     suspend fun deleteFeed(feed: Feed) {
         feedDao.deleteFeed(feed)
     }
 
-    suspend fun syncFeed(feed: Feed) {
+    suspend fun syncFeed(feed: Feed) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         if (feed.type == FeedType.RSS || feed.type == FeedType.MASTODON) {
             val articles = rssParser.fetchFeed(feed)
 
@@ -56,6 +60,18 @@ class FeedRepository(
 
             // Apply limits
             applyLimits(feed)
+
+            // Auto-download articles if limit > 0
+            if (feed.downloadLimit > 0) {
+                val articlesToDownload = articleDao.getTopUncachedArticles(feed.id, feed.downloadLimit)
+                for (article in articlesToDownload) {
+                    val content = htmlDownloader.downloadHtml(article.url)
+                    if (content != null) {
+                        val downloaded = article.copy(content = content, isCached = true)
+                        articleDao.updateArticle(downloaded)
+                    }
+                }
+            }
         } else if (feed.type == FeedType.HTML) {
             // For HTML "feeds", we treat the URL as a single page article.
             // We create a single "Article" entry for this feed which is the page itself.
