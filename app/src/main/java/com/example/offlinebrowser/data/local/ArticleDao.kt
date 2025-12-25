@@ -22,6 +22,9 @@ interface ArticleDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertArticle(article: Article)
 
+    @androidx.room.Update
+    suspend fun updateArticle(article: Article)
+
     @Delete
     suspend fun deleteArticle(article: Article)
 
@@ -30,4 +33,7 @@ interface ArticleDao {
 
     @Query("DELETE FROM articles WHERE feedId = :feedId AND id NOT IN (SELECT id FROM articles WHERE feedId = :feedId ORDER BY publishedDate DESC LIMIT :limit)")
     suspend fun deleteExcessArticles(feedId: Int, limit: Int)
+
+    @Query("SELECT * FROM articles WHERE feedId = :feedId AND isCached = 0 ORDER BY publishedDate DESC LIMIT :limit")
+    suspend fun getTopUncachedArticles(feedId: Int, limit: Int): List<Article>
 }

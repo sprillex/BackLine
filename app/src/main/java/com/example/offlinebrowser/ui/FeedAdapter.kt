@@ -14,7 +14,8 @@ import com.example.offlinebrowser.data.model.Feed
 class FeedAdapter(
     private val onFeedClick: (Feed) -> Unit,
     private val onSyncClick: (Feed) -> Unit,
-    private val onDeleteClick: (Feed) -> Unit
+    private val onDeleteClick: (Feed) -> Unit,
+    private val onEditClick: (Feed) -> Unit
 ) : ListAdapter<Feed, FeedAdapter.FeedViewHolder>(FeedDiffCallback()) {
 
     class FeedViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -22,6 +23,7 @@ class FeedAdapter(
         val tvUrl: TextView = itemView.findViewById(R.id.tvUrl)
         val btnSync: Button = itemView.findViewById(R.id.btnSync)
         val btnDelete: Button = itemView.findViewById(R.id.btnDelete)
+        val btnEdit: Button = itemView.findViewById(R.id.btnEdit)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FeedViewHolder {
@@ -36,6 +38,7 @@ class FeedAdapter(
         holder.itemView.setOnClickListener { onFeedClick(feed) }
         holder.btnSync.setOnClickListener { onSyncClick(feed) }
         holder.btnDelete.setOnClickListener { onDeleteClick(feed) }
+        holder.btnEdit.setOnClickListener { onEditClick(feed) }
     }
 }
 
