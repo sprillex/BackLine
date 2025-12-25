@@ -13,5 +13,6 @@ data class Feed(
     val url: String,
     val title: String,
     val type: FeedType,
-    val lastUpdated: Long = 0
+    val lastUpdated: Long = 0,
+    val downloadLimit: Int = 0
 )

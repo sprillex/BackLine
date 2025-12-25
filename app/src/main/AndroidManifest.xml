@@ -36,6 +36,7 @@
         <activity android:name=".ui.WeatherActivity" />
         <activity android:name=".ui.BinderyActivity" />
         <activity android:name=".SettingsActivity" />
+        <activity android:name=".EditFeedActivity" />
     </application>
 
 </manifest>
