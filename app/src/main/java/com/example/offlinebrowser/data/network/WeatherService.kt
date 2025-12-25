@@ -9,6 +9,9 @@ interface WeatherService {
     suspend fun getWeather(
         @Query("latitude") latitude: Double,
         @Query("longitude") longitude: Double,
-        @Query("current_weather") currentWeather: Boolean = true
+        @Query("current_weather") currentWeather: Boolean = true,
+        @Query("daily") daily: String = "temperature_2m_max,temperature_2m_min,weathercode",
+        @Query("forecast_days") forecastDays: Int = 10,
+        @Query("timezone") timezone: String = "auto"
     ): String // Returning raw JSON string for simplicity in storage
 }
