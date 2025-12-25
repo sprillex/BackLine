@@ -21,7 +21,6 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
-        cache: gradle
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
@@ -29,8 +28,11 @@ jobs:
     - name: Create local.properties
       run: echo "sdk.dir=$ANDROID_HOME" > local.properties
 
+    - name: Clean Build
+      run: ./gradlew clean --no-daemon
+
     - name: Build with Gradle
-      run: ./gradlew assembleDebug --stacktrace
+      run: ./gradlew assembleDebug --no-daemon --no-build-cache --stacktrace
 
     - name: Upload Debug APK
       uses: actions/upload-artifact@v4
