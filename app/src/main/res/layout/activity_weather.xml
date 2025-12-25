@@ -39,6 +39,12 @@
         android:layout_height="wrap_content"
         android:text="Add Location" />
 
+    <Button
+        android:id="@+id/btnCurrentLocation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Use Current Location" />
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvWeather"
         android:layout_width="match_parent"
