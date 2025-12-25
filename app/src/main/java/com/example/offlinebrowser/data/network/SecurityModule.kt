@@ -45,6 +45,10 @@ class FingerprintTrustManager(private val trustedServerDao: TrustedServerDao) : 
         throw CertificateException("Cannot verify server without hostname/port information.")
     }
 
+    override fun getAcceptedIssuers(): Array<X509Certificate> {
+        return arrayOf()
+    }
+
     private fun verifyServer(chain: Array<out X509Certificate>?, ip: String?, port: Int) {
         if (chain.isNullOrEmpty()) {
             throw CertificateException("Certificate chain is empty")
