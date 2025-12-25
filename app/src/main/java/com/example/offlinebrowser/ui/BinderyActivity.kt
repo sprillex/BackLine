@@ -4,7 +4,6 @@ import android.app.DownloadManager
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
-import android.os.Environment
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -14,10 +13,20 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.work.Data
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.example.offlinebrowser.R
+import com.example.offlinebrowser.data.local.OfflineDatabase
+import com.example.offlinebrowser.data.model.TrustedServer
+import com.example.offlinebrowser.data.network.SafeClientFactory
+import com.example.offlinebrowser.workers.ZimDownloadWorker
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.Request
+import org.json.JSONObject
 import org.jsoup.Jsoup
 import java.io.IOException
 
@@ -25,6 +34,7 @@ class BinderyActivity : AppCompatActivity() {
 
     private lateinit var etBinderyUrl: EditText
     private lateinit var btnConnect: Button
+    private lateinit var btnScanQr: Button
     private lateinit var progressBar: ProgressBar
     private lateinit var rvModules: RecyclerView
     private var currentUrl: String = ""
@@ -35,6 +45,7 @@ class BinderyActivity : AppCompatActivity() {
 
         etBinderyUrl = findViewById(R.id.etBinderyUrl)
         btnConnect = findViewById(R.id.btnConnect)
+        btnScanQr = findViewById(R.id.btnScanQr)
         progressBar = findViewById(R.id.progressBar)
         rvModules = findViewById(R.id.rvModules)
 
@@ -47,6 +58,46 @@ class BinderyActivity : AppCompatActivity() {
                 fetchModules(url)
             }
         }
+
+        btnScanQr.setOnClickListener {
+            startQrScan()
+        }
+    }
+
+    private fun startQrScan() {
+        val scanner = GmsBarcodeScanning.getClient(this)
+        scanner.startScan()
+            .addOnSuccessListener { barcode ->
+                val rawValue = barcode.rawValue
+                if (rawValue != null) {
+                    processQrContent(rawValue)
+                } else {
+                    Toast.makeText(this, "QR Code empty", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .addOnFailureListener { e ->
+                Toast.makeText(this, "QR Scan failed: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun processQrContent(json: String) {
+        lifecycleScope.launch {
+            try {
+                val jsonObject = JSONObject(json)
+                val ip = jsonObject.getString("ip")
+                val port = jsonObject.getInt("port")
+                val hash = jsonObject.getString("hash")
+
+                val database = OfflineDatabase.getDatabase(applicationContext)
+                val trustedServer = TrustedServer(ip = ip, port = port, fingerprint = hash)
+                database.trustedServerDao().insertTrustedServer(trustedServer)
+
+                etBinderyUrl.setText("https://$ip:$port/")
+                Toast.makeText(this@BinderyActivity, "Server added and trusted.", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(this@BinderyActivity, "Invalid QR Format", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun fetchModules(url: String) {
@@ -55,7 +106,17 @@ class BinderyActivity : AppCompatActivity() {
 
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val doc = Jsoup.connect(url).get()
+                // Use SafeClientFactory to support self-signed pinned certs
+                val client = SafeClientFactory.create(applicationContext)
+                val request = Request.Builder().url(url).build()
+                val response = client.newCall(request).execute()
+
+                if (!response.isSuccessful) {
+                     throw IOException("Unexpected code $response")
+                }
+                val html = response.body?.string() ?: ""
+                val doc = Jsoup.parse(html, url)
+
                 val moduleDivs = doc.select("div.module")
                 val modules = moduleDivs.map { div ->
                     val title = div.select("h3").text()
@@ -103,18 +164,17 @@ class BinderyActivity : AppCompatActivity() {
             return
         }
 
-        try {
-            val request = DownloadManager.Request(Uri.parse(module.downloadUrl))
-            request.setTitle("Downloading ${module.title}")
-            request.setDescription("Downloading ZIM file for ${module.title}")
-            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "${module.title.replace(" ", "_")}.zim")
+        // Use WorkManager for download to support secure client
+        val data = Data.Builder()
+            .putString("url", module.downloadUrl)
+            .putString("title", module.title)
+            .build()
 
-            val manager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-            manager.enqueue(request)
-            Toast.makeText(this, "Download started...", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            Toast.makeText(this, "Download failed: ${e.message}", Toast.LENGTH_LONG).show()
-        }
+        val downloadWork = OneTimeWorkRequestBuilder<ZimDownloadWorker>()
+            .setInputData(data)
+            .build()
+
+        WorkManager.getInstance(this).enqueue(downloadWork)
+        Toast.makeText(this, "Download queued...", Toast.LENGTH_SHORT).show()
     }
 }
