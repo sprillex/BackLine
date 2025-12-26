@@ -73,6 +73,9 @@ dependencies {
     // QR Code Scanner
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
 
+    // Zim Reader
+    implementation("com.github.dbrant:zimdroid:0.0.14")
+
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
