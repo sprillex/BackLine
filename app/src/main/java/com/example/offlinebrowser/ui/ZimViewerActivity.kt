@@ -9,9 +9,9 @@ import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
+import com.dmitrybrant.zimdroid.ZimFile
+import com.dmitrybrant.zimdroid.ZimReader
 import com.example.offlinebrowser.R
-import org.openzim.zimdroid.ZimFile
-import org.openzim.zimdroid.ZimReader
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.IOException
