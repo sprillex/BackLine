@@ -11,6 +11,8 @@ class ArticleRepository(
 ) {
     fun getArticlesForFeed(feedId: Int): Flow<List<Article>> = articleDao.getArticlesForFeed(feedId)
 
+    fun getArticlesByCategory(category: String): Flow<List<Article>> = articleDao.getArticlesByCategory(category)
+
     suspend fun downloadArticleContent(article: Article) {
         if (article.isCached) return
 
