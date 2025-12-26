@@ -64,6 +64,7 @@ class ZimDownloadWorker(
                     val progress = ((totalBytesRead * 100) / contentLength).toInt()
                     if (progress > lastProgress) {
                         setForeground(createForegroundInfo(title, progress))
+                        setProgress(workDataOf("progress" to progress, "title" to title))
                         lastProgress = progress
                     }
                 }
