@@ -31,21 +31,22 @@ import androidx.viewpager2.widget.ViewPager2
 import com.example.offlinebrowser.data.repository.PreferencesRepository
 import com.example.offlinebrowser.ui.WeatherActivity
 import com.example.offlinebrowser.viewmodel.MainViewModel
-import com.example.offlinebrowser.data.model.Weather
-import com.example.offlinebrowser.data.model.WeatherResponse
-import com.google.gson.Gson
+import com.example.offlinebrowser.ui.CategoryAdapter
+import com.example.offlinebrowser.ui.WeatherHomeAdapter
+import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.coroutines.launch
 
 class HomeActivity : AppCompatActivity() {
 
     private val viewModel: MainViewModel by viewModels()
-    private val gson = Gson()
+    private val preferencesRepository by lazy { PreferencesRepository(this) }
 
     private lateinit var statusDot: View
     private lateinit var ssidText: TextView
     private lateinit var weatherPager: ViewPager2
     private lateinit var tvWeatherEmpty: TextView
     private lateinit var statusContainer: LinearLayout
+    private lateinit var rvCategories: RecyclerView
 
     private val connectivityManager by lazy { getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager }
     private val wifiManager by lazy { applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager }
@@ -55,72 +56,19 @@ class HomeActivity : AppCompatActivity() {
              updateWifiStatus()
         }
 
-    // A simple adapter for the weather ViewPager
-    inner class WeatherHomeAdapter : RecyclerView.Adapter<WeatherHomeAdapter.WeatherViewHolder>() {
-        var locations: List<Weather> = emptyList()
-
-        inner class WeatherViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-            val tvTemp: TextView = view.findViewById(R.id.tv_temp)
-            val tvCondition: TextView = view.findViewById(R.id.tv_condition)
-            val tvCity: TextView = view.findViewById(R.id.tv_city)
-            val tvHighLow: TextView = view.findViewById(R.id.tv_high_low)
-
-            init {
-                view.setOnLongClickListener {
-                    startActivity(Intent(this@HomeActivity, WeatherActivity::class.java))
-                    true
-                }
-            }
+    private val weatherAdapter by lazy {
+        WeatherHomeAdapter(preferencesRepository) {
+            startActivity(Intent(this, WeatherActivity::class.java))
         }
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): WeatherViewHolder {
-            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_weather_home, parent, false)
-            return WeatherViewHolder(view)
-        }
-
-        override fun onBindViewHolder(holder: WeatherViewHolder, position: Int) {
-            val weather = locations[position]
-            holder.tvCity.text = weather.locationName
-
-            try {
-                // If data is empty or invalid, show placeholder
-                // Explicitly handle null dataJson just in case Room returns null despite type
-                val json = weather.dataJson ?: ""
-                val response = if (json.isNotEmpty()) gson.fromJson(json, WeatherResponse::class.java) else null
-
-                if (response?.currentWeather != null) {
-                    val temp = response.currentWeather.temperature
-                    val unit = if (PreferencesRepository(this@HomeActivity).weatherUnits == "imperial") "°F" else "°C"
-                    // Ideally convert if needed, but for MVP just show what API returned (assuming API handles unit or we just show raw)
-                    // Note: The API call in WeatherRepository likely respects the unit setting, or defaults to metric.
-                    // For this display, we'll just append the unit.
-
-                    holder.tvTemp.text = "$temp$unit"
-
-                    // Simple condition mapping (placeholder)
-                    holder.tvCondition.text = when(response.currentWeather.weathercode) {
-                        0 -> "Clear"
-                        1, 2, 3 -> "Partly Cloudy"
-                        45, 48 -> "Fog"
-                        51, 53, 55 -> "Drizzle"
-                        61, 63, 65 -> "Rain"
-                        71, 73, 75 -> "Snow"
-                        else -> "Unknown"
-                    }
-                } else {
-                    holder.tvTemp.text = "--"
-                    holder.tvCondition.text = "N/A"
-                }
-            } catch (e: Throwable) {
-                holder.tvTemp.text = "--"
-                holder.tvCondition.text = "N/A"
-            }
-        }
-
-        override fun getItemCount(): Int = locations.size
     }
 
-    private val weatherAdapter = WeatherHomeAdapter()
+    private val categoryAdapter by lazy {
+        CategoryAdapter { category ->
+            val intent = Intent(this, ArticleListActivity::class.java)
+            intent.putExtra("EXTRA_CATEGORY", category)
+            startActivity(intent)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -131,15 +79,24 @@ class HomeActivity : AppCompatActivity() {
         weatherPager = findViewById(R.id.weather_pager)
         tvWeatherEmpty = findViewById(R.id.tv_weather_empty)
         statusContainer = findViewById(R.id.status_container)
+        rvCategories = findViewById(R.id.rv_categories)
 
         weatherPager.adapter = weatherAdapter
+        rvCategories.layoutManager = LinearLayoutManager(this)
+        rvCategories.adapter = categoryAdapter
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.weatherLocations.collect { weatherList ->
-                    weatherAdapter.locations = weatherList
-                    weatherAdapter.notifyDataSetChanged()
-                    updateWeatherVisibility()
+                launch {
+                    viewModel.weatherLocations.collect { weatherList ->
+                        weatherAdapter.submitList(weatherList)
+                        updateWeatherVisibility()
+                    }
+                }
+                launch {
+                    viewModel.categories.collect { categoryList ->
+                        categoryAdapter.submitList(categoryList)
+                    }
                 }
             }
         }

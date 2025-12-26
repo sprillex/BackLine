@@ -13,6 +13,9 @@ interface ArticleDao {
     @Query("SELECT * FROM articles WHERE feedId = :feedId ORDER BY publishedDate DESC")
     fun getArticlesForFeed(feedId: Int): Flow<List<Article>>
 
+    @Query("SELECT articles.* FROM articles INNER JOIN feeds ON articles.feedId = feeds.id WHERE feeds.category = :category ORDER BY articles.publishedDate DESC")
+    fun getArticlesByCategory(category: String): Flow<List<Article>>
+
     @Query("SELECT * FROM articles WHERE feedId = :feedId AND url = :url LIMIT 1")
     suspend fun getArticleByUrl(feedId: Int, url: String): Article?
 

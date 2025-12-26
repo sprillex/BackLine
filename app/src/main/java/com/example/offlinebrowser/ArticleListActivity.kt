@@ -17,12 +17,15 @@ class ArticleListActivity : AppCompatActivity() {
     private val viewModel: MainViewModel by viewModels()
     private lateinit var articleAdapter: ArticleAdapter
     private var feedId: Int = -1
+    private var category: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_article_list)
 
         feedId = intent.getIntExtra("FEED_ID", -1)
+        category = intent.getStringExtra("EXTRA_CATEGORY")
+
         val rvArticles = findViewById<RecyclerView>(R.id.rvArticles)
 
         articleAdapter = ArticleAdapter(
@@ -42,8 +45,14 @@ class ArticleListActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.getArticlesForFeed(feedId).collect { articles ->
-                    articleAdapter.submitList(articles)
+                if (category != null) {
+                    viewModel.getArticlesByCategory(category!!).collect { articles ->
+                        articleAdapter.submitList(articles)
+                    }
+                } else {
+                    viewModel.getArticlesForFeed(feedId).collect { articles ->
+                        articleAdapter.submitList(articles)
+                    }
                 }
             }
         }
