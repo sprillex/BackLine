@@ -61,4 +61,16 @@
         android:layout_height="wrap_content"
         android:text="The Bindery (ZIM)" />
 
+    <Button
+        android:id="@+id/btnKiwix"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Kiwix Library" />
+
+    <Button
+        android:id="@+id/btnLibrary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="My Library (Downloads)" />
+
 </LinearLayout>
