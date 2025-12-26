@@ -6,6 +6,8 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -61,6 +63,9 @@ class SettingsActivity : AppCompatActivity() {
         val etInterval = findViewById<EditText>(R.id.etInterval)
         val etLimitCount = findViewById<EditText>(R.id.etLimitCount)
         val etLimitDays = findViewById<EditText>(R.id.etLimitDays)
+        val rgWeatherUnits = findViewById<RadioGroup>(R.id.rgWeatherUnits)
+        val rbMetric = findViewById<RadioButton>(R.id.rbMetric)
+        val rbImperial = findViewById<RadioButton>(R.id.rbImperial)
         val btnSave = findViewById<Button>(R.id.btnSave)
         val btnRequestPerm = findViewById<Button>(R.id.btnRequestPerm)
 
@@ -69,6 +74,13 @@ class SettingsActivity : AppCompatActivity() {
         etInterval.setText(preferencesRepository.refreshIntervalMinutes.toString())
         etLimitCount.setText(preferencesRepository.feedLimitCount.toString())
         etLimitDays.setText(preferencesRepository.feedLimitDays.toString())
+
+        val currentUnits = preferencesRepository.weatherUnits
+        if (currentUnits == "imperial") {
+            rbImperial.isChecked = true
+        } else {
+            rbMetric.isChecked = true
+        }
 
         btnSave.setOnClickListener {
             preferencesRepository.wifiOnly = cbWifiOnly.isChecked
@@ -84,6 +96,9 @@ class SettingsActivity : AppCompatActivity() {
 
             val limitDays = etLimitDays.text.toString().toIntOrNull() ?: 30
             preferencesRepository.feedLimitDays = limitDays
+
+            val selectedUnits = if (rbImperial.isChecked) "imperial" else "metric"
+            preferencesRepository.weatherUnits = selectedUnits
 
             // Re-schedule sync with new settings
             scheduleSync(interval, cbWifiOnly.isChecked)
