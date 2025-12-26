@@ -131,6 +131,8 @@ class ZimViewerActivity : AppCompatActivity() {
                 return WebResourceResponse("text/html", "UTF-8", ByteArrayInputStream(html.toByteArray()))
             }
 
+            // TODO: Handle images and other resources using appropriate ZimReader methods if available (e.g., getDataForName)
+
             return null
 
         } catch (e: Exception) {
