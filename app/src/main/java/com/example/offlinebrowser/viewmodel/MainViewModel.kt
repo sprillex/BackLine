@@ -17,6 +17,7 @@ import com.example.offlinebrowser.data.repository.WeatherRepository
 import com.example.offlinebrowser.util.NetworkMonitor
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -30,6 +31,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val feeds: StateFlow<List<Feed>> = feedRepository.allFeeds
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val categories: StateFlow<List<String>> = feeds.map { feedList ->
+        feedList.mapNotNull { it.category }.distinct().sorted()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val weatherLocations: StateFlow<List<Weather>> = weatherRepository.allWeather
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -68,6 +73,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun getArticlesForFeed(feedId: Int): StateFlow<List<Article>> {
         return articleRepository.getArticlesForFeed(feedId)
+             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }
+
+    fun getArticlesByCategory(category: String): StateFlow<List<Article>> {
+        return articleRepository.getArticlesByCategory(category)
              .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     }
 

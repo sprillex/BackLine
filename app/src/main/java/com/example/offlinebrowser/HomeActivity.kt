@@ -31,7 +31,9 @@ import androidx.viewpager2.widget.ViewPager2
 import com.example.offlinebrowser.data.repository.PreferencesRepository
 import com.example.offlinebrowser.ui.WeatherActivity
 import com.example.offlinebrowser.viewmodel.MainViewModel
+import com.example.offlinebrowser.ui.CategoryAdapter
 import com.example.offlinebrowser.ui.WeatherHomeAdapter
+import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.coroutines.launch
 
 class HomeActivity : AppCompatActivity() {
@@ -44,6 +46,7 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var weatherPager: ViewPager2
     private lateinit var tvWeatherEmpty: TextView
     private lateinit var statusContainer: LinearLayout
+    private lateinit var rvCategories: RecyclerView
 
     private val connectivityManager by lazy { getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager }
     private val wifiManager by lazy { applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager }
@@ -59,6 +62,14 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
+    private val categoryAdapter by lazy {
+        CategoryAdapter { category ->
+            val intent = Intent(this, ArticleListActivity::class.java)
+            intent.putExtra("EXTRA_CATEGORY", category)
+            startActivity(intent)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
@@ -68,14 +79,24 @@ class HomeActivity : AppCompatActivity() {
         weatherPager = findViewById(R.id.weather_pager)
         tvWeatherEmpty = findViewById(R.id.tv_weather_empty)
         statusContainer = findViewById(R.id.status_container)
+        rvCategories = findViewById(R.id.rv_categories)
 
         weatherPager.adapter = weatherAdapter
+        rvCategories.layoutManager = LinearLayoutManager(this)
+        rvCategories.adapter = categoryAdapter
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.weatherLocations.collect { weatherList ->
-                    weatherAdapter.submitList(weatherList)
-                    updateWeatherVisibility()
+                launch {
+                    viewModel.weatherLocations.collect { weatherList ->
+                        weatherAdapter.submitList(weatherList)
+                        updateWeatherVisibility()
+                    }
+                }
+                launch {
+                    viewModel.categories.collect { categoryList ->
+                        categoryAdapter.submitList(categoryList)
+                    }
                 }
             }
         }
