@@ -32,11 +32,14 @@ import com.example.offlinebrowser.data.repository.PreferencesRepository
 import com.example.offlinebrowser.ui.WeatherActivity
 import com.example.offlinebrowser.viewmodel.MainViewModel
 import com.example.offlinebrowser.data.model.Weather
+import com.example.offlinebrowser.data.model.WeatherResponse
+import com.google.gson.Gson
 import kotlinx.coroutines.launch
 
 class HomeActivity : AppCompatActivity() {
 
     private val viewModel: MainViewModel by viewModels()
+    private val gson = Gson()
 
     private lateinit var statusDot: View
     private lateinit var ssidText: TextView
@@ -77,9 +80,32 @@ class HomeActivity : AppCompatActivity() {
 
         override fun onBindViewHolder(holder: WeatherViewHolder, position: Int) {
             val weather = locations[position]
-            holder.tvCity.text = weather.name
-            // Basic data binding - in real app we'd parse current conditions
-            // Assuming default text for now if data is simple
+            holder.tvCity.text = weather.locationName
+
+            try {
+                val response = gson.fromJson(weather.dataJson, WeatherResponse::class.java)
+                val temp = response.currentWeather?.temperature ?: 0.0
+                val unit = if (PreferencesRepository(this@HomeActivity).weatherUnits == "imperial") "°F" else "°C"
+                // Ideally convert if needed, but for MVP just show what API returned (assuming API handles unit or we just show raw)
+                // Note: The API call in WeatherRepository likely respects the unit setting, or defaults to metric.
+                // For this display, we'll just append the unit.
+
+                holder.tvTemp.text = "$temp$unit"
+
+                // Simple condition mapping (placeholder)
+                holder.tvCondition.text = when(response.currentWeather?.weathercode) {
+                    0 -> "Clear"
+                    1, 2, 3 -> "Partly Cloudy"
+                    45, 48 -> "Fog"
+                    51, 53, 55 -> "Drizzle"
+                    61, 63, 65 -> "Rain"
+                    71, 73, 75 -> "Snow"
+                    else -> "Unknown"
+                }
+            } catch (e: Exception) {
+                holder.tvTemp.text = "--"
+                holder.tvCondition.text = "N/A"
+            }
         }
 
         override fun getItemCount(): Int = locations.size
