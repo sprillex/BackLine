@@ -40,6 +40,7 @@ class HomeActivity : AppCompatActivity() {
 
     private val viewModel: MainViewModel by viewModels()
     private val gson = Gson()
+    private val preferencesRepository by lazy { PreferencesRepository(this) }
 
     private lateinit var statusDot: View
     private lateinit var ssidText: TextView
@@ -79,10 +80,10 @@ class HomeActivity : AppCompatActivity() {
         }
 
         override fun onBindViewHolder(holder: WeatherViewHolder, position: Int) {
-            val weather = locations[position]
-            holder.tvCity.text = weather.locationName
-
             try {
+                val weather = locations[position]
+                holder.tvCity.text = weather.locationName
+
                 // If data is empty or invalid, show placeholder
                 // Explicitly handle null dataJson just in case Room returns null despite type
                 val json = weather.dataJson ?: ""
@@ -90,7 +91,7 @@ class HomeActivity : AppCompatActivity() {
 
                 if (response?.currentWeather != null) {
                     val temp = response.currentWeather.temperature
-                    val unit = if (PreferencesRepository(this@HomeActivity).weatherUnits == "imperial") "°F" else "°C"
+                    val unit = if (preferencesRepository.weatherUnits == "imperial") "°F" else "°C"
                     // Ideally convert if needed, but for MVP just show what API returned (assuming API handles unit or we just show raw)
                     // Note: The API call in WeatherRepository likely respects the unit setting, or defaults to metric.
                     // For this display, we'll just append the unit.
@@ -112,8 +113,9 @@ class HomeActivity : AppCompatActivity() {
                     holder.tvCondition.text = "N/A"
                 }
             } catch (e: Throwable) {
+                e.printStackTrace()
                 holder.tvTemp.text = "--"
-                holder.tvCondition.text = "N/A"
+                holder.tvCondition.text = "Error"
             }
         }
 
