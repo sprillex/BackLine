@@ -19,14 +19,14 @@ import com.example.offlinebrowser.ui.WeatherActivity
 import com.example.offlinebrowser.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
 
-class MainActivity : AppCompatActivity() {
+class FeedSettingsActivity : AppCompatActivity() {
 
     private val viewModel: MainViewModel by viewModels()
     private lateinit var feedAdapter: FeedAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContentView(R.layout.activity_feed_settings)
 
         val etUrl = findViewById<EditText>(R.id.etUrl)
         val btnSettings = findViewById<Button>(R.id.btnSettings)
