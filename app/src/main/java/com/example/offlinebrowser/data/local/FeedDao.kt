@@ -18,7 +18,7 @@ interface FeedDao {
     suspend fun getFeedById(id: Int): Feed?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertFeed(feed: Feed)
+    suspend fun insertFeed(feed: Feed): Long
 
     @Update
     suspend fun updateFeed(feed: Feed)

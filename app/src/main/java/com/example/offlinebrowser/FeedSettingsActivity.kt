@@ -63,7 +63,7 @@ class FeedSettingsActivity : AppCompatActivity() {
         btnAddRss.setOnClickListener {
             val url = etUrl.text.toString()
             if (url.isNotEmpty()) {
-                viewModel.addFeed(url, FeedType.RSS)
+                showAddFeedDialog(url, FeedType.RSS)
                 etUrl.text.clear()
             }
         }
@@ -71,7 +71,7 @@ class FeedSettingsActivity : AppCompatActivity() {
         btnAddMastodon.setOnClickListener {
             val url = etUrl.text.toString()
             if (url.isNotEmpty()) {
-                viewModel.addFeed(url, FeedType.MASTODON)
+                showAddFeedDialog(url, FeedType.MASTODON)
                 etUrl.text.clear()
             }
         }
@@ -79,7 +79,7 @@ class FeedSettingsActivity : AppCompatActivity() {
         btnAddHtml.setOnClickListener {
             val url = etUrl.text.toString()
             if (url.isNotEmpty()) {
-                viewModel.addFeed(url, FeedType.HTML)
+                showAddFeedDialog(url, FeedType.HTML)
                 etUrl.text.clear()
             }
         }
@@ -101,5 +101,24 @@ class FeedSettingsActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun showAddFeedDialog(url: String, type: FeedType) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_feed, null)
+        val etDownloadLimit = dialogView.findViewById<EditText>(R.id.etDownloadLimit)
+        val etCategory = dialogView.findViewById<EditText>(R.id.etCategory)
+        val cbSyncNow = dialogView.findViewById<android.widget.CheckBox>(R.id.cbSyncNow)
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Add Feed Settings")
+            .setView(dialogView)
+            .setPositiveButton("Add") { _, _ ->
+                val limit = etDownloadLimit.text.toString().toIntOrNull() ?: 0
+                val category = etCategory.text.toString().takeIf { it.isNotEmpty() }
+                val syncNow = cbSyncNow.isChecked
+                viewModel.addFeed(url, type, limit, category, syncNow)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 }

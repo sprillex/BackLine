@@ -30,9 +30,13 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import com.example.offlinebrowser.data.repository.PreferencesRepository
 import com.example.offlinebrowser.ui.WeatherActivity
+import com.example.offlinebrowser.viewmodel.MainViewModel
+import com.example.offlinebrowser.data.model.Weather
 import kotlinx.coroutines.launch
 
 class HomeActivity : AppCompatActivity() {
+
+    private val viewModel: MainViewModel by viewModels()
 
     private lateinit var statusDot: View
     private lateinit var ssidText: TextView
@@ -50,9 +54,7 @@ class HomeActivity : AppCompatActivity() {
 
     // A simple adapter for the weather ViewPager
     inner class WeatherHomeAdapter : RecyclerView.Adapter<WeatherHomeAdapter.WeatherViewHolder>() {
-        // Mock data or real data depending on integration. For now mock list.
-        // In real app, observe database/repository
-        var locations: List<String> = emptyList()
+        var locations: List<Weather> = emptyList()
 
         inner class WeatherViewHolder(view: View) : RecyclerView.ViewHolder(view) {
             val tvTemp: TextView = view.findViewById(R.id.tv_temp)
@@ -74,9 +76,10 @@ class HomeActivity : AppCompatActivity() {
         }
 
         override fun onBindViewHolder(holder: WeatherViewHolder, position: Int) {
-            // Bind data here. For now static from XML or simple modification
-            holder.tvCity.text = locations[position]
-            // Real logic: Fetch weather for this location
+            val weather = locations[position]
+            holder.tvCity.text = weather.name
+            // Basic data binding - in real app we'd parse current conditions
+            // Assuming default text for now if data is simple
         }
 
         override fun getItemCount(): Int = locations.size
@@ -95,10 +98,16 @@ class HomeActivity : AppCompatActivity() {
         statusContainer = findViewById(R.id.status_container)
 
         weatherPager.adapter = weatherAdapter
-        // Check if we have locations. For now, let's assume empty if not added.
-        // In a real implementation, we'd query the WeatherRepository.
-        // To satisfy "The weather will not show up until the user adds a location", we default to empty.
-        updateWeatherVisibility()
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.weatherLocations.collect { weatherList ->
+                    weatherAdapter.locations = weatherList
+                    weatherAdapter.notifyDataSetChanged()
+                    updateWeatherVisibility()
+                }
+            }
+        }
 
         // Bottom Nav
         findViewById<View>(R.id.nav_home).setOnClickListener {

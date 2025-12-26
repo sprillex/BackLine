@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Download Limit (0 for default):" />
+
+    <EditText
+        android:id="@+id/etDownloadLimit"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="number"
+        android:text="0" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Category:"
+        android:layout_marginTop="10dp"/>
+
+    <EditText
+        android:id="@+id/etCategory"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="textCapWords"
+        android:hint="e.g., Tech, News" />
+
+    <CheckBox
+        android:id="@+id/cbSyncNow"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Sync Now"
+        android:checked="true"
+        android:layout_marginTop="10dp"/>
+
+</LinearLayout>

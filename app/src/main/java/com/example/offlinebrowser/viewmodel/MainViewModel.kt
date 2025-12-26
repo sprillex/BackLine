@@ -34,9 +34,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val weatherLocations: StateFlow<List<Weather>> = weatherRepository.allWeather
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun addFeed(url: String, type: FeedType) {
+    fun addFeed(url: String, type: FeedType, downloadLimit: Int = 0, category: String? = null, syncNow: Boolean = false) {
         viewModelScope.launch {
-            feedRepository.addFeed(url, type)
+            val id = feedRepository.addFeed(url, type, downloadLimit, category)
+            if (syncNow) {
+                 val feed = feedRepository.getFeedById(id.toInt())
+                 if (feed != null) {
+                     syncFeed(feed)
+                 }
+            }
         }
     }
 
