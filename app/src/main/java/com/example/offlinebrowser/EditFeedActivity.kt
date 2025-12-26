@@ -34,8 +34,7 @@ class EditFeedActivity : AppCompatActivity() {
         val btnCancel = findViewById<Button>(R.id.btnCancel)
 
         lifecycleScope.launch {
-            val feeds = viewModel.feeds.firstOrNull()
-            currentFeed = feeds?.find { it.id == feedId }
+            currentFeed = viewModel.getFeedById(feedId)
 
             if (currentFeed != null) {
                 etTitle.setText(currentFeed!!.title)

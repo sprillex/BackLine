@@ -31,11 +31,15 @@ class FeedRepository(
         feedDao.updateFeed(feed)
     }
 
+    suspend fun getFeedById(id: Int): Feed? {
+        return feedDao.getFeedById(id)
+    }
+
     suspend fun deleteFeed(feed: Feed) {
         feedDao.deleteFeed(feed)
     }
 
-    suspend fun syncFeed(feed: Feed) {
+    suspend fun syncFeed(feed: Feed) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         if (feed.type == FeedType.RSS || feed.type == FeedType.MASTODON) {
             val articles = rssParser.fetchFeed(feed)
 
