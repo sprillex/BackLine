@@ -36,6 +36,7 @@ class FeedSettingsActivity : AppCompatActivity() {
         val rvFeeds = findViewById<RecyclerView>(R.id.rvFeeds)
         val btnWeather = findViewById<Button>(R.id.btnWeather)
         val btnBindery = findViewById<Button>(R.id.btnBindery)
+        val btnKiwix = findViewById<Button>(R.id.btnKiwix)
 
         btnSettings.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
@@ -91,6 +92,11 @@ class FeedSettingsActivity : AppCompatActivity() {
 
         btnBindery.setOnClickListener {
             val intent = Intent(this, BinderyActivity::class.java)
+            startActivity(intent)
+        }
+
+        btnKiwix.setOnClickListener {
+            val intent = Intent(this, KiwixSearchActivity::class.java)
             startActivity(intent)
         }
 
