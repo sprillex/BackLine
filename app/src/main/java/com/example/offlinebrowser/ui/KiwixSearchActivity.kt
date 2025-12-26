@@ -95,6 +95,7 @@ class KiwixSearchActivity : AppCompatActivity() {
 
         val downloadWork = OneTimeWorkRequestBuilder<ZimDownloadWorker>()
             .setInputData(data)
+            .addTag("download")
             .build()
 
         WorkManager.getInstance(this).enqueue(downloadWork)
