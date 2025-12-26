@@ -56,10 +56,15 @@ class WeatherHomeAdapter(
             val response = if (json.isNotEmpty()) gson.fromJson(json, WeatherResponse::class.java) else null
 
             if (response?.currentWeather != null) {
-                val temp = response.currentWeather.temperature
-                val unit = if (preferencesRepository.weatherUnits == "imperial") "°F" else "°C"
+                val rawTemp = response.currentWeather.temperature
+                val useImperial = preferencesRepository.weatherUnits == "imperial"
 
-                holder.tvTemp?.text = "$temp$unit"
+                if (useImperial) {
+                    val fahrenheit = (rawTemp * 9 / 5) + 32
+                    holder.tvTemp?.text = String.format("%.1f°F", fahrenheit)
+                } else {
+                    holder.tvTemp?.text = "$rawTemp°C"
+                }
 
                 holder.tvCondition?.text = when(response.currentWeather.weathercode) {
                     0 -> "Clear"
