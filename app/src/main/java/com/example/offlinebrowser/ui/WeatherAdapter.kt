@@ -13,7 +13,8 @@ import com.example.offlinebrowser.data.model.Weather
 
 class WeatherAdapter(
     private val useImperial: Boolean,
-    private val onRefresh: (Weather) -> Unit
+    private val onRefresh: (Weather) -> Unit,
+    private val onEdit: (Weather) -> Unit
 ) : ListAdapter<Weather, WeatherAdapter.WeatherViewHolder>(WeatherDiffCallback()) {
 
     class WeatherViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -21,6 +22,7 @@ class WeatherAdapter(
         val tvCoords: TextView = itemView.findViewById(R.id.tvCoords)
         val tvData: TextView = itemView.findViewById(R.id.tvData)
         val btnRefresh: Button = itemView.findViewById(R.id.btnRefresh)
+        val btnEdit: Button = itemView.findViewById(R.id.btnEdit)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): WeatherViewHolder {
@@ -57,6 +59,7 @@ class WeatherAdapter(
         }
 
         holder.btnRefresh.setOnClickListener { onRefresh(weather) }
+        holder.btnEdit.setOnClickListener { onEdit(weather) }
     }
 }
 

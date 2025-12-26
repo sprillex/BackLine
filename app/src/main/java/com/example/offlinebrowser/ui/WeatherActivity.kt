@@ -46,7 +46,8 @@ class WeatherActivity : AppCompatActivity() {
 
         weatherAdapter = WeatherAdapter(
             useImperial = useImperial,
-            onRefresh = { weather -> viewModel.updateWeather(weather) }
+            onRefresh = { weather -> viewModel.updateWeather(weather) },
+            onEdit = { weather -> showEditDialog(weather) }
         )
 
         rvWeather.layoutManager = LinearLayoutManager(this)
@@ -125,10 +126,60 @@ class WeatherActivity : AppCompatActivity() {
         fusedLocationClient.lastLocation
             .addOnSuccessListener { location ->
                 if (location != null) {
-                    viewModel.addWeatherLocation("Current Location", location.latitude, location.longitude)
+                    val etName = findViewById<EditText>(R.id.etName)
+                    val nameInput = etName.text.toString()
+
+                    if (nameInput.isNotEmpty()) {
+                        viewModel.addWeatherLocation(nameInput, location.latitude, location.longitude)
+                        etName.text.clear()
+                    } else {
+                        showNameDialog(location.latitude, location.longitude)
+                    }
                 } else {
                     Toast.makeText(this, "Unable to get location", Toast.LENGTH_SHORT).show()
                 }
             }
+    }
+
+    private fun showNameDialog(lat: Double, lon: Double) {
+        val input = EditText(this)
+        input.hint = "Location Name"
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Enter Location Name")
+            .setView(input)
+            .setPositiveButton("Add") { _, _ ->
+                val name = input.text.toString()
+                if (name.isNotEmpty()) {
+                    viewModel.addWeatherLocation(name, lat, lon)
+                } else {
+                    viewModel.addWeatherLocation("Current Location", lat, lon)
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showEditDialog(weather: com.example.offlinebrowser.data.model.Weather) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_feed, null) // Reusing layout or creating new?
+        // Let's create a simple linear layout programmatically or use a new layout file if complex.
+        // Simple name edit is enough based on request "edit weather content settings".
+        // But maybe user wants to adjust lat/lon too? Let's allow name editing.
+
+        val input = EditText(this)
+        input.setText(weather.locationName)
+        input.hint = "Location Name"
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Edit Weather Settings")
+            .setView(input)
+            .setPositiveButton("Save") { _, _ ->
+                val newName = input.text.toString()
+                if (newName.isNotEmpty()) {
+                    val updatedWeather = weather.copy(locationName = newName)
+                    viewModel.updateWeather(updatedWeather)
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 }
