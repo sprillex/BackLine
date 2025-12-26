@@ -35,7 +35,7 @@ class ArticleAdapter(
         holder.itemView.setOnClickListener { onArticleClick(article) }
         holder.btnDownload.setOnClickListener { onDownloadClick(article) }
 
-        holder.btnDownload.isEnabled = !article.isCached
+        holder.btnDownload.visibility = if (article.isCached) View.GONE else View.VISIBLE
     }
 }
 
