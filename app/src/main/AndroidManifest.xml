@@ -38,8 +38,19 @@
         <activity android:name=".ui.WeatherActivity" />
         <activity android:name=".ui.BinderyActivity" />
         <activity android:name=".ui.KiwixSearchActivity" />
+        <activity android:name=".ui.LibraryActivity" />
         <activity android:name=".SettingsActivity" />
         <activity android:name=".EditFeedActivity" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
