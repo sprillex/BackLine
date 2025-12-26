@@ -25,4 +25,8 @@ class PreferencesRepository(context: Context) {
     var feedLimitDays: Int
         get() = prefs.getInt("feed_limit_days", 30)
         set(value) = prefs.edit().putInt("feed_limit_days", value).apply()
+
+    var weatherUnits: String
+        get() = prefs.getString("weather_units", "metric") ?: "metric"
+        set(value) = prefs.edit().putString("weather_units", value).apply()
 }

@@ -16,6 +16,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.offlinebrowser.R
+import com.example.offlinebrowser.data.repository.PreferencesRepository
 import com.example.offlinebrowser.viewmodel.MainViewModel
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
@@ -40,7 +41,11 @@ class WeatherActivity : AppCompatActivity() {
         val btnCurrentLocation = findViewById<Button>(R.id.btnCurrentLocation)
         val rvWeather = findViewById<RecyclerView>(R.id.rvWeather)
 
+        val preferencesRepository = PreferencesRepository(this)
+        val useImperial = preferencesRepository.weatherUnits == "imperial"
+
         weatherAdapter = WeatherAdapter(
+            useImperial = useImperial,
             onRefresh = { weather -> viewModel.updateWeather(weather) }
         )
 

@@ -12,6 +12,7 @@ import com.example.offlinebrowser.R
 import com.example.offlinebrowser.data.model.Weather
 
 class WeatherAdapter(
+    private val useImperial: Boolean,
     private val onRefresh: (Weather) -> Unit
 ) : ListAdapter<Weather, WeatherAdapter.WeatherViewHolder>(WeatherDiffCallback()) {
 
@@ -37,7 +38,13 @@ class WeatherAdapter(
                 val gson = com.google.gson.Gson()
                 val response = gson.fromJson(weather.dataJson, com.example.offlinebrowser.data.model.WeatherResponse::class.java)
                 if (response?.currentWeather != null) {
-                    holder.tvData.text = "Temp: ${response.currentWeather.temperature}°"
+                    val rawTemp = response.currentWeather.temperature
+                    if (useImperial) {
+                        val fahrenheit = (rawTemp * 9 / 5) + 32
+                        holder.tvData.text = String.format("Temp: %.1f°F", fahrenheit)
+                    } else {
+                        holder.tvData.text = "Temp: $rawTemp°C"
+                    }
                 } else {
                     holder.tvData.text = "Data cached (No current weather)"
                 }
