@@ -15,6 +15,8 @@ import com.example.offlinebrowser.data.model.Feed
 import com.example.offlinebrowser.data.model.FeedType
 import com.example.offlinebrowser.ui.BinderyActivity
 import com.example.offlinebrowser.ui.FeedAdapter
+import com.example.offlinebrowser.ui.KiwixSearchActivity
+import com.example.offlinebrowser.ui.LibraryActivity
 import com.example.offlinebrowser.ui.WeatherActivity
 import com.example.offlinebrowser.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
