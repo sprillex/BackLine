@@ -60,6 +60,22 @@ class SettingsActivity : AppCompatActivity() {
 
         val cbWifiOnly = findViewById<CheckBox>(R.id.cbWifiOnly)
         val etSsids = findViewById<EditText>(R.id.etSsids)
+
+        val ssidToAdd = intent.getStringExtra("EXTRA_ADD_SSID")
+        if (ssidToAdd != null) {
+             androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Add SSID")
+                .setMessage("Add $ssidToAdd to allowed list?")
+                .setPositiveButton("Yes") { _, _ ->
+                     val current = etSsids.text.toString()
+                     if (current.isEmpty()) {
+                         etSsids.setText(ssidToAdd)
+                     } else if (!current.contains(ssidToAdd)) {
+                         etSsids.setText("$current, $ssidToAdd")
+                     }
+                }
+                .show()
+        }
         val etInterval = findViewById<EditText>(R.id.etInterval)
         val etLimitCount = findViewById<EditText>(R.id.etLimitCount)
         val etLimitDays = findViewById<EditText>(R.id.etLimitDays)

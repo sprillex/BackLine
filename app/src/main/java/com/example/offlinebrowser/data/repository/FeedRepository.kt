@@ -22,9 +22,9 @@ class FeedRepository(
     private val preferencesRepository = PreferencesRepository(context)
     val allFeeds: Flow<List<Feed>> = feedDao.getAllFeeds()
 
-    suspend fun addFeed(url: String, type: FeedType) {
-        val feed = Feed(url = url, title = url, type = type) // Title will be updated on sync
-        feedDao.insertFeed(feed)
+    suspend fun addFeed(url: String, type: FeedType, downloadLimit: Int = 0, category: String? = null): Long {
+        val feed = Feed(url = url, title = url, type = type, downloadLimit = downloadLimit, category = category)
+        return feedDao.insertFeed(feed)
     }
 
     suspend fun updateFeed(feed: Feed) {
