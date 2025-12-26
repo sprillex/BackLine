@@ -2,7 +2,7 @@ name: Android Build
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "main", "master", "offline-browser-initial-1863957139394542535" ]
   pull_request:
     branches: [ "main", "master" ]
   workflow_dispatch:
