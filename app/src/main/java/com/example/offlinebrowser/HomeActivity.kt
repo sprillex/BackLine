@@ -84,7 +84,9 @@ class HomeActivity : AppCompatActivity() {
 
             try {
                 // If data is empty or invalid, show placeholder
-                val response = if (weather.dataJson.isNotEmpty()) gson.fromJson(weather.dataJson, WeatherResponse::class.java) else null
+                // Explicitly handle null dataJson just in case Room returns null despite type
+                val json = weather.dataJson ?: ""
+                val response = if (json.isNotEmpty()) gson.fromJson(json, WeatherResponse::class.java) else null
 
                 if (response?.currentWeather != null) {
                     val temp = response.currentWeather.temperature
@@ -109,7 +111,7 @@ class HomeActivity : AppCompatActivity() {
                     holder.tvTemp.text = "--"
                     holder.tvCondition.text = "N/A"
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 holder.tvTemp.text = "--"
                 holder.tvCondition.text = "N/A"
             }
