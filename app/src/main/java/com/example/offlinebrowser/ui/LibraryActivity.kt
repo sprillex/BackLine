@@ -99,30 +99,9 @@ class LibraryActivity : AppCompatActivity() {
 
     private fun openFile(file: File) {
         try {
-            val uri = FileProvider.getUriForFile(
-                this,
-                "${applicationContext.packageName}.fileprovider",
-                file
-            )
-
-            val intent = Intent(Intent.ACTION_VIEW)
-            intent.setDataAndType(uri, "application/x-zim")
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-
-            try {
-                startActivity(intent)
-            } catch (e: Exception) {
-                // Try generic open
-                val genericIntent = Intent(Intent.ACTION_VIEW)
-                genericIntent.setDataAndType(uri, "*/*")
-                genericIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-
-                try {
-                    startActivity(Intent.createChooser(genericIntent, "Open with..."))
-                } catch (e2: Exception) {
-                     Toast.makeText(this, "No app found to open this file.", Toast.LENGTH_SHORT).show()
-                }
-            }
+            val intent = Intent(this, ZimViewerActivity::class.java)
+            intent.putExtra("ZIM_FILE_PATH", file.absolutePath)
+            startActivity(intent)
         } catch (e: Exception) {
             Toast.makeText(this, "Error opening file: ${e.message}", Toast.LENGTH_SHORT).show()
         }
