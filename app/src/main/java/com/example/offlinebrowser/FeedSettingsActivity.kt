@@ -15,6 +15,8 @@ import com.example.offlinebrowser.data.model.Feed
 import com.example.offlinebrowser.data.model.FeedType
 import com.example.offlinebrowser.ui.BinderyActivity
 import com.example.offlinebrowser.ui.FeedAdapter
+import com.example.offlinebrowser.ui.KiwixSearchActivity
+import com.example.offlinebrowser.ui.LibraryActivity
 import com.example.offlinebrowser.ui.WeatherActivity
 import com.example.offlinebrowser.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
@@ -36,6 +38,8 @@ class FeedSettingsActivity : AppCompatActivity() {
         val rvFeeds = findViewById<RecyclerView>(R.id.rvFeeds)
         val btnWeather = findViewById<Button>(R.id.btnWeather)
         val btnBindery = findViewById<Button>(R.id.btnBindery)
+        val btnKiwix = findViewById<Button>(R.id.btnKiwix)
+        val btnLibrary = findViewById<Button>(R.id.btnLibrary)
 
         btnSettings.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
@@ -91,6 +95,16 @@ class FeedSettingsActivity : AppCompatActivity() {
 
         btnBindery.setOnClickListener {
             val intent = Intent(this, BinderyActivity::class.java)
+            startActivity(intent)
+        }
+
+        btnKiwix.setOnClickListener {
+            val intent = Intent(this, KiwixSearchActivity::class.java)
+            startActivity(intent)
+        }
+
+        btnLibrary.setOnClickListener {
+            val intent = Intent(this, LibraryActivity::class.java)
             startActivity(intent)
         }
 
