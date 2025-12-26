@@ -61,12 +61,7 @@ class ZimViewerActivity : AppCompatActivity() {
             zimReader = ZimReader(zimFile!!)
 
             // Log basic info
-            try {
-                // Accessing properties safely just in case
-                Log.d(TAG, "ZIM UUID: ${zimFile?.uuid}")
-            } catch(e: Exception) {
-                e.printStackTrace()
-            }
+            Log.d(TAG, "Opened ZIM file: ${file.name}")
 
             webView.webViewClient = object : WebViewClient() {
                 override fun shouldInterceptRequest(
