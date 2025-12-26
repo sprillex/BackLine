@@ -37,6 +37,7 @@
         <activity android:name=".ArticleViewerActivity" />
         <activity android:name=".ui.WeatherActivity" />
         <activity android:name=".ui.BinderyActivity" />
+        <activity android:name=".ui.KiwixSearchActivity" />
         <activity android:name=".SettingsActivity" />
         <activity android:name=".EditFeedActivity" />
 
