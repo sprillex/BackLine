@@ -83,26 +83,35 @@ class HomeActivity : AppCompatActivity() {
             holder.tvCity.text = weather.locationName
 
             try {
-                val response = gson.fromJson(weather.dataJson, WeatherResponse::class.java)
-                val temp = response.currentWeather?.temperature ?: 0.0
-                val unit = if (PreferencesRepository(this@HomeActivity).weatherUnits == "imperial") "°F" else "°C"
-                // Ideally convert if needed, but for MVP just show what API returned (assuming API handles unit or we just show raw)
-                // Note: The API call in WeatherRepository likely respects the unit setting, or defaults to metric.
-                // For this display, we'll just append the unit.
+                // If data is empty or invalid, show placeholder
+                // Explicitly handle null dataJson just in case Room returns null despite type
+                val json = weather.dataJson ?: ""
+                val response = if (json.isNotEmpty()) gson.fromJson(json, WeatherResponse::class.java) else null
 
-                holder.tvTemp.text = "$temp$unit"
+                if (response?.currentWeather != null) {
+                    val temp = response.currentWeather.temperature
+                    val unit = if (PreferencesRepository(this@HomeActivity).weatherUnits == "imperial") "°F" else "°C"
+                    // Ideally convert if needed, but for MVP just show what API returned (assuming API handles unit or we just show raw)
+                    // Note: The API call in WeatherRepository likely respects the unit setting, or defaults to metric.
+                    // For this display, we'll just append the unit.
 
-                // Simple condition mapping (placeholder)
-                holder.tvCondition.text = when(response.currentWeather?.weathercode) {
-                    0 -> "Clear"
-                    1, 2, 3 -> "Partly Cloudy"
-                    45, 48 -> "Fog"
-                    51, 53, 55 -> "Drizzle"
-                    61, 63, 65 -> "Rain"
-                    71, 73, 75 -> "Snow"
-                    else -> "Unknown"
+                    holder.tvTemp.text = "$temp$unit"
+
+                    // Simple condition mapping (placeholder)
+                    holder.tvCondition.text = when(response.currentWeather.weathercode) {
+                        0 -> "Clear"
+                        1, 2, 3 -> "Partly Cloudy"
+                        45, 48 -> "Fog"
+                        51, 53, 55 -> "Drizzle"
+                        61, 63, 65 -> "Rain"
+                        71, 73, 75 -> "Snow"
+                        else -> "Unknown"
+                    }
+                } else {
+                    holder.tvTemp.text = "--"
+                    holder.tvCondition.text = "N/A"
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 holder.tvTemp.text = "--"
                 holder.tvCondition.text = "N/A"
             }
