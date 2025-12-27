@@ -41,7 +41,7 @@ class KiwixSearchActivity : AppCompatActivity() {
         rvKiwixResults = findViewById(R.id.rvKiwixResults)
 
         rvKiwixResults.layoutManager = LinearLayoutManager(this)
-        adapter = KiwixAdapter { book -> downloadBook(book) }
+        adapter = KiwixAdapter(onDownloadClick = { book -> downloadBook(book) })
         rvKiwixResults.adapter = adapter
 
         btnSearch.setOnClickListener {
