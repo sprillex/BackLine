@@ -117,7 +117,7 @@ class ZimViewerActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         try {
-            zimFile?.close()
+            zimReader?.close()
         } catch (e: IOException) {
             e.printStackTrace()
         }
