@@ -73,18 +73,18 @@ class ZimViewerActivity : AppCompatActivity() {
                 }
             }
 
+            /*
+            // Commenting out method calls to verify imports and basic instantiation first
             // Load main page
             val randomTitle = zimReader?.getRandomTitle()
             if (randomTitle != null) {
-                 // Try to load a random page as a start, or search for "Welcome" / "Main_Page"
-                 // Or better, check if we can get the main page from metadata?
-                 // ZimReader doesn't seem to expose main page easily in the snippet I saw.
-                 // Let's try to load the random title
                  val url = "zim://${randomTitle}"
                  webView.loadUrl(url)
             } else {
                  webView.loadData("<h1>Unable to read ZIM file</h1>", "text/html", "UTF-8")
             }
+            */
+            webView.loadData("<h1>ZIM Reader Debug Mode</h1><p>File opened successfully.</p>", "text/html", "UTF-8")
 
         } catch (e: Exception) {
             e.printStackTrace()
@@ -95,38 +95,16 @@ class ZimViewerActivity : AppCompatActivity() {
     private fun handleRequest(url: String): WebResourceResponse? {
         if (!url.startsWith("zim://")) return null
 
-        val title = url.removePrefix("zim://")
+        // val title = url.removePrefix("zim://")
 
         try {
-            // Try to find if it's an article (A namespace) or image (I namespace) or other.
-            // The URL from WebView will likely match the link target in HTML.
-            // ZIM links are usually relative.
-
-            // Try to get data. I'm assuming getDataForTitle or getInputStream exists.
-            // Since I can't verify the API, I will try a few common patterns using reflection if needed,
-            // but for now I'll write what I think is correct and let the user correct me if build fails.
-
-            // Based on ZimDroid snippet:
-            // String html = reader.getHtmlForTitle(randomTitle);
-
-            // I will assume `getDataForUrl(url)` or `getDataForTitle(title)`
-            // I'll try `getDataForTitle` which returns a ByteArrayInputStream hopefully?
-            // Or `ByteArray`
-
-            // Let's use `getHtmlForTitle` for text/html request?
-            // WebView doesn't tell us expected type easily in `shouldInterceptRequest` (only in newer APIs).
-
-            // I'll guess `zimReader.getData(title)` returns `ByteArray`.
-
-            // NOTE: I am making a best-effort guess.
-            // If this fails to compile, I will fix it.
-
+            /*
+            // Commenting out method calls to verify imports
             val html = zimReader?.getHtmlForTitle(title)
             if (html != null) {
                 return WebResourceResponse("text/html", "UTF-8", ByteArrayInputStream(html.toByteArray()))
             }
-
-            // TODO: Handle images and other resources using appropriate ZimReader methods if available (e.g., getDataForName)
+            */
 
             return null
 
