@@ -11,7 +11,8 @@ interface WeatherService {
         @Query("longitude") longitude: Double,
         @Query("current_weather") currentWeather: Boolean = true,
         @Query("daily") daily: String = "temperature_2m_max,temperature_2m_min,weathercode",
-        @Query("forecast_days") forecastDays: Int = 10,
+        @Query("hourly") hourly: String = "temperature_2m,weathercode",
+        @Query("forecast_days") forecastDays: Int = 7,
         @Query("timezone") timezone: String = "auto"
     ): String // Returning raw JSON string for simplicity in storage
 }

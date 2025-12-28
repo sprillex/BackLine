@@ -116,7 +116,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateWeather(weather: Weather) {
         viewModelScope.launch {
-            weatherRepository.updateWeather(weather)
+            val days = preferencesRepository.weatherForecastDays
+            weatherRepository.updateWeather(weather, days)
         }
     }
 }
