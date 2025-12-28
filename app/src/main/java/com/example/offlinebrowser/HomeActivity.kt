@@ -36,8 +36,13 @@ import com.example.offlinebrowser.ui.WeatherHomeAdapter
 import com.example.offlinebrowser.data.model.Weather
 import com.example.offlinebrowser.ui.HourlyAdapter
 import com.example.offlinebrowser.ui.HourlyItem
+import com.example.offlinebrowser.ui.ForecastAdapter
+import com.example.offlinebrowser.ui.ForecastItem
 import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 class HomeActivity : AppCompatActivity() {
 
@@ -62,7 +67,7 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var tvDetailTemp: TextView
     private lateinit var tvDetailCondition: TextView
     private lateinit var tvDetailHighLow: TextView
-    private lateinit var rvHourly: RecyclerView
+    private lateinit var rvForecast: RecyclerView
 
     private val connectivityManager by lazy { getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager }
     private val wifiManager by lazy { applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager }
@@ -87,6 +92,7 @@ class HomeActivity : AppCompatActivity() {
             val jsonObject = com.google.gson.JsonParser().parse(weather.dataJson ?: "").asJsonObject
             val current = jsonObject.getAsJsonObject("current_weather")
             val hourly = jsonObject.getAsJsonObject("hourly")
+            val daily = if (jsonObject.has("daily")) jsonObject.getAsJsonObject("daily") else null
 
             val useImperial = preferencesRepository.weatherUnits == "imperial"
             val temp = current.get("temperature").asDouble
@@ -99,19 +105,10 @@ class HomeActivity : AppCompatActivity() {
                 tvDetailTemp.text = "$temp°C"
             }
 
-            tvDetailCondition.text = when(code) {
-                0 -> "Clear"
-                1, 2, 3 -> "Partly Cloudy"
-                45, 48 -> "Fog"
-                51, 53, 55 -> "Drizzle"
-                61, 63, 65 -> "Rain"
-                71, 73, 75 -> "Snow"
-                else -> "Unknown"
-            }
+            tvDetailCondition.text = getWeatherCondition(code)
 
             // High/Low if daily available
-            if (jsonObject.has("daily")) {
-                val daily = jsonObject.getAsJsonObject("daily")
+            if (daily != null) {
                 val maxArr = daily.getAsJsonArray("temperature_2m_max")
                 val minArr = daily.getAsJsonArray("temperature_2m_min")
                 if (maxArr.size() > 0 && minArr.size() > 0) {
@@ -129,30 +126,82 @@ class HomeActivity : AppCompatActivity() {
                 tvDetailHighLow.text = ""
             }
 
-            // Hourly
-            val hourlyItems = mutableListOf<HourlyItem>()
-            if (hourly != null) {
-                val timeArr = hourly.getAsJsonArray("time")
-                val tempArr = hourly.getAsJsonArray("temperature_2m")
-                val codeArr = hourly.getAsJsonArray("weathercode")
+            // Forecast Display
+            if (daily != null && hourly != null) {
+                val forecastItems = mutableListOf<ForecastItem>()
 
-                // Limit to next 24 hours or so
-                val count = minOf(timeArr.size(), 24)
-                for (i in 0 until count) {
-                    hourlyItems.add(HourlyItem(
-                        timeArr[i].asString,
-                        tempArr[i].asDouble,
-                        codeArr[i].asInt
-                    ))
+                val dailyTimes = daily.getAsJsonArray("time")
+                val maxTemps = daily.getAsJsonArray("temperature_2m_max")
+                val minTemps = daily.getAsJsonArray("temperature_2m_min")
+                val dailyCodes = daily.getAsJsonArray("weathercode")
+
+                val hourlyTimes = hourly.getAsJsonArray("time")
+                val hourlyTemps = hourly.getAsJsonArray("temperature_2m")
+                val hourlyCodes = hourly.getAsJsonArray("weathercode")
+
+                for (i in 0 until dailyTimes.size()) {
+                    if (i < maxTemps.size() && i < minTemps.size() && i < dailyCodes.size()) {
+                        val dateStr = dailyTimes[i].asString
+                        val dayName = try {
+                            val date = LocalDate.parse(dateStr)
+                            date.format(DateTimeFormatter.ofPattern("EEE", Locale.getDefault()))
+                        } catch (e: Exception) {
+                            dateStr
+                        }
+
+                        val condition = getWeatherCondition(dailyCodes[i].asInt)
+
+                        // Slice hourly data for this day (24 hours)
+                        val dayHourlyItems = mutableListOf<HourlyItem>()
+                        val startIndex = i * 24
+                        val endIndex = startIndex + 24
+
+                        for (h in startIndex until endIndex) {
+                            if (h < hourlyTimes.size() && h < hourlyTemps.size() && h < hourlyCodes.size()) {
+                                dayHourlyItems.add(HourlyItem(
+                                    hourlyTimes[h].asString,
+                                    hourlyTemps[h].asDouble,
+                                    hourlyCodes[h].asInt
+                                ))
+                            }
+                        }
+
+                        forecastItems.add(ForecastItem(
+                            day = dayName,
+                            condition = condition,
+                            maxTemp = maxTemps[i].asDouble,
+                            minTemp = minTemps[i].asDouble,
+                            code = dailyCodes[i].asInt,
+                            hourlyItems = dayHourlyItems
+                        ))
+                    }
                 }
-            }
 
-            rvHourly.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-            rvHourly.adapter = HourlyAdapter(hourlyItems, useImperial)
+                val forecastAdapter = ForecastAdapter(forecastItems, useImperial)
+                rvForecast.layoutManager = LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
+                rvForecast.adapter = forecastAdapter
+                rvForecast.visibility = View.VISIBLE
+            } else {
+                rvForecast.visibility = View.GONE
+            }
 
         } catch (e: Exception) {
             e.printStackTrace()
             tvDetailCondition.text = "Error parsing weather data"
+        }
+    }
+
+    private fun getWeatherCondition(code: Int): String {
+        return when(code) {
+            0 -> "Sunny"
+            1, 2, 3 -> "Partly Cloudy"
+            45, 48 -> "Foggy"
+            51, 53, 55 -> "Drizzle"
+            61, 63, 65 -> "Rain"
+            71, 73, 75 -> "Snow"
+            80, 81, 82 -> "Showers"
+            95, 96, 99 -> "Thunderstorm"
+            else -> "Unknown"
         }
     }
 
@@ -178,95 +227,6 @@ class HomeActivity : AppCompatActivity() {
             pillWeather.setBackgroundResource(R.drawable.bg_pill)
             pillWeather.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
         }
-    }
-
-    private fun showWeatherDetailDialog(weather: Weather) {
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_weather_detail, null)
-        val tvLocation = dialogView.findViewById<TextView>(R.id.tv_detail_location)
-        val tvTemp = dialogView.findViewById<TextView>(R.id.tv_detail_temp)
-        val tvCondition = dialogView.findViewById<TextView>(R.id.tv_detail_condition)
-        val tvHighLow = dialogView.findViewById<TextView>(R.id.tv_detail_high_low)
-        val rvHourly = dialogView.findViewById<RecyclerView>(R.id.rv_hourly)
-
-        tvLocation.text = weather.locationName
-
-        try {
-            val jsonObject = com.google.gson.JsonParser().parse(weather.dataJson ?: "").asJsonObject
-            val current = jsonObject.getAsJsonObject("current_weather")
-            val hourly = jsonObject.getAsJsonObject("hourly")
-
-            val useImperial = preferencesRepository.weatherUnits == "imperial"
-            val temp = current.get("temperature").asDouble
-            val code = current.get("weathercode").asInt
-
-            if (useImperial) {
-                val f = (temp * 9 / 5) + 32
-                tvTemp.text = String.format("%.1f°F", f)
-            } else {
-                tvTemp.text = "$temp°C"
-            }
-
-            tvCondition.text = when(code) {
-                0 -> "Clear"
-                1, 2, 3 -> "Partly Cloudy"
-                45, 48 -> "Fog"
-                51, 53, 55 -> "Drizzle"
-                61, 63, 65 -> "Rain"
-                71, 73, 75 -> "Snow"
-                else -> "Unknown"
-            }
-
-            // High/Low if daily available
-            if (jsonObject.has("daily")) {
-                val daily = jsonObject.getAsJsonObject("daily")
-                val maxArr = daily.getAsJsonArray("temperature_2m_max")
-                val minArr = daily.getAsJsonArray("temperature_2m_min")
-                if (maxArr.size() > 0 && minArr.size() > 0) {
-                    val max = maxArr[0].asDouble
-                    val min = minArr[0].asDouble
-                    if (useImperial) {
-                         val maxF = (max * 9 / 5) + 32
-                         val minF = (min * 9 / 5) + 32
-                         tvHighLow.text = String.format("H: %.0f° L: %.0f°", maxF, minF)
-                    } else {
-                         tvHighLow.text = "H: $max° L: $min°"
-                    }
-                }
-            }
-
-            // Hourly
-            val hourlyItems = mutableListOf<HourlyItem>()
-            if (hourly != null) {
-                val timeArr = hourly.getAsJsonArray("time")
-                val tempArr = hourly.getAsJsonArray("temperature_2m")
-                val codeArr = hourly.getAsJsonArray("weathercode")
-
-                // Limit to next 24 hours or so
-                val count = minOf(timeArr.size(), 24)
-                for (i in 0 until count) {
-                    hourlyItems.add(HourlyItem(
-                        timeArr[i].asString,
-                        tempArr[i].asDouble,
-                        codeArr[i].asInt
-                    ))
-                }
-            }
-
-            rvHourly.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-            rvHourly.adapter = HourlyAdapter(hourlyItems, useImperial)
-
-        } catch (e: Exception) {
-            e.printStackTrace()
-            tvCondition.text = "Error parsing weather data"
-        }
-
-        AlertDialog.Builder(this)
-            .setView(dialogView)
-            .setPositiveButton("Close", null)
-            .setNeutralButton("Settings") { _, _ ->
-                 startActivity(Intent(this, WeatherActivity::class.java))
-            }
-            .show()
     }
 
     private val categoryAdapter by lazy {
@@ -297,7 +257,7 @@ class HomeActivity : AppCompatActivity() {
         tvDetailTemp = findViewById(R.id.tv_detail_temp)
         tvDetailCondition = findViewById(R.id.tv_detail_condition)
         tvDetailHighLow = findViewById(R.id.tv_detail_high_low)
-        rvHourly = findViewById(R.id.rv_hourly)
+        rvForecast = findViewById(R.id.rv_forecast)
 
         weatherPager.adapter = weatherAdapter
         rvCategories.layoutManager = LinearLayoutManager(this)
