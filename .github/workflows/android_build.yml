@@ -35,7 +35,7 @@ jobs:
       run: ./gradlew assembleDebug --no-daemon --no-build-cache --stacktrace
 
     - name: Rename APK
-      run: mv app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/BackLineDebugB.apk
+      run: mv app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/OffLineDebugB.apk
 
     - name: Upload Debug APK
       uses: actions/upload-artifact@v4

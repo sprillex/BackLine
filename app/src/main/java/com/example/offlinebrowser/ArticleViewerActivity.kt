@@ -4,19 +4,27 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.webkit.WebView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.webkit.WebSettingsCompat
+import androidx.webkit.WebViewFeature
 import com.example.offlinebrowser.data.local.OfflineDatabase
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class ArticleViewerActivity : AppCompatActivity() {
+
+    private var isDarkMode = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_article_viewer)
 
         val webView = findViewById<WebView>(R.id.webView)
+        val fabDarkMode = findViewById<FloatingActionButton>(R.id.fab_dark_mode)
 
         val articleId = intent.getIntExtra("ARTICLE_ID", -1)
         if (articleId != -1) {
@@ -35,7 +43,26 @@ class ArticleViewerActivity : AppCompatActivity() {
             }
         }
 
+        fabDarkMode.setOnClickListener {
+            toggleDarkMode(webView)
+        }
+
         setupBottomNav()
+    }
+
+    private fun toggleDarkMode(webView: WebView) {
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
+            isDarkMode = !isDarkMode
+            if (isDarkMode) {
+                WebSettingsCompat.setForceDark(webView.settings, WebSettingsCompat.FORCE_DARK_ON)
+                Toast.makeText(this, "Dark Mode On", Toast.LENGTH_SHORT).show()
+            } else {
+                WebSettingsCompat.setForceDark(webView.settings, WebSettingsCompat.FORCE_DARK_OFF)
+                Toast.makeText(this, "Dark Mode Off", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Toast.makeText(this, "Dark Mode not supported on this device", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun setupBottomNav() {
