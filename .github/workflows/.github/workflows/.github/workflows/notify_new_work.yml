@@ -1,0 +1,21 @@
+name: Notify on New Work
+on:
+  pull_request:
+    types: [opened]       # Triggers only when a PR is first created
+  create:                 # Triggers when a Branch or Tag is created
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Identify Event Type
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "New Pull Request Detected: ${{ github.event.pull_request.title }}"
+          elif [[ "${{ github.event_name }}" == "create" && "${{ github.event.ref_type }}" == "branch" ]]; then
+            echo "New Branch Detected: ${{ github.ref_name }}"
+          fi
+
+      # Insert your Webhook/Pushover step here
+      - name: Send Notification
+        run: echo "Sending notification..."
