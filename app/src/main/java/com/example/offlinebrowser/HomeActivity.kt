@@ -33,6 +33,7 @@ import com.example.offlinebrowser.ui.WeatherActivity
 import com.example.offlinebrowser.viewmodel.MainViewModel
 import com.example.offlinebrowser.ui.CategoryAdapter
 import com.example.offlinebrowser.ui.WeatherHomeAdapter
+import com.example.offlinebrowser.data.model.Weather
 import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.coroutines.launch
 
@@ -60,8 +61,8 @@ class HomeActivity : AppCompatActivity() {
         WeatherHomeAdapter(preferencesRepository) { weather ->
             val prettyJson = try {
                 val gson = com.google.gson.GsonBuilder().setPrettyPrinting().create()
-                val jsonElement = com.google.gson.JsonParser().parse(weather.dataJson ?: "")
-                gson.toJson(jsonElement)
+                val obj = gson.fromJson(weather.dataJson ?: "", Any::class.java)
+                gson.toJson(obj)
             } catch (e: Exception) {
                 weather.dataJson ?: "No Data"
             }
