@@ -21,6 +21,7 @@ class WeatherAdapter(
         val tvName: TextView = itemView.findViewById(R.id.tvName)
         val tvCoords: TextView = itemView.findViewById(R.id.tvCoords)
         val tvData: TextView = itemView.findViewById(R.id.tvData)
+        val rvHourly: RecyclerView = itemView.findViewById(R.id.rvHourly)
         val btnRefresh: Button = itemView.findViewById(R.id.btnRefresh)
         val btnEdit: Button = itemView.findViewById(R.id.btnEdit)
     }
@@ -50,12 +51,39 @@ class WeatherAdapter(
                 } else {
                     holder.tvData.text = "Data cached (No current weather)"
                 }
+
+                if (response?.hourly != null) {
+                    val hourlyItems = mutableListOf<HourlyItem>()
+                    val times = response.hourly.time
+                    val temps = response.hourly.temperature2m
+                    val codes = response.hourly.weathercode
+
+                    for (i in times.indices) {
+                        if (i < temps.size && i < codes.size) {
+                            hourlyItems.add(HourlyItem(times[i], temps[i], codes[i]))
+                        }
+                    }
+
+                    val hourlyAdapter = HourlyAdapter(hourlyItems, useImperial)
+                    holder.rvHourly.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(
+                        holder.itemView.context,
+                        androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL,
+                        false
+                    )
+                    holder.rvHourly.adapter = hourlyAdapter
+                    holder.rvHourly.visibility = View.VISIBLE
+                } else {
+                    holder.rvHourly.visibility = View.GONE
+                }
+
             } catch (e: Exception) {
                  e.printStackTrace()
                  holder.tvData.text = "Error parsing data"
+                 holder.rvHourly.visibility = View.GONE
             }
         } else {
              holder.tvData.text = "No data"
+             holder.rvHourly.visibility = View.GONE
         }
 
         holder.btnRefresh.setOnClickListener { onRefresh(weather) }
