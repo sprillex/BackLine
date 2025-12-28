@@ -15,7 +15,7 @@ import com.google.gson.Gson
 
 class WeatherHomeAdapter(
     private val preferencesRepository: PreferencesRepository,
-    private val onLongClick: () -> Unit
+    private val onLongClick: (Weather) -> Unit
 ) : ListAdapter<Weather, WeatherHomeAdapter.WeatherViewHolder>(WeatherHomeDiffCallback()) {
 
     private val gson = Gson()
@@ -28,7 +28,10 @@ class WeatherHomeAdapter(
 
         init {
             view.setOnLongClickListener {
-                onLongClick()
+                val position = bindingAdapterPosition
+                if (position != RecyclerView.NO_POSITION) {
+                    onLongClick(getItem(position))
+                }
                 true
             }
         }
