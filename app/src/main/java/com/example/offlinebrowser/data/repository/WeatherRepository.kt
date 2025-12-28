@@ -22,9 +22,13 @@ class WeatherRepository(private val weatherDao: WeatherDao) {
 
     val allWeather: Flow<List<Weather>> = weatherDao.getAllWeather()
 
-    suspend fun updateWeather(weather: Weather) {
+    suspend fun updateWeather(weather: Weather, forecastDays: Int = 7) {
         try {
-            val json = weatherService.getWeather(weather.latitude, weather.longitude)
+            val json = weatherService.getWeather(
+                latitude = weather.latitude,
+                longitude = weather.longitude,
+                forecastDays = forecastDays
+            )
             val updatedWeather = weather.copy(
                 dataJson = json,
                 lastUpdated = System.currentTimeMillis()

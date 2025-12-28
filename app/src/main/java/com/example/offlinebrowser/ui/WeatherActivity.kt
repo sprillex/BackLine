@@ -40,6 +40,7 @@ class WeatherActivity : AppCompatActivity() {
         val btnAdd = findViewById<Button>(R.id.btnAdd)
         val btnCurrentLocation = findViewById<Button>(R.id.btnCurrentLocation)
         val rvWeather = findViewById<RecyclerView>(R.id.rvWeather)
+        val btnSettings = findViewById<Button>(R.id.btnSettings)
 
         val preferencesRepository = PreferencesRepository(this)
         val useImperial = preferencesRepository.weatherUnits == "imperial"
@@ -64,6 +65,10 @@ class WeatherActivity : AppCompatActivity() {
                 etLon.text.clear()
                 etName.text.clear()
             }
+        }
+
+        btnSettings.setOnClickListener {
+            showGlobalSettingsDialog(preferencesRepository)
         }
 
         btnCurrentLocation.setOnClickListener {
@@ -160,11 +165,6 @@ class WeatherActivity : AppCompatActivity() {
     }
 
     private fun showEditDialog(weather: com.example.offlinebrowser.data.model.Weather) {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_add_feed, null) // Reusing layout or creating new?
-        // Let's create a simple linear layout programmatically or use a new layout file if complex.
-        // Simple name edit is enough based on request "edit weather content settings".
-        // But maybe user wants to adjust lat/lon too? Let's allow name editing.
-
         val input = EditText(this)
         input.setText(weather.locationName)
         input.hint = "Location Name"
@@ -178,6 +178,52 @@ class WeatherActivity : AppCompatActivity() {
                     val updatedWeather = weather.copy(locationName = newName)
                     viewModel.updateWeather(updatedWeather)
                 }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showGlobalSettingsDialog(prefs: PreferencesRepository) {
+        val layout = android.widget.LinearLayout(this)
+        layout.orientation = android.widget.LinearLayout.VERTICAL
+        layout.setPadding(32, 32, 32, 32)
+
+        val intervalLabel = android.widget.TextView(this)
+        intervalLabel.text = "Refresh Interval (min)"
+        layout.addView(intervalLabel)
+
+        val intervalInput = EditText(this)
+        intervalInput.inputType = android.text.InputType.TYPE_CLASS_NUMBER
+        intervalInput.setText(prefs.weatherRefreshIntervalMinutes.toString())
+        layout.addView(intervalInput)
+
+        val daysLabel = android.widget.TextView(this)
+        daysLabel.text = "Forecast Days (1-16)"
+        daysLabel.layoutParams = android.widget.LinearLayout.LayoutParams(
+            android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply { topMargin = 32 }
+        layout.addView(daysLabel)
+
+        val daysInput = EditText(this)
+        daysInput.inputType = android.text.InputType.TYPE_CLASS_NUMBER
+        daysInput.setText(prefs.weatherForecastDays.toString())
+        layout.addView(daysInput)
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Global Weather Settings")
+            .setView(layout)
+            .setPositiveButton("Save") { _, _ ->
+                val interval = intervalInput.text.toString().toLongOrNull()
+                val days = daysInput.text.toString().toIntOrNull()
+
+                if (interval != null) {
+                    prefs.weatherRefreshIntervalMinutes = interval
+                }
+                if (days != null) {
+                    prefs.weatherForecastDays = days
+                }
+                Toast.makeText(this, "Settings saved. Refresh to apply.", Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton("Cancel", null)
             .show()
