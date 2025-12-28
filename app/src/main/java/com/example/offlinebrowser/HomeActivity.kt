@@ -57,8 +57,23 @@ class HomeActivity : AppCompatActivity() {
         }
 
     private val weatherAdapter by lazy {
-        WeatherHomeAdapter(preferencesRepository) {
-            startActivity(Intent(this, WeatherActivity::class.java))
+        WeatherHomeAdapter(preferencesRepository) { weather ->
+            val prettyJson = try {
+                val gson = com.google.gson.GsonBuilder().setPrettyPrinting().create()
+                val jsonElement = com.google.gson.JsonParser().parse(weather.dataJson ?: "")
+                gson.toJson(jsonElement)
+            } catch (e: Exception) {
+                weather.dataJson ?: "No Data"
+            }
+
+            AlertDialog.Builder(this)
+                .setTitle(weather.locationName)
+                .setMessage(prettyJson)
+                .setPositiveButton("OK", null)
+                .setNeutralButton("Open Settings") { _, _ ->
+                    startActivity(Intent(this, WeatherActivity::class.java))
+                }
+                .show()
         }
     }
 
