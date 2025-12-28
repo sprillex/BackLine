@@ -33,6 +33,7 @@ import com.example.offlinebrowser.ui.WeatherActivity
 import com.example.offlinebrowser.viewmodel.MainViewModel
 import com.example.offlinebrowser.ui.CategoryAdapter
 import com.example.offlinebrowser.ui.WeatherHomeAdapter
+import com.example.offlinebrowser.data.model.Weather
 import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.coroutines.launch
 
@@ -57,8 +58,23 @@ class HomeActivity : AppCompatActivity() {
         }
 
     private val weatherAdapter by lazy {
-        WeatherHomeAdapter(preferencesRepository) {
-            startActivity(Intent(this, WeatherActivity::class.java))
+        WeatherHomeAdapter(preferencesRepository) { weather ->
+            val prettyJson = try {
+                val gson = com.google.gson.GsonBuilder().setPrettyPrinting().create()
+                val obj = gson.fromJson(weather.dataJson ?: "", Any::class.java)
+                gson.toJson(obj)
+            } catch (e: Exception) {
+                weather.dataJson ?: "No Data"
+            }
+
+            AlertDialog.Builder(this)
+                .setTitle(weather.locationName)
+                .setMessage(prettyJson)
+                .setPositiveButton("OK", null)
+                .setNeutralButton("Open Settings") { _, _ ->
+                    startActivity(Intent(this, WeatherActivity::class.java))
+                }
+                .show()
         }
     }
 

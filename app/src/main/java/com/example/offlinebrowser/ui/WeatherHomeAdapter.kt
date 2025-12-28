@@ -15,7 +15,7 @@ import com.google.gson.Gson
 
 class WeatherHomeAdapter(
     private val preferencesRepository: PreferencesRepository,
-    private val onLongClick: () -> Unit
+    private val onLongClick: (Weather) -> Unit
 ) : ListAdapter<Weather, WeatherHomeAdapter.WeatherViewHolder>(WeatherHomeDiffCallback()) {
 
     private val gson = Gson()
@@ -25,13 +25,6 @@ class WeatherHomeAdapter(
         val tvCondition: TextView? = view.findViewById(R.id.tv_condition)
         val tvCity: TextView? = view.findViewById(R.id.tv_city)
         val tvHighLow: TextView? = view.findViewById(R.id.tv_high_low)
-
-        init {
-            view.setOnLongClickListener {
-                onLongClick()
-                true
-            }
-        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): WeatherViewHolder {
@@ -49,6 +42,10 @@ class WeatherHomeAdapter(
     override fun onBindViewHolder(holder: WeatherViewHolder, position: Int) {
         try {
             val weather = getItem(position)
+            holder.itemView.setOnLongClickListener {
+                onLongClick(weather)
+                true
+            }
             holder.tvCity?.text = weather.locationName
 
             // If data is empty or invalid, show placeholder
