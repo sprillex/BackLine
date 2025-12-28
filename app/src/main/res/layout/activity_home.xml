@@ -72,6 +72,7 @@
             android:orientation="horizontal">
 
             <TextView
+                android:id="@+id/pill_all"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="All"
@@ -86,6 +87,7 @@
                 android:layout_marginEnd="10dp"/>
 
             <TextView
+                android:id="@+id/pill_weather"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Weather"
@@ -154,73 +156,155 @@
             android:paddingEnd="15dp"
             android:paddingBottom="20dp">
 
-            <!-- Weather Section -->
+            <!-- Container for standard home view -->
             <LinearLayout
-                android:id="@+id/weather_section"
+                android:id="@+id/home_standard_view"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
+
+                <!-- Weather Section -->
+                <LinearLayout
+                    android:id="@+id/weather_section"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="10dp"
+                        android:layout_marginBottom="10dp"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Conditions"
+                            android:textColor="@color/text_primary"
+                            android:textStyle="bold"
+                            android:textSize="18sp"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="WXN Source"
+                            android:textColor="@color/accent_color"
+                            android:textSize="12sp"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_card"
+                        android:padding="15dp"
+                        android:orientation="vertical">
+
+                        <!-- We use a ViewPager2 for swiping locations -->
+                        <androidx.viewpager2.widget.ViewPager2
+                            android:id="@+id/weather_pager"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:minHeight="80dp"/>
+
+                        <!-- Empty state message if no weather -->
+                        <TextView
+                            android:id="@+id/tv_weather_empty"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="No location added"
+                            android:textColor="@color/text_secondary"
+                            android:gravity="center"
+                            android:visibility="gone"/>
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- Categories Section -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rv_categories"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="25dp"
+                    android:nestedScrollingEnabled="false"/>
+
+            </LinearLayout>
+
+            <!-- Detailed Weather View -->
+            <LinearLayout
+                android:id="@+id/weather_detail_view"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                android:layout_marginTop="20dp">
+
+                <TextView
+                    android:id="@+id/tv_detail_location"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary"
+                    android:gravity="center"
+                    android:layout_marginBottom="20dp"/>
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:layout_marginTop="10dp"
-                    android:layout_marginBottom="10dp"
-                    android:gravity="center_vertical">
+                    android:gravity="center"
+                    android:layout_marginBottom="25dp">
 
                     <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Conditions"
-                        android:textColor="@color/text_primary"
-                        android:textStyle="bold"
-                        android:textSize="18sp"/>
-
-                    <TextView
+                        android:id="@+id/tv_detail_temp"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="WXN Source"
-                        android:textColor="@color/accent_color"
-                        android:textSize="12sp"/>
+                        android:textSize="48sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary"
+                        android:layout_marginEnd="20dp"/>
+
+                    <LinearLayout
+                         android:layout_width="wrap_content"
+                         android:layout_height="wrap_content"
+                         android:orientation="vertical">
+
+                         <TextView
+                             android:id="@+id/tv_detail_condition"
+                             android:layout_width="wrap_content"
+                             android:layout_height="wrap_content"
+                             android:textSize="18sp"
+                             android:textColor="@color/text_primary"/>
+
+                         <TextView
+                             android:id="@+id/tv_detail_high_low"
+                             android:layout_width="wrap_content"
+                             android:layout_height="wrap_content"
+                             android:textSize="14sp"
+                             android:textColor="@color/text_secondary"/>
+                    </LinearLayout>
                 </LinearLayout>
 
-                <LinearLayout
+                <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="@drawable/bg_card"
-                    android:padding="15dp"
-                    android:orientation="vertical">
+                    android:text="Hourly Forecast"
+                    android:textColor="@color/text_primary"
+                    android:textStyle="bold"
+                    android:textSize="18sp"
+                    android:layout_marginBottom="10dp"/>
 
-                    <!-- We use a ViewPager2 for swiping locations, but for now just a placeholder view inside -->
-                     <androidx.viewpager2.widget.ViewPager2
-                        android:id="@+id/weather_pager"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:minHeight="80dp"/>
-
-                     <!-- Empty state message if no weather -->
-                     <TextView
-                        android:id="@+id/tv_weather_empty"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="No location added"
-                        android:textColor="@color/text_secondary"
-                        android:gravity="center"
-                        android:visibility="gone"/>
-
-                </LinearLayout>
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rv_hourly"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="120dp"/>
 
             </LinearLayout>
-
-            <!-- Categories Section -->
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rv_categories"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="25dp"
-                android:nestedScrollingEnabled="false"/>
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
