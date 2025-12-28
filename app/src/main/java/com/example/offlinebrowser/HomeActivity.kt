@@ -12,6 +12,7 @@ import android.net.NetworkRequest
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -36,8 +37,13 @@ import com.example.offlinebrowser.ui.WeatherHomeAdapter
 import com.example.offlinebrowser.data.model.Weather
 import com.example.offlinebrowser.ui.HourlyAdapter
 import com.example.offlinebrowser.ui.HourlyItem
+import com.example.offlinebrowser.ui.ForecastAdapter
+import com.example.offlinebrowser.ui.ForecastItem
 import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 class HomeActivity : AppCompatActivity() {
 
@@ -54,18 +60,20 @@ class HomeActivity : AppCompatActivity() {
     // New Views for Embedded Layout
     private lateinit var homeStandardView: LinearLayout
     private lateinit var weatherDetailView: LinearLayout
-    private lateinit var pillAll: TextView
-    private lateinit var pillWeather: TextView
+    private lateinit var pillContainer: LinearLayout
 
     // Detailed Weather Views
     private lateinit var tvDetailLocation: TextView
     private lateinit var tvDetailTemp: TextView
     private lateinit var tvDetailCondition: TextView
     private lateinit var tvDetailHighLow: TextView
-    private lateinit var rvHourly: RecyclerView
+    private lateinit var rvForecast: RecyclerView
 
     private val connectivityManager by lazy { getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager }
     private val wifiManager by lazy { applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager }
+
+    private var currentWeatherCount = 0
+    private var currentCategories: List<String> = emptyList()
 
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
@@ -87,6 +95,7 @@ class HomeActivity : AppCompatActivity() {
             val jsonObject = com.google.gson.JsonParser().parse(weather.dataJson ?: "").asJsonObject
             val current = jsonObject.getAsJsonObject("current_weather")
             val hourly = jsonObject.getAsJsonObject("hourly")
+            val daily = if (jsonObject.has("daily")) jsonObject.getAsJsonObject("daily") else null
 
             val useImperial = preferencesRepository.weatherUnits == "imperial"
             val temp = current.get("temperature").asDouble
@@ -99,19 +108,10 @@ class HomeActivity : AppCompatActivity() {
                 tvDetailTemp.text = "$temp°C"
             }
 
-            tvDetailCondition.text = when(code) {
-                0 -> "Clear"
-                1, 2, 3 -> "Partly Cloudy"
-                45, 48 -> "Fog"
-                51, 53, 55 -> "Drizzle"
-                61, 63, 65 -> "Rain"
-                71, 73, 75 -> "Snow"
-                else -> "Unknown"
-            }
+            tvDetailCondition.text = getWeatherCondition(code)
 
             // High/Low if daily available
-            if (jsonObject.has("daily")) {
-                val daily = jsonObject.getAsJsonObject("daily")
+            if (daily != null) {
                 val maxArr = daily.getAsJsonArray("temperature_2m_max")
                 val minArr = daily.getAsJsonArray("temperature_2m_min")
                 if (maxArr.size() > 0 && minArr.size() > 0) {
@@ -129,26 +129,64 @@ class HomeActivity : AppCompatActivity() {
                 tvDetailHighLow.text = ""
             }
 
-            // Hourly
-            val hourlyItems = mutableListOf<HourlyItem>()
-            if (hourly != null) {
-                val timeArr = hourly.getAsJsonArray("time")
-                val tempArr = hourly.getAsJsonArray("temperature_2m")
-                val codeArr = hourly.getAsJsonArray("weathercode")
+            // Forecast Display
+            if (daily != null && hourly != null) {
+                val forecastItems = mutableListOf<ForecastItem>()
 
-                // Limit to next 24 hours or so
-                val count = minOf(timeArr.size(), 24)
-                for (i in 0 until count) {
-                    hourlyItems.add(HourlyItem(
-                        timeArr[i].asString,
-                        tempArr[i].asDouble,
-                        codeArr[i].asInt
-                    ))
+                val dailyTimes = daily.getAsJsonArray("time")
+                val maxTemps = daily.getAsJsonArray("temperature_2m_max")
+                val minTemps = daily.getAsJsonArray("temperature_2m_min")
+                val dailyCodes = daily.getAsJsonArray("weathercode")
+
+                val hourlyTimes = hourly.getAsJsonArray("time")
+                val hourlyTemps = hourly.getAsJsonArray("temperature_2m")
+                val hourlyCodes = hourly.getAsJsonArray("weathercode")
+
+                for (i in 0 until dailyTimes.size()) {
+                    if (i < maxTemps.size() && i < minTemps.size() && i < dailyCodes.size()) {
+                        val dateStr = dailyTimes[i].asString
+                        val dayName = try {
+                            val date = LocalDate.parse(dateStr)
+                            date.format(DateTimeFormatter.ofPattern("EEE", Locale.getDefault()))
+                        } catch (e: Exception) {
+                            dateStr
+                        }
+
+                        val condition = getWeatherCondition(dailyCodes[i].asInt)
+
+                        // Slice hourly data for this day (24 hours)
+                        val dayHourlyItems = mutableListOf<HourlyItem>()
+                        val startIndex = i * 24
+                        val endIndex = startIndex + 24
+
+                        for (h in startIndex until endIndex) {
+                            if (h < hourlyTimes.size() && h < hourlyTemps.size() && h < hourlyCodes.size()) {
+                                dayHourlyItems.add(HourlyItem(
+                                    hourlyTimes[h].asString,
+                                    hourlyTemps[h].asDouble,
+                                    hourlyCodes[h].asInt
+                                ))
+                            }
+                        }
+
+                        forecastItems.add(ForecastItem(
+                            day = dayName,
+                            condition = condition,
+                            maxTemp = maxTemps[i].asDouble,
+                            minTemp = minTemps[i].asDouble,
+                            code = dailyCodes[i].asInt,
+                            hourlyItems = dayHourlyItems
+                        ))
+                    }
                 }
-            }
 
-            rvHourly.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-            rvHourly.adapter = HourlyAdapter(hourlyItems, useImperial)
+                val forecastAdapter = ForecastAdapter(forecastItems, useImperial)
+                rvForecast.layoutManager = LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
+                rvForecast.adapter = forecastAdapter
+                rvForecast.visibility = View.VISIBLE
+            } else {
+                rvForecast.visibility = View.GONE
+            }
 
         } catch (e: Exception) {
             e.printStackTrace()
@@ -156,117 +194,94 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
+    private fun getWeatherCondition(code: Int): String {
+        return when(code) {
+            0 -> "Sunny"
+            1, 2, 3 -> "Partly Cloudy"
+            45, 48 -> "Foggy"
+            51, 53, 55 -> "Drizzle"
+            61, 63, 65 -> "Rain"
+            71, 73, 75 -> "Snow"
+            80, 81, 82 -> "Showers"
+            95, 96, 99 -> "Thunderstorm"
+            else -> "Unknown"
+        }
+    }
+
     private fun toggleWeatherDetail(showDetail: Boolean) {
         if (showDetail) {
             homeStandardView.visibility = View.GONE
             weatherDetailView.visibility = View.VISIBLE
-
-            // Update Pill Styles
-            pillAll.setBackgroundResource(R.drawable.bg_pill)
-            pillAll.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
-
-            pillWeather.setBackgroundResource(R.drawable.bg_pill_active)
-            pillWeather.setTextColor(ContextCompat.getColor(this, R.color.bg_color))
+            updatePills(activePill = "Weather")
         } else {
             homeStandardView.visibility = View.VISIBLE
             weatherDetailView.visibility = View.GONE
-
-            // Update Pill Styles
-            pillAll.setBackgroundResource(R.drawable.bg_pill_active)
-            pillAll.setTextColor(ContextCompat.getColor(this, R.color.bg_color))
-
-            pillWeather.setBackgroundResource(R.drawable.bg_pill)
-            pillWeather.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+            updatePills(activePill = "All")
         }
     }
 
-    private fun showWeatherDetailDialog(weather: Weather) {
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_weather_detail, null)
-        val tvLocation = dialogView.findViewById<TextView>(R.id.tv_detail_location)
-        val tvTemp = dialogView.findViewById<TextView>(R.id.tv_detail_temp)
-        val tvCondition = dialogView.findViewById<TextView>(R.id.tv_detail_condition)
-        val tvHighLow = dialogView.findViewById<TextView>(R.id.tv_detail_high_low)
-        val rvHourly = dialogView.findViewById<RecyclerView>(R.id.rv_hourly)
+    private fun updatePills(activePill: String) {
+        pillContainer.removeAllViews()
 
-        tvLocation.text = weather.locationName
-
-        try {
-            val jsonObject = com.google.gson.JsonParser().parse(weather.dataJson ?: "").asJsonObject
-            val current = jsonObject.getAsJsonObject("current_weather")
-            val hourly = jsonObject.getAsJsonObject("hourly")
-
-            val useImperial = preferencesRepository.weatherUnits == "imperial"
-            val temp = current.get("temperature").asDouble
-            val code = current.get("weathercode").asInt
-
-            if (useImperial) {
-                val f = (temp * 9 / 5) + 32
-                tvTemp.text = String.format("%.1f°F", f)
-            } else {
-                tvTemp.text = "$temp°C"
-            }
-
-            tvCondition.text = when(code) {
-                0 -> "Clear"
-                1, 2, 3 -> "Partly Cloudy"
-                45, 48 -> "Fog"
-                51, 53, 55 -> "Drizzle"
-                61, 63, 65 -> "Rain"
-                71, 73, 75 -> "Snow"
-                else -> "Unknown"
-            }
-
-            // High/Low if daily available
-            if (jsonObject.has("daily")) {
-                val daily = jsonObject.getAsJsonObject("daily")
-                val maxArr = daily.getAsJsonArray("temperature_2m_max")
-                val minArr = daily.getAsJsonArray("temperature_2m_min")
-                if (maxArr.size() > 0 && minArr.size() > 0) {
-                    val max = maxArr[0].asDouble
-                    val min = minArr[0].asDouble
-                    if (useImperial) {
-                         val maxF = (max * 9 / 5) + 32
-                         val minF = (min * 9 / 5) + 32
-                         tvHighLow.text = String.format("H: %.0f° L: %.0f°", maxF, minF)
-                    } else {
-                         tvHighLow.text = "H: $max° L: $min°"
-                    }
-                }
-            }
-
-            // Hourly
-            val hourlyItems = mutableListOf<HourlyItem>()
-            if (hourly != null) {
-                val timeArr = hourly.getAsJsonArray("time")
-                val tempArr = hourly.getAsJsonArray("temperature_2m")
-                val codeArr = hourly.getAsJsonArray("weathercode")
-
-                // Limit to next 24 hours or so
-                val count = minOf(timeArr.size(), 24)
-                for (i in 0 until count) {
-                    hourlyItems.add(HourlyItem(
-                        timeArr[i].asString,
-                        tempArr[i].asDouble,
-                        codeArr[i].asInt
-                    ))
-                }
-            }
-
-            rvHourly.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-            rvHourly.adapter = HourlyAdapter(hourlyItems, useImperial)
-
-        } catch (e: Exception) {
-            e.printStackTrace()
-            tvCondition.text = "Error parsing weather data"
+        // "All" Pill
+        addPill("All", activePill == "All") {
+            toggleWeatherDetail(false)
         }
 
-        AlertDialog.Builder(this)
-            .setView(dialogView)
-            .setPositiveButton("Close", null)
-            .setNeutralButton("Settings") { _, _ ->
-                 startActivity(Intent(this, WeatherActivity::class.java))
+        // "Weather" Pill
+        if (currentWeatherCount > 0) {
+            addPill("Weather", activePill == "Weather") {
+                 if (weatherAdapter.itemCount > 0) {
+                     val currentPos = weatherPager.currentItem
+                     if (currentPos >= 0 && currentPos < weatherAdapter.currentList.size) {
+                         updateWeatherDetailView(weatherAdapter.currentList[currentPos])
+                         toggleWeatherDetail(true)
+                     }
+                 }
             }
-            .show()
+        }
+
+        // Category Pills
+        currentCategories.forEach { category ->
+            addPill(category, activePill == category) {
+                 val intent = Intent(this, ArticleListActivity::class.java)
+                 intent.putExtra("EXTRA_CATEGORY", category)
+                 startActivity(intent)
+            }
+        }
+    }
+
+    private fun addPill(text: String, isActive: Boolean, onClick: () -> Unit) {
+        val textView = TextView(this)
+        textView.text = text
+        textView.textSize = 13f
+
+        // Define padding and margins using pixels
+        val paddingHorizontal = (16 * resources.displayMetrics.density).toInt()
+        val paddingVertical = (8 * resources.displayMetrics.density).toInt()
+        val marginEnd = (10 * resources.displayMetrics.density).toInt()
+
+        textView.setPadding(paddingHorizontal, paddingVertical, paddingHorizontal, paddingVertical)
+
+        val params = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        )
+        params.marginEnd = marginEnd
+        textView.layoutParams = params
+
+        if (isActive) {
+            textView.setTextColor(ContextCompat.getColor(this, R.color.bg_color))
+            textView.setBackgroundResource(R.drawable.bg_pill_active)
+            textView.setTypeface(null, android.graphics.Typeface.BOLD)
+        } else {
+            textView.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+            textView.setBackgroundResource(R.drawable.bg_pill)
+            textView.setTypeface(null, android.graphics.Typeface.NORMAL)
+        }
+
+        textView.setOnClickListener { onClick() }
+        pillContainer.addView(textView)
     }
 
     private val categoryAdapter by lazy {
@@ -290,14 +305,13 @@ class HomeActivity : AppCompatActivity() {
 
         homeStandardView = findViewById(R.id.home_standard_view)
         weatherDetailView = findViewById(R.id.weather_detail_view)
-        pillAll = findViewById(R.id.pill_all)
-        pillWeather = findViewById(R.id.pill_weather)
+        pillContainer = findViewById(R.id.pill_container)
 
         tvDetailLocation = findViewById(R.id.tv_detail_location)
         tvDetailTemp = findViewById(R.id.tv_detail_temp)
         tvDetailCondition = findViewById(R.id.tv_detail_condition)
         tvDetailHighLow = findViewById(R.id.tv_detail_high_low)
-        rvHourly = findViewById(R.id.rv_hourly)
+        rvForecast = findViewById(R.id.rv_forecast)
 
         weatherPager.adapter = weatherAdapter
         rvCategories.layoutManager = LinearLayoutManager(this)
@@ -308,12 +322,17 @@ class HomeActivity : AppCompatActivity() {
                 launch {
                     viewModel.weatherLocations.collect { weatherList ->
                         weatherAdapter.submitList(weatherList)
+                        currentWeatherCount = weatherList.size
                         updateWeatherVisibility()
+                        // Refresh pills if weather presence changed
+                        updatePills(if (weatherDetailView.visibility == View.VISIBLE) "Weather" else "All")
                     }
                 }
                 launch {
                     viewModel.categories.collect { categoryList ->
                         categoryAdapter.submitList(categoryList)
+                        currentCategories = categoryList
+                        updatePills(if (weatherDetailView.visibility == View.VISIBLE) "Weather" else "All")
                     }
                 }
             }
@@ -346,42 +365,12 @@ class HomeActivity : AppCompatActivity() {
             true
         }
 
-        // Pill Listeners
-        pillAll.setOnClickListener {
-            toggleWeatherDetail(false)
-        }
-
-        pillWeather.setOnClickListener {
-            // If we have weather data, show the first available or current one
-            if (weatherAdapter.itemCount > 0) {
-                 // We can get the current item from ViewModel if we had access to the list synchronously or if we cached it.
-                 // weatherAdapter.currentList gives us the list
-                 if (weatherAdapter.currentList.isNotEmpty()) {
-                     // Try to get the one currently visible in ViewPager if possible,
-                     // but ViewPager state is UI. Let's default to the first one for now or the last one clicked.
-                     // A better approach is to track the last viewed weather or just the first one.
-                     val currentPos = weatherPager.currentItem
-                     if (currentPos >= 0 && currentPos < weatherAdapter.currentList.size) {
-                         updateWeatherDetailView(weatherAdapter.currentList[currentPos])
-                         toggleWeatherDetail(true)
-                     }
-                 }
-            } else {
-                 Toast.makeText(this, "No weather data available", Toast.LENGTH_SHORT).show()
-            }
-        }
-
         registerNetworkCallback()
     }
 
     override fun onResume() {
         super.onResume()
         updateWifiStatus()
-
-        // Check permission if needed for SSID
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-             requestPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))
-        }
     }
 
     private fun updateWeatherVisibility() {

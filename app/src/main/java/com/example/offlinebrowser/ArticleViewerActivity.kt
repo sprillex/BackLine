@@ -1,6 +1,8 @@
 package com.example.offlinebrowser
 
+import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import android.webkit.WebView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -12,8 +14,9 @@ import kotlinx.coroutines.withContext
 class ArticleViewerActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val webView = WebView(this)
-        setContentView(webView)
+        setContentView(R.layout.activity_article_viewer)
+
+        val webView = findViewById<WebView>(R.id.webView)
 
         val articleId = intent.getIntExtra("ARTICLE_ID", -1)
         if (articleId != -1) {
@@ -30,6 +33,24 @@ class ArticleViewerActivity : AppCompatActivity() {
                     webView.loadDataWithBaseURL(null, feed.content, "text/html", "UTF-8", null)
                 }
             }
+        }
+
+        setupBottomNav()
+    }
+
+    private fun setupBottomNav() {
+        findViewById<View>(R.id.nav_home).setOnClickListener {
+            val intent = Intent(this, HomeActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+            startActivity(intent)
+            finish()
+        }
+        findViewById<View>(R.id.nav_content).setOnClickListener {
+             startActivity(Intent(this, ArticleListActivity::class.java))
+             finish()
+        }
+        findViewById<View>(R.id.nav_settings).setOnClickListener {
+             startActivity(Intent(this, FeedSettingsActivity::class.java))
         }
     }
 }
