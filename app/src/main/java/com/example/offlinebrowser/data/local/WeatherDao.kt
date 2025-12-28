@@ -13,5 +13,5 @@ interface WeatherDao {
     fun getAllWeather(): Flow<List<Weather>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertWeather(weather: Weather)
+    suspend fun insertWeather(weather: Weather): Long
 }

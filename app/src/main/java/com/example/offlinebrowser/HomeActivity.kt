@@ -12,25 +12,30 @@ import android.net.NetworkRequest
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.widget.NestedScrollView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import com.example.offlinebrowser.data.repository.PreferencesRepository
 import com.example.offlinebrowser.ui.WeatherActivity
 import com.example.offlinebrowser.viewmodel.MainViewModel
+import com.example.offlinebrowser.ui.ArticleAdapter
 import com.example.offlinebrowser.ui.CategoryAdapter
 import com.example.offlinebrowser.ui.WeatherHomeAdapter
 import com.example.offlinebrowser.data.model.Weather
@@ -38,7 +43,6 @@ import com.example.offlinebrowser.ui.HourlyAdapter
 import com.example.offlinebrowser.ui.HourlyItem
 import com.example.offlinebrowser.ui.ForecastAdapter
 import com.example.offlinebrowser.ui.ForecastItem
-import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -55,12 +59,13 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var tvWeatherEmpty: TextView
     private lateinit var statusContainer: LinearLayout
     private lateinit var rvCategories: RecyclerView
+    private lateinit var rvArticles: RecyclerView
+    private lateinit var dashboardScrollView: NestedScrollView
 
     // New Views for Embedded Layout
     private lateinit var homeStandardView: LinearLayout
     private lateinit var weatherDetailView: LinearLayout
-    private lateinit var pillAll: TextView
-    private lateinit var pillWeather: TextView
+    private lateinit var pillContainer: LinearLayout
 
     // Detailed Weather Views
     private lateinit var tvDetailLocation: TextView
@@ -72,6 +77,22 @@ class HomeActivity : AppCompatActivity() {
     private val connectivityManager by lazy { getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager }
     private val wifiManager by lazy { applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager }
 
+    private var currentWeatherCount = 0
+    private var currentCategories: List<String> = emptyList()
+
+    // State
+    private enum class ViewState {
+        DASHBOARD,
+        WEATHER_DETAIL,
+        ARTICLE_LIST
+    }
+    private var currentViewState: ViewState = ViewState.DASHBOARD
+    private var activeCategory: String? = null
+    private var activeFeedId: Int = -1
+    private var articleJob: kotlinx.coroutines.Job? = null
+
+    private lateinit var articleAdapter: ArticleAdapter
+
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
              updateWifiStatus()
@@ -79,10 +100,205 @@ class HomeActivity : AppCompatActivity() {
 
     private val weatherAdapter by lazy {
         WeatherHomeAdapter(preferencesRepository) { weather ->
-            // On long press, toggle to the detail view
             updateWeatherDetailView(weather)
-            toggleWeatherDetail(true)
+            setViewState(ViewState.WEATHER_DETAIL)
         }
+    }
+
+    private val categoryAdapter by lazy {
+        CategoryAdapter { category ->
+            showArticles(category = category)
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_home)
+
+        initViews()
+        setupAdapters()
+        setupListeners()
+        setupObservers()
+        registerNetworkCallback()
+        handleIntent(intent)
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (currentViewState != ViewState.DASHBOARD) {
+                    setViewState(ViewState.DASHBOARD)
+                } else {
+                    finish()
+                }
+            }
+        })
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        if (intent == null) return
+
+        val category = intent.getStringExtra("EXTRA_CATEGORY")
+        val feedId = intent.getIntExtra("FEED_ID", -1)
+        val showWeather = intent.getBooleanExtra("OPEN_WEATHER", false)
+        val openContent = intent.getBooleanExtra("OPEN_CONTENT", false)
+
+        if (category != null || feedId != -1) {
+            showArticles(category, feedId)
+        } else if (openContent) {
+            showArticles(null)
+        } else if (showWeather && currentWeatherCount > 0) {
+             if (weatherAdapter.itemCount > 0) {
+                 val currentPos = weatherPager.currentItem
+                 if (currentPos >= 0 && currentPos < weatherAdapter.currentList.size) {
+                     updateWeatherDetailView(weatherAdapter.currentList[currentPos])
+                     setViewState(ViewState.WEATHER_DETAIL)
+                 }
+             }
+        }
+    }
+
+    private fun initViews() {
+        statusDot = findViewById(R.id.status_dot)
+        ssidText = findViewById(R.id.ssid_text)
+        weatherPager = findViewById(R.id.weather_pager)
+        tvWeatherEmpty = findViewById(R.id.tv_weather_empty)
+        statusContainer = findViewById(R.id.status_container)
+        rvCategories = findViewById(R.id.rv_categories)
+        rvArticles = findViewById(R.id.rv_articles)
+        dashboardScrollView = findViewById(R.id.dashboard_scroll_view)
+
+        homeStandardView = findViewById(R.id.home_standard_view)
+        weatherDetailView = findViewById(R.id.weather_detail_view)
+        pillContainer = findViewById(R.id.pill_container)
+
+        tvDetailLocation = findViewById(R.id.tv_detail_location)
+        tvDetailTemp = findViewById(R.id.tv_detail_temp)
+        tvDetailCondition = findViewById(R.id.tv_detail_condition)
+        tvDetailHighLow = findViewById(R.id.tv_detail_high_low)
+        rvForecast = findViewById(R.id.rv_forecast)
+    }
+
+    private fun setupAdapters() {
+        weatherPager.adapter = weatherAdapter
+        rvCategories.layoutManager = LinearLayoutManager(this)
+        rvCategories.adapter = categoryAdapter
+
+        articleAdapter = ArticleAdapter(
+            onArticleClick = { article ->
+                if (article.content.isNotEmpty()) {
+                    val intent = Intent(this, ArticleViewerActivity::class.java)
+                    intent.putExtra("ARTICLE_ID", article.id)
+                    startActivity(intent)
+                }
+            },
+            onDownloadClick = { article -> viewModel.downloadArticle(article) }
+        )
+        rvArticles.layoutManager = LinearLayoutManager(this)
+        rvArticles.adapter = articleAdapter
+    }
+
+    private fun setupListeners() {
+        // Bottom Nav
+        findViewById<View>(R.id.nav_home).setOnClickListener {
+            setViewState(ViewState.DASHBOARD)
+        }
+        findViewById<View>(R.id.nav_content).setOnClickListener {
+            showArticles(null)
+        }
+        findViewById<View>(R.id.nav_settings).setOnClickListener {
+             startActivity(Intent(this, FeedSettingsActivity::class.java))
+        }
+
+        // Status Long Press
+        statusContainer.setOnLongClickListener {
+            val ssid = ssidText.text.toString()
+            if (ssid != "Local" && ssid != "<unknown ssid>" && ssid != "WiFi") {
+                val intent = Intent(this, SettingsActivity::class.java)
+                intent.putExtra("EXTRA_ADD_SSID", ssid)
+                startActivity(intent)
+            } else {
+                 startActivity(Intent(this, SettingsActivity::class.java))
+            }
+            true
+        }
+    }
+
+    private fun setupObservers() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    viewModel.weatherLocations.collect { weatherList ->
+                        weatherAdapter.submitList(weatherList)
+                        currentWeatherCount = weatherList.size
+                        updateWeatherVisibility()
+                        updatePills()
+                    }
+                }
+                launch {
+                    viewModel.categories.collect { categoryList ->
+                        categoryAdapter.submitList(categoryList)
+                        currentCategories = categoryList
+                        updatePills()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun showArticles(category: String? = null, feedId: Int = -1) {
+        activeCategory = category
+        activeFeedId = feedId
+        setViewState(ViewState.ARTICLE_LIST)
+
+        articleJob?.cancel()
+        articleJob = lifecycleScope.launch {
+            if (category != null) {
+                viewModel.getArticlesByCategory(category).collect { articles ->
+                    if (currentViewState == ViewState.ARTICLE_LIST && activeCategory == category) {
+                        articleAdapter.submitList(articles)
+                    }
+                }
+            } else if (feedId != -1) {
+                viewModel.getArticlesForFeed(feedId).collect { articles ->
+                    if (currentViewState == ViewState.ARTICLE_LIST && activeFeedId == feedId) {
+                        articleAdapter.submitList(articles)
+                    }
+                }
+            } else {
+                articleAdapter.submitList(emptyList())
+            }
+        }
+    }
+
+    private fun setViewState(state: ViewState) {
+        currentViewState = state
+        when (state) {
+            ViewState.DASHBOARD -> {
+                dashboardScrollView.visibility = View.VISIBLE
+                homeStandardView.visibility = View.VISIBLE
+                weatherDetailView.visibility = View.GONE
+                rvArticles.visibility = View.GONE
+                activeCategory = null
+                activeFeedId = -1
+            }
+            ViewState.WEATHER_DETAIL -> {
+                dashboardScrollView.visibility = View.VISIBLE
+                homeStandardView.visibility = View.GONE
+                weatherDetailView.visibility = View.VISIBLE
+                rvArticles.visibility = View.GONE
+                activeCategory = null
+                activeFeedId = -1
+            }
+            ViewState.ARTICLE_LIST -> {
+                dashboardScrollView.visibility = View.GONE
+                rvArticles.visibility = View.VISIBLE
+            }
+        }
+        updatePills()
     }
 
     private fun updateWeatherDetailView(weather: Weather) {
@@ -107,7 +323,6 @@ class HomeActivity : AppCompatActivity() {
 
             tvDetailCondition.text = getWeatherCondition(code)
 
-            // High/Low if daily available
             if (daily != null) {
                 val maxArr = daily.getAsJsonArray("temperature_2m_max")
                 val minArr = daily.getAsJsonArray("temperature_2m_min")
@@ -126,15 +341,12 @@ class HomeActivity : AppCompatActivity() {
                 tvDetailHighLow.text = ""
             }
 
-            // Forecast Display
             if (daily != null && hourly != null) {
                 val forecastItems = mutableListOf<ForecastItem>()
-
                 val dailyTimes = daily.getAsJsonArray("time")
                 val maxTemps = daily.getAsJsonArray("temperature_2m_max")
                 val minTemps = daily.getAsJsonArray("temperature_2m_min")
                 val dailyCodes = daily.getAsJsonArray("weathercode")
-
                 val hourlyTimes = hourly.getAsJsonArray("time")
                 val hourlyTemps = hourly.getAsJsonArray("temperature_2m")
                 val hourlyCodes = hourly.getAsJsonArray("weathercode")
@@ -148,14 +360,10 @@ class HomeActivity : AppCompatActivity() {
                         } catch (e: Exception) {
                             dateStr
                         }
-
                         val condition = getWeatherCondition(dailyCodes[i].asInt)
-
-                        // Slice hourly data for this day (24 hours)
                         val dayHourlyItems = mutableListOf<HourlyItem>()
                         val startIndex = i * 24
                         val endIndex = startIndex + 24
-
                         for (h in startIndex until endIndex) {
                             if (h < hourlyTimes.size() && h < hourlyTemps.size() && h < hourlyCodes.size()) {
                                 dayHourlyItems.add(HourlyItem(
@@ -165,7 +373,6 @@ class HomeActivity : AppCompatActivity() {
                                 ))
                             }
                         }
-
                         forecastItems.add(ForecastItem(
                             day = dayName,
                             condition = condition,
@@ -176,7 +383,6 @@ class HomeActivity : AppCompatActivity() {
                         ))
                     }
                 }
-
                 val forecastAdapter = ForecastAdapter(forecastItems, useImperial)
                 rvForecast.layoutManager = LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
                 rvForecast.adapter = forecastAdapter
@@ -184,7 +390,6 @@ class HomeActivity : AppCompatActivity() {
             } else {
                 rvForecast.visibility = View.GONE
             }
-
         } catch (e: Exception) {
             e.printStackTrace()
             tvDetailCondition.text = "Error parsing weather data"
@@ -205,143 +410,70 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
-    private fun toggleWeatherDetail(showDetail: Boolean) {
-        if (showDetail) {
-            homeStandardView.visibility = View.GONE
-            weatherDetailView.visibility = View.VISIBLE
+    private fun updatePills() {
+        pillContainer.removeAllViews()
 
-            // Update Pill Styles
-            pillAll.setBackgroundResource(R.drawable.bg_pill)
-            pillAll.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
-
-            pillWeather.setBackgroundResource(R.drawable.bg_pill_active)
-            pillWeather.setTextColor(ContextCompat.getColor(this, R.color.bg_color))
-        } else {
-            homeStandardView.visibility = View.VISIBLE
-            weatherDetailView.visibility = View.GONE
-
-            // Update Pill Styles
-            pillAll.setBackgroundResource(R.drawable.bg_pill_active)
-            pillAll.setTextColor(ContextCompat.getColor(this, R.color.bg_color))
-
-            pillWeather.setBackgroundResource(R.drawable.bg_pill)
-            pillWeather.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
-        }
-    }
-
-    private val categoryAdapter by lazy {
-        CategoryAdapter { category ->
-            val intent = Intent(this, ArticleListActivity::class.java)
-            intent.putExtra("EXTRA_CATEGORY", category)
-            startActivity(intent)
-        }
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_home)
-
-        statusDot = findViewById(R.id.status_dot)
-        ssidText = findViewById(R.id.ssid_text)
-        weatherPager = findViewById(R.id.weather_pager)
-        tvWeatherEmpty = findViewById(R.id.tv_weather_empty)
-        statusContainer = findViewById(R.id.status_container)
-        rvCategories = findViewById(R.id.rv_categories)
-
-        homeStandardView = findViewById(R.id.home_standard_view)
-        weatherDetailView = findViewById(R.id.weather_detail_view)
-        pillAll = findViewById(R.id.pill_all)
-        pillWeather = findViewById(R.id.pill_weather)
-
-        tvDetailLocation = findViewById(R.id.tv_detail_location)
-        tvDetailTemp = findViewById(R.id.tv_detail_temp)
-        tvDetailCondition = findViewById(R.id.tv_detail_condition)
-        tvDetailHighLow = findViewById(R.id.tv_detail_high_low)
-        rvForecast = findViewById(R.id.rv_forecast)
-
-        weatherPager.adapter = weatherAdapter
-        rvCategories.layoutManager = LinearLayoutManager(this)
-        rvCategories.adapter = categoryAdapter
-
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                launch {
-                    viewModel.weatherLocations.collect { weatherList ->
-                        weatherAdapter.submitList(weatherList)
-                        updateWeatherVisibility()
-                    }
-                }
-                launch {
-                    viewModel.categories.collect { categoryList ->
-                        categoryAdapter.submitList(categoryList)
-                    }
-                }
-            }
+        // "All" Pill
+        addPill("All", currentViewState == ViewState.DASHBOARD) {
+            setViewState(ViewState.DASHBOARD)
         }
 
-        // Bottom Nav
-        findViewById<View>(R.id.nav_home).setOnClickListener {
-            // If in detailed view, go back to standard
-            if (weatherDetailView.visibility == View.VISIBLE) {
-                toggleWeatherDetail(false)
-            }
-        }
-        findViewById<View>(R.id.nav_content).setOnClickListener {
-             startActivity(Intent(this, ArticleListActivity::class.java))
-        }
-        findViewById<View>(R.id.nav_settings).setOnClickListener {
-             startActivity(Intent(this, FeedSettingsActivity::class.java))
-        }
-
-        // Status Long Press
-        statusContainer.setOnLongClickListener {
-            val ssid = ssidText.text.toString()
-            if (ssid != "Local" && ssid != "<unknown ssid>" && ssid != "WiFi") {
-                val intent = Intent(this, SettingsActivity::class.java)
-                intent.putExtra("EXTRA_ADD_SSID", ssid)
-                startActivity(intent)
-            } else {
-                 startActivity(Intent(this, SettingsActivity::class.java))
-            }
-            true
-        }
-
-        // Pill Listeners
-        pillAll.setOnClickListener {
-            toggleWeatherDetail(false)
-        }
-
-        pillWeather.setOnClickListener {
-            // If we have weather data, show the first available or current one
-            if (weatherAdapter.itemCount > 0) {
-                 // We can get the current item from ViewModel if we had access to the list synchronously or if we cached it.
-                 // weatherAdapter.currentList gives us the list
-                 if (weatherAdapter.currentList.isNotEmpty()) {
-                     // Try to get the one currently visible in ViewPager if possible,
-                     // but ViewPager state is UI. Let's default to the first one for now or the last one clicked.
-                     // A better approach is to track the last viewed weather or just the first one.
+        // "Weather" Pill
+        if (currentWeatherCount > 0) {
+            addPill("Weather", currentViewState == ViewState.WEATHER_DETAIL) {
+                 if (weatherAdapter.itemCount > 0) {
                      val currentPos = weatherPager.currentItem
                      if (currentPos >= 0 && currentPos < weatherAdapter.currentList.size) {
                          updateWeatherDetailView(weatherAdapter.currentList[currentPos])
-                         toggleWeatherDetail(true)
+                         setViewState(ViewState.WEATHER_DETAIL)
                      }
                  }
-            } else {
-                 Toast.makeText(this, "No weather data available", Toast.LENGTH_SHORT).show()
             }
         }
 
-        registerNetworkCallback()
+        // Category Pills
+        currentCategories.forEach { category ->
+            addPill(category, currentViewState == ViewState.ARTICLE_LIST && activeCategory == category) {
+                 showArticles(category = category)
+            }
+        }
+    }
+
+    private fun addPill(text: String, isActive: Boolean, onClick: () -> Unit) {
+        val textView = TextView(this)
+        textView.text = text
+        textView.textSize = 13f
+
+        val paddingHorizontal = (16 * resources.displayMetrics.density).toInt()
+        val paddingVertical = (8 * resources.displayMetrics.density).toInt()
+        val marginEnd = (10 * resources.displayMetrics.density).toInt()
+
+        textView.setPadding(paddingHorizontal, paddingVertical, paddingHorizontal, paddingVertical)
+
+        val params = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        )
+        params.marginEnd = marginEnd
+        textView.layoutParams = params
+
+        if (isActive) {
+            textView.setTextColor(ContextCompat.getColor(this, R.color.bg_color))
+            textView.setBackgroundResource(R.drawable.bg_pill_active)
+            textView.setTypeface(null, android.graphics.Typeface.BOLD)
+        } else {
+            textView.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+            textView.setBackgroundResource(R.drawable.bg_pill)
+            textView.setTypeface(null, android.graphics.Typeface.NORMAL)
+        }
+
+        textView.setOnClickListener { onClick() }
+        pillContainer.addView(textView)
     }
 
     override fun onResume() {
         super.onResume()
         updateWifiStatus()
-
-        // Check permission if needed for SSID
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-             requestPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))
-        }
     }
 
     private fun updateWeatherVisibility() {
@@ -382,8 +514,6 @@ class HomeActivity : AppCompatActivity() {
 
         if (isWifi) {
             statusDot.setBackgroundResource(R.drawable.status_dot_green)
-
-            // Get SSID
              if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                  val info = wifiManager.connectionInfo
                  val ssid = info.ssid.trim('"')

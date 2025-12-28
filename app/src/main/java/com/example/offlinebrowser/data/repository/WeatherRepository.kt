@@ -47,6 +47,8 @@ class WeatherRepository(private val weatherDao: WeatherDao) {
             dataJson = "",
             lastUpdated = 0
         )
-        weatherDao.insertWeather(weather)
+        val id = weatherDao.insertWeather(weather)
+        // Immediately update
+        updateWeather(weather.copy(id = id.toInt()))
     }
 }

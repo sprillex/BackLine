@@ -48,7 +48,7 @@ class FeedSettingsActivity : AppCompatActivity() {
         feedAdapter = FeedAdapter(
             onFeedClick = { feed ->
                 // Navigate to Article List
-                 val intent = Intent(this, ArticleListActivity::class.java)
+                 val intent = Intent(this, HomeActivity::class.java)
                  intent.putExtra("FEED_ID", feed.id)
                  startActivity(intent)
             },
