@@ -10,6 +10,9 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.offlinebrowser.R
 import com.example.offlinebrowser.data.model.Weather
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 class WeatherAdapter(
     private val useImperial: Boolean,
@@ -21,7 +24,7 @@ class WeatherAdapter(
         val tvName: TextView = itemView.findViewById(R.id.tvName)
         val tvCoords: TextView = itemView.findViewById(R.id.tvCoords)
         val tvData: TextView = itemView.findViewById(R.id.tvData)
-        val rvHourly: RecyclerView = itemView.findViewById(R.id.rvHourly)
+        val rvForecast: RecyclerView = itemView.findViewById(R.id.rvForecast)
         val btnRefresh: Button = itemView.findViewById(R.id.btnRefresh)
         val btnEdit: Button = itemView.findViewById(R.id.btnEdit)
     }
@@ -40,6 +43,8 @@ class WeatherAdapter(
             try {
                 val gson = com.google.gson.Gson()
                 val response = gson.fromJson(weather.dataJson, com.example.offlinebrowser.data.model.WeatherResponse::class.java)
+
+                // Current Weather Display
                 if (response?.currentWeather != null) {
                     val rawTemp = response.currentWeather.temperature
                     if (useImperial) {
@@ -52,42 +57,90 @@ class WeatherAdapter(
                     holder.tvData.text = "Data cached (No current weather)"
                 }
 
-                if (response?.hourly != null) {
-                    val hourlyItems = mutableListOf<HourlyItem>()
-                    val times = response.hourly.time
-                    val temps = response.hourly.temperature2m
-                    val codes = response.hourly.weathercode
+                // Forecast Display
+                if (response?.daily != null && response.hourly != null) {
+                    val forecastItems = mutableListOf<ForecastItem>()
+                    val dailyTimes = response.daily.time
+                    val maxTemps = response.daily.temperature2mMax
+                    val minTemps = response.daily.temperature2mMin
+                    val dailyCodes = response.daily.weathercode
 
-                    for (i in times.indices) {
-                        if (i < temps.size && i < codes.size) {
-                            hourlyItems.add(HourlyItem(times[i], temps[i], codes[i]))
+                    val hourlyTimes = response.hourly.time
+                    val hourlyTemps = response.hourly.temperature2m
+                    val hourlyCodes = response.hourly.weathercode
+
+                    for (i in dailyTimes.indices) {
+                        if (i < maxTemps.size && i < minTemps.size && i < dailyCodes.size) {
+                            val dateStr = dailyTimes[i]
+                            val dayName = try {
+                                val date = LocalDate.parse(dateStr)
+                                date.format(DateTimeFormatter.ofPattern("EEE", Locale.getDefault()))
+                            } catch (e: Exception) {
+                                dateStr
+                            }
+
+                            val condition = getWeatherCondition(dailyCodes[i])
+
+                            // Slice hourly data for this day (24 hours)
+                            val dayHourlyItems = mutableListOf<HourlyItem>()
+                            val startIndex = i * 24
+                            val endIndex = startIndex + 24
+
+                            for (h in startIndex until endIndex) {
+                                if (h < hourlyTimes.size && h < hourlyTemps.size && h < hourlyCodes.size) {
+                                    dayHourlyItems.add(HourlyItem(hourlyTimes[h], hourlyTemps[h], hourlyCodes[h]))
+                                }
+                            }
+
+                            forecastItems.add(ForecastItem(
+                                day = dayName,
+                                condition = condition,
+                                maxTemp = maxTemps[i],
+                                minTemp = minTemps[i],
+                                code = dailyCodes[i],
+                                hourlyItems = dayHourlyItems
+                            ))
                         }
                     }
 
-                    val hourlyAdapter = HourlyAdapter(hourlyItems, useImperial)
-                    holder.rvHourly.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(
+                    val forecastAdapter = ForecastAdapter(forecastItems, useImperial)
+                    holder.rvForecast.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(
                         holder.itemView.context,
-                        androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL,
+                        androidx.recyclerview.widget.LinearLayoutManager.VERTICAL,
                         false
                     )
-                    holder.rvHourly.adapter = hourlyAdapter
-                    holder.rvHourly.visibility = View.VISIBLE
+                    holder.rvForecast.adapter = forecastAdapter
+                    holder.rvForecast.visibility = View.VISIBLE
                 } else {
-                    holder.rvHourly.visibility = View.GONE
+                    holder.rvForecast.visibility = View.GONE
                 }
 
             } catch (e: Exception) {
                  e.printStackTrace()
-                 holder.tvData.text = "Error parsing data"
-                 holder.rvHourly.visibility = View.GONE
+                 holder.tvData.text = "Error parsing data: ${e.message}"
+                 holder.rvForecast.visibility = View.GONE
             }
         } else {
              holder.tvData.text = "No data"
-             holder.rvHourly.visibility = View.GONE
+             holder.rvForecast.visibility = View.GONE
         }
 
         holder.btnRefresh.setOnClickListener { onRefresh(weather) }
         holder.btnEdit.setOnClickListener { onEdit(weather) }
+    }
+
+    private fun getWeatherCondition(code: Int): String {
+        return when(code) {
+            0 -> "Sunny" // Clear sky
+            1, 2, 3 -> "Partly Cloudy" // Mainly clear, partly cloudy, and overcast
+            45, 48 -> "Foggy"
+            51, 53, 55 -> "Drizzle"
+            61, 63, 65 -> "Rain"
+            71, 73, 75 -> "Snow"
+            80, 81, 82 -> "Showers"
+            95, 96, 99 -> "Thunderstorm"
+            else -> "Unknown"
+        }
     }
 }
 
