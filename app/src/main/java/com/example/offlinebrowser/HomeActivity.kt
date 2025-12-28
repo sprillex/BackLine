@@ -180,6 +180,95 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
+    private fun showWeatherDetailDialog(weather: Weather) {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_weather_detail, null)
+        val tvLocation = dialogView.findViewById<TextView>(R.id.tv_detail_location)
+        val tvTemp = dialogView.findViewById<TextView>(R.id.tv_detail_temp)
+        val tvCondition = dialogView.findViewById<TextView>(R.id.tv_detail_condition)
+        val tvHighLow = dialogView.findViewById<TextView>(R.id.tv_detail_high_low)
+        val rvHourly = dialogView.findViewById<RecyclerView>(R.id.rv_hourly)
+
+        tvLocation.text = weather.locationName
+
+        try {
+            val jsonObject = com.google.gson.JsonParser().parse(weather.dataJson ?: "").asJsonObject
+            val current = jsonObject.getAsJsonObject("current_weather")
+            val hourly = jsonObject.getAsJsonObject("hourly")
+
+            val useImperial = preferencesRepository.weatherUnits == "imperial"
+            val temp = current.get("temperature").asDouble
+            val code = current.get("weathercode").asInt
+
+            if (useImperial) {
+                val f = (temp * 9 / 5) + 32
+                tvTemp.text = String.format("%.1f°F", f)
+            } else {
+                tvTemp.text = "$temp°C"
+            }
+
+            tvCondition.text = when(code) {
+                0 -> "Clear"
+                1, 2, 3 -> "Partly Cloudy"
+                45, 48 -> "Fog"
+                51, 53, 55 -> "Drizzle"
+                61, 63, 65 -> "Rain"
+                71, 73, 75 -> "Snow"
+                else -> "Unknown"
+            }
+
+            // High/Low if daily available
+            if (jsonObject.has("daily")) {
+                val daily = jsonObject.getAsJsonObject("daily")
+                val maxArr = daily.getAsJsonArray("temperature_2m_max")
+                val minArr = daily.getAsJsonArray("temperature_2m_min")
+                if (maxArr.size() > 0 && minArr.size() > 0) {
+                    val max = maxArr[0].asDouble
+                    val min = minArr[0].asDouble
+                    if (useImperial) {
+                         val maxF = (max * 9 / 5) + 32
+                         val minF = (min * 9 / 5) + 32
+                         tvHighLow.text = String.format("H: %.0f° L: %.0f°", maxF, minF)
+                    } else {
+                         tvHighLow.text = "H: $max° L: $min°"
+                    }
+                }
+            }
+
+            // Hourly
+            val hourlyItems = mutableListOf<HourlyItem>()
+            if (hourly != null) {
+                val timeArr = hourly.getAsJsonArray("time")
+                val tempArr = hourly.getAsJsonArray("temperature_2m")
+                val codeArr = hourly.getAsJsonArray("weathercode")
+
+                // Limit to next 24 hours or so
+                val count = minOf(timeArr.size(), 24)
+                for (i in 0 until count) {
+                    hourlyItems.add(HourlyItem(
+                        timeArr[i].asString,
+                        tempArr[i].asDouble,
+                        codeArr[i].asInt
+                    ))
+                }
+            }
+
+            rvHourly.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+            rvHourly.adapter = HourlyAdapter(hourlyItems, useImperial)
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            tvCondition.text = "Error parsing weather data"
+        }
+
+        AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setPositiveButton("Close", null)
+            .setNeutralButton("Settings") { _, _ ->
+                 startActivity(Intent(this, WeatherActivity::class.java))
+            }
+            .show()
+    }
+
     private val categoryAdapter by lazy {
         CategoryAdapter { category ->
             val intent = Intent(this, ArticleListActivity::class.java)
