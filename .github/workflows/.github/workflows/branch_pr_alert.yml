@@ -1,0 +1,32 @@
+name: New Branch/PR Alert
+on:
+  pull_request:
+    types: [opened]
+  create:
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    # Filter out tag creation so we only get Branch alerts (optional)
+    if: github.event.ref_type != 'tag'
+
+    steps:
+      - name: Send Pushover Notification
+        run: |
+          # Determine the message based on the event
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            MSG="New PR Opened: ${{ github.event.pull_request.title }} by ${{ github.actor }}"
+            URL="${{ github.event.pull_request.html_url }}"
+          else
+            MSG="New Branch Created: ${{ github.ref_name }} by ${{ github.actor }}"
+            URL="${{ github.server_url }}/${{ github.repository }}/tree/${{ github.ref_name }}"
+          fi
+
+          # Send the request
+          curl -s \
+            --form-string "token=${{ secrets.PUSHOVER_APP_TOKEN }}" \
+            --form-string "user=${{ secrets.PUSHOVER_USER_KEY }}" \
+            --form-string "title=GitHub Activity: ${{ github.repository }}" \
+            --form-string "message=$MSG" \
+            --form-string "url=$URL" \
+            https://api.pushover.net/1/messages.json
