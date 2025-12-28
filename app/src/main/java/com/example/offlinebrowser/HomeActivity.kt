@@ -89,6 +89,7 @@ class HomeActivity : AppCompatActivity() {
     private var currentViewState: ViewState = ViewState.DASHBOARD
     private var activeCategory: String? = null
     private var activeFeedId: Int = -1
+    private var articleJob: kotlinx.coroutines.Job? = null
 
     private lateinit var articleAdapter: ArticleAdapter
 
@@ -253,7 +254,8 @@ class HomeActivity : AppCompatActivity() {
         activeFeedId = feedId
         setViewState(ViewState.ARTICLE_LIST)
 
-        lifecycleScope.launch {
+        articleJob?.cancel()
+        articleJob = lifecycleScope.launch {
             if (category != null) {
                 viewModel.getArticlesByCategory(category).collect { articles ->
                     if (currentViewState == ViewState.ARTICLE_LIST && activeCategory == category) {
