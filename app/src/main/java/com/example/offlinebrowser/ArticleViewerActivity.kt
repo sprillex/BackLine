@@ -46,7 +46,11 @@ class ArticleViewerActivity : AppCompatActivity() {
             finish()
         }
         findViewById<View>(R.id.nav_content).setOnClickListener {
-             startActivity(Intent(this, ArticleListActivity::class.java))
+             // Navigate to HomeActivity in Content mode
+             val intent = Intent(this, HomeActivity::class.java)
+             intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+             intent.putExtra("OPEN_CONTENT", true)
+             startActivity(intent)
              finish()
         }
         findViewById<View>(R.id.nav_settings).setOnClickListener {
