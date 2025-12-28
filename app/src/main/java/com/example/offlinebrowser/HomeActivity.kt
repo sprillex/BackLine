@@ -60,7 +60,7 @@ class HomeActivity : AppCompatActivity() {
         WeatherHomeAdapter(preferencesRepository) { weather ->
             val prettyJson = try {
                 val gson = com.google.gson.GsonBuilder().setPrettyPrinting().create()
-                val jsonElement = com.google.gson.JsonParser.parseString(weather.dataJson ?: "")
+                val jsonElement = com.google.gson.JsonParser().parse(weather.dataJson ?: "")
                 gson.toJson(jsonElement)
             } catch (e: Exception) {
                 weather.dataJson ?: "No Data"
