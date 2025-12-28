@@ -25,12 +25,28 @@ class HourlyAdapter(private val items: List<HourlyItem>, private val useImperial
     override fun onBindViewHolder(holder: HourlyViewHolder, position: Int) {
         val item = items[position]
 
-        // Simple time parsing (assuming ISO 2025-12-28T00:00)
-        // Extract hour part "T00:00" -> "00:00"
-        val timeParts = item.time.split("T")
-        val hour = if (timeParts.size > 1) timeParts[1] else item.time
+        // Parse ISO 2025-12-28T14:00 to 2 PM
+        val formattedTime = try {
+            val timeParts = item.time.split("T")
+            if (timeParts.size > 1) {
+                val hourMinute = timeParts[1]
+                val hourInt = hourMinute.split(":")[0].toInt()
 
-        holder.tvHour.text = hour
+                val amPm = if (hourInt < 12) "AM" else "PM"
+                val hour12 = when {
+                    hourInt == 0 -> 12
+                    hourInt > 12 -> hourInt - 12
+                    else -> hourInt
+                }
+                "$hour12 $amPm"
+            } else {
+                item.time
+            }
+        } catch (e: Exception) {
+            item.time
+        }
+
+        holder.tvHour.text = formattedTime
 
         if (useImperial) {
              val fahrenheit = (item.temp * 9 / 5) + 32
