@@ -39,6 +39,8 @@ class WeatherAdapter(
             try {
                 val gson = com.google.gson.Gson()
                 val response = gson.fromJson(weather.dataJson, com.example.offlinebrowser.data.model.WeatherResponse::class.java)
+
+                // Current Weather Display
                 if (response?.currentWeather != null) {
                     val rawTemp = response.currentWeather.temperature
                     if (useImperial) {
@@ -52,7 +54,7 @@ class WeatherAdapter(
                 }
             } catch (e: Exception) {
                  e.printStackTrace()
-                 holder.tvData.text = "Error parsing data"
+                 holder.tvData.text = "Error parsing data: ${e.message}"
             }
         } else {
              holder.tvData.text = "No data"

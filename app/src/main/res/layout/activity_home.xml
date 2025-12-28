@@ -292,14 +292,14 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Hourly Forecast"
+                    android:text="Daily Forecast"
                     android:textColor="@color/text_primary"
                     android:textStyle="bold"
                     android:textSize="18sp"
                     android:layout_marginBottom="10dp"/>
 
                 <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rv_hourly"
+                    android:id="@+id/rv_forecast"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:minHeight="120dp"/>
