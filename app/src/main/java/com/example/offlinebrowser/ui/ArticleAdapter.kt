@@ -4,12 +4,15 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.example.offlinebrowser.R
 import com.example.offlinebrowser.data.model.Article
+import java.net.URI
 
 class ArticleAdapter(
     private val onArticleClick: (Article) -> Unit,
@@ -17,6 +20,7 @@ class ArticleAdapter(
 ) : ListAdapter<Article, ArticleAdapter.ArticleViewHolder>(ArticleDiffCallback()) {
 
     class ArticleViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val ivFavicon: ImageView = itemView.findViewById(R.id.ivFavicon)
         val tvTitle: TextView = itemView.findViewById(R.id.tvTitle)
         val tvStatus: TextView = itemView.findViewById(R.id.tvStatus)
         val btnDownload: Button = itemView.findViewById(R.id.btnDownload)
@@ -31,6 +35,20 @@ class ArticleAdapter(
         val article = getItem(position)
         holder.tvTitle.text = article.title
         holder.tvStatus.text = if (article.isCached) "Cached" else "Online"
+
+        try {
+            val uri = URI(article.url)
+            val domain = uri.host
+            val faviconUrl = "https://www.google.com/s2/favicons?domain=$domain&sz=64"
+
+            Glide.with(holder.itemView.context)
+                .load(faviconUrl)
+                .placeholder(R.mipmap.ic_launcher)
+                .error(R.mipmap.ic_launcher)
+                .into(holder.ivFavicon)
+        } catch (e: Exception) {
+            holder.ivFavicon.setImageResource(R.mipmap.ic_launcher)
+        }
 
         holder.itemView.setOnClickListener { onArticleClick(article) }
         holder.btnDownload.setOnClickListener { onDownloadClick(article) }

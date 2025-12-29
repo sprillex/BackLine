@@ -1,6 +1,8 @@
 package com.example.offlinebrowser.ui
 
+import android.net.Uri
 import android.os.Bundle
+import android.os.ParcelFileDescriptor
 import android.util.Log
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -21,6 +23,7 @@ class ZimViewerActivity : AppCompatActivity() {
     private lateinit var webView: WebView
     private var zimReader: ZimReader? = null
     private var zimFile: ZimFile? = null
+    private var pfd: ParcelFileDescriptor? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,27 +44,38 @@ class ZimViewerActivity : AppCompatActivity() {
         }
 
         val filePath = intent.getStringExtra("ZIM_FILE_PATH")
-        if (filePath == null) {
-            Toast.makeText(this, "No file provided", Toast.LENGTH_SHORT).show()
-            finish()
-            return
-        }
-
-        val file = File(filePath)
-        if (!file.exists()) {
-            Toast.makeText(this, "File not found", Toast.LENGTH_SHORT).show()
-            finish()
-            return
-        }
-
-        supportActionBar?.title = file.name
+        val fileUriString = intent.getStringExtra("ZIM_FILE_URI")
 
         try {
-            zimFile = ZimFile(file.absolutePath)
-            zimReader = ZimReader(zimFile!!)
+            if (filePath != null) {
+                val file = File(filePath)
+                if (!file.exists()) {
+                    throw IOException("File not found")
+                }
+                supportActionBar?.title = file.name
+                zimFile = ZimFile(file.absolutePath)
+                Log.d(TAG, "Opened ZIM file path: ${file.name}")
 
-            // Log basic info
-            Log.d(TAG, "Opened ZIM file: ${file.name}")
+            } else if (fileUriString != null) {
+                val uri = Uri.parse(fileUriString)
+                supportActionBar?.title = "External File"
+
+                // Try to open via native File Descriptor path
+                pfd = contentResolver.openFileDescriptor(uri, "r")
+                if (pfd == null) throw IOException("Cannot open file descriptor")
+
+                val fd = pfd!!.fd
+                val path = "/proc/self/fd/$fd"
+                zimFile = ZimFile(path)
+                Log.d(TAG, "Opened ZIM URI: $uri via $path")
+
+            } else {
+                Toast.makeText(this, "No file provided", Toast.LENGTH_SHORT).show()
+                finish()
+                return
+            }
+
+            zimReader = ZimReader(zimFile!!)
 
             webView.webViewClient = object : WebViewClient() {
                 override fun shouldInterceptRequest(
@@ -89,6 +103,7 @@ class ZimViewerActivity : AppCompatActivity() {
         } catch (e: Exception) {
             e.printStackTrace()
             Toast.makeText(this, "Error opening ZIM: ${e.message}", Toast.LENGTH_LONG).show()
+            finish()
         }
     }
 
@@ -118,6 +133,7 @@ class ZimViewerActivity : AppCompatActivity() {
         super.onDestroy()
         try {
             zimReader?.close()
+            pfd?.close()
         } catch (e: IOException) {
             e.printStackTrace()
         }
