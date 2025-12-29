@@ -17,13 +17,63 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.example.offlinebrowser.data.repository.ConfigRepository
 import com.example.offlinebrowser.data.repository.PreferencesRepository
 import com.example.offlinebrowser.workers.SyncWorker
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 
 class SettingsActivity : AppCompatActivity() {
 
     private lateinit var preferencesRepository: PreferencesRepository
+    private lateinit var configRepository: ConfigRepository
+
+    private val createDocumentLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        uri?.let {
+            CoroutineScope(Dispatchers.Main).launch {
+                try {
+                    val outputStream = contentResolver.openOutputStream(it)
+                    outputStream?.use { stream ->
+                        configRepository.exportConfig(stream)
+                    }
+                    Toast.makeText(this@SettingsActivity, "Configuration exported successfully", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    Toast.makeText(this@SettingsActivity, "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    private val openDocumentLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let {
+            CoroutineScope(Dispatchers.Main).launch {
+                try {
+                    val inputStream = contentResolver.openInputStream(it)
+                    inputStream?.use { stream ->
+                        configRepository.importConfig(stream)
+                    }
+                    Toast.makeText(this@SettingsActivity, "Configuration imported. Updating content...", Toast.LENGTH_SHORT).show()
+
+                    // Trigger Sync
+                    val request = androidx.work.OneTimeWorkRequestBuilder<SyncWorker>()
+                        .setExpedited(androidx.work.OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                        .build()
+                    WorkManager.getInstance(this@SettingsActivity).enqueue(request)
+
+                    // Refresh UI
+                    recreate()
+
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    Toast.makeText(this@SettingsActivity, "Import failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
 
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
@@ -57,6 +107,7 @@ class SettingsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_settings)
 
         preferencesRepository = PreferencesRepository(this)
+        configRepository = ConfigRepository(this)
 
         val cbWifiOnly = findViewById<CheckBox>(R.id.cbWifiOnly)
         val etSsids = findViewById<EditText>(R.id.etSsids)
@@ -84,6 +135,8 @@ class SettingsActivity : AppCompatActivity() {
         val rbImperial = findViewById<RadioButton>(R.id.rbImperial)
         val btnSave = findViewById<Button>(R.id.btnSave)
         val btnRequestPerm = findViewById<Button>(R.id.btnRequestPerm)
+        val btnExport = findViewById<Button>(R.id.btnExport)
+        val btnImport = findViewById<Button>(R.id.btnImport)
 
         cbWifiOnly.isChecked = preferencesRepository.wifiOnly
         etSsids.setText(preferencesRepository.allowedWifiSsids.joinToString(","))
@@ -131,6 +184,14 @@ class SettingsActivity : AppCompatActivity() {
             } else {
                  Toast.makeText(this, "Permission already granted", Toast.LENGTH_SHORT).show()
             }
+        }
+
+        btnExport.setOnClickListener {
+            createDocumentLauncher.launch("offline_browser_config.json")
+        }
+
+        btnImport.setOnClickListener {
+            openDocumentLauncher.launch(arrayOf("application/json"))
         }
     }
 }
