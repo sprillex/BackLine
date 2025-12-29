@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import com.example.offlinebrowser.data.model.Article
 import kotlinx.coroutines.flow.Flow
 
@@ -25,7 +26,7 @@ interface ArticleDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertArticle(article: Article)
 
-    @androidx.room.Update
+    @Update
     suspend fun updateArticle(article: Article)
 
     @Delete

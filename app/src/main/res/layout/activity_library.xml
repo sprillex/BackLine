@@ -5,10 +5,17 @@
     android:orientation="vertical"
     android:padding="16dp">
 
+    <Button
+        android:id="@+id/btnImportFile"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Import ZIM File"
+        android:layout_marginBottom="16dp" />
+
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Active Downloads"
+        android:text="Active Downloads / Imports"
         android:textSize="18sp"
         android:textStyle="bold"
         android:layout_marginBottom="8dp" />

@@ -14,9 +14,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import androidx.work.workDataOf
 import com.example.offlinebrowser.R
+import com.example.offlinebrowser.workers.FileImportWorker
 import java.io.File
 
 class LibraryActivity : AppCompatActivity() {
@@ -25,6 +29,47 @@ class LibraryActivity : AppCompatActivity() {
     private lateinit var rvDownloads: RecyclerView
     private lateinit var tvEmptyState: TextView
     private lateinit var workManager: WorkManager
+    private lateinit var btnImportFile: android.widget.Button
+
+    private val importFileLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let {
+            val fileName = getFileName(it) ?: "imported_${System.currentTimeMillis()}.zim"
+
+            val importRequest = OneTimeWorkRequestBuilder<FileImportWorker>()
+                .setInputData(workDataOf(
+                    "source_uri" to it.toString(),
+                    "file_name" to fileName
+                ))
+                .addTag("download") // Reusing "download" tag to show in the existing list
+                .build()
+
+            workManager.enqueue(importRequest)
+            Toast.makeText(this, "Import started...", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun getFileName(uri: Uri): String? {
+        var result: String? = null
+        if (uri.scheme == "content") {
+            val cursor = contentResolver.query(uri, null, null, null, null)
+            cursor.use {
+                if (it != null && it.moveToFirst()) {
+                    val index = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (index != -1) {
+                        result = it.getString(index)
+                    }
+                }
+            }
+        }
+        if (result == null) {
+            result = uri.path
+            val cut = result?.lastIndexOf('/')
+            if (cut != null && cut != -1) {
+                result = result?.substring(cut + 1)
+            }
+        }
+        return result
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,10 +78,15 @@ class LibraryActivity : AppCompatActivity() {
         rvFiles = findViewById(R.id.rvFiles)
         rvDownloads = findViewById(R.id.rvDownloads)
         tvEmptyState = findViewById(R.id.tvEmptyState)
+        btnImportFile = findViewById(R.id.btnImportFile)
         workManager = WorkManager.getInstance(this)
 
         rvFiles.layoutManager = LinearLayoutManager(this)
         rvDownloads.layoutManager = LinearLayoutManager(this)
+
+        btnImportFile.setOnClickListener {
+            importFileLauncher.launch(arrayOf("application/octet-stream", "application/zim", "*/*"))
+        }
 
         loadFiles()
         observeDownloads()
