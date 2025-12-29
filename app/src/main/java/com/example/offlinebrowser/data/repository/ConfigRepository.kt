@@ -75,64 +75,17 @@ class ConfigRepository(private val context: Context) {
         preferencesRepository.weatherUnits = config.settings.weatherUnits
 
         // Restore Feeds
-        val existingFeeds = feedDao.getAllFeeds().first()
-        // Strategy: Clear all existing or Upsert?
-        // User said: "All content should be updated upon importing... It should not contain any downloaded content."
-        // This suggests a fresh start for the feeds being imported.
-        // I will clear existing feeds and weather to ensure the state matches the config file exactly.
-        // Wait, "save and import a configuration file". Usually means backup/restore.
-        // If I clear everything, I lose feeds that might not be in the config (if the config is partial, but here it's a full export).
-        // Let's assume full restore: Clear current state, load new state.
-
-        // However, wiping the database might be aggressive.
-        // Let's try to add new ones and update existing ones.
-        // But what about feeds that are NOT in the config?
-        // "I want a version that can save and import a configuration file."
-        // Usually implies transferring state or restoring backup.
-        // I will implement "Upsert" logic. New feeds added, existing updated.
-        // But user said "All content should be updated upon importing".
-        // This refers to the content (articles/weather data), which should be fetched fresh.
-
-        // I'll proceed with:
-        // 1. Delete all existing Feeds and Weather?
-        // If I switch devices, I want the config to be the source of truth.
-        // If I use `Insert(onConflict = REPLACE)`, it handles updates.
-        // But what about deletions? If I deleted a feed and restore an old config, it comes back (correct).
-        // If I added a feed and restore an old config, does it disappear?
-        // A "restore" typically resets to the checkpoint.
-        // So I will clear existing data to match the config file strictly.
-        // This is cleaner for "All content should be updated". If I kept old feeds, I'd have to update them too?
-        // Or just the imported ones?
-        // Safer to treat "Configuration" as the definition of what should be in the app.
-
-        // To be safe against data loss of cached articles for feeds that ARE in the config,
-        // I should probably check if feed exists.
-        // BUT, the requirement says "It should not contain any downloaded content".
-        // So the config file doesn't have articles.
-        // If I wipe the DB, I lose existing articles.
-        // If I keep the DB but update feeds, I keep existing articles for matching feeds.
-        // User says: "All content should be updated upon importing".
-        // This implies triggering a sync.
-
-        // Decision: I will Iterate through imported feeds/weather.
-        // Insert/Update them.
-        // I will NOT delete feeds that are not in the config, unless I offer an option "Replace existing configuration" vs "Merge".
-        // Given the phrasing "import a configuration file", "Merge" is often safer, but "Restore" is often what's meant.
-        // I'll implement "Merge/Overwrite". Existing feeds with same URL will be updated (settings like download limit). New feeds added.
-        // Existing feeds NOT in config will remain (safe).
-
-        // Wait, "All content should be updated".
-        // I need to trigger sync for ALL feeds (or at least the imported ones).
-        // I'll trigger a global sync at the end.
+        val existingFeeds = feedDao.getAllFeeds().first().toMutableList()
 
         config.feeds.forEach { feedConfig ->
-            // Check if exists to preserve ID (and thus articles?)
-            // We don't have a getByUrl in FeedDao? Let's check.
-            // FeedDao has `getAllFeeds`.
-            // I'll do a simple loop check or add `getFeedByUrl` to Dao.
-            // For now, iterate existing.
-
+            // Check if exists to preserve ID
+            // We consume the existing list to prevent multiple config entries from updating the same DB row
             val existing = existingFeeds.find { it.url == feedConfig.url }
+
+            if (existing != null) {
+                existingFeeds.remove(existing)
+            }
+
             val feed = Feed(
                 id = existing?.id ?: 0,
                 url = feedConfig.url,
@@ -145,9 +98,20 @@ class ConfigRepository(private val context: Context) {
             feedDao.insertFeed(feed)
         }
 
-        val existingWeather = weatherDao.getAllWeather().first()
+        val existingWeather = weatherDao.getAllWeather().first().toMutableList()
         config.weatherLocations.forEach { weatherConfig ->
-            val existing = existingWeather.find { it.latitude == weatherConfig.latitude && it.longitude == weatherConfig.longitude }
+            // Match by name AND location to handle cases where user has multiple locations with same coords
+            // but different names (or simply to correctly map specific config entries to specific DB rows).
+            val existing = existingWeather.find {
+                it.locationName == weatherConfig.locationName &&
+                it.latitude == weatherConfig.latitude &&
+                it.longitude == weatherConfig.longitude
+            }
+
+            if (existing != null) {
+                existingWeather.remove(existing)
+            }
+
             val weather = Weather(
                 id = existing?.id ?: 0,
                 locationName = weatherConfig.locationName,
