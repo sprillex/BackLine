@@ -20,6 +20,8 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.example.offlinebrowser.R
+import com.example.offlinebrowser.data.repository.LinkedFileRepository
+import com.example.offlinebrowser.data.repository.LinkedZimFile
 import com.example.offlinebrowser.workers.FileImportWorker
 import java.io.File
 
@@ -30,6 +32,8 @@ class LibraryActivity : AppCompatActivity() {
     private lateinit var tvEmptyState: TextView
     private lateinit var workManager: WorkManager
     private lateinit var btnImportFile: android.widget.Button
+    private lateinit var btnLinkFile: android.widget.Button
+    private lateinit var linkedFileRepository: LinkedFileRepository
 
     private val importFileLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let {
@@ -45,6 +49,21 @@ class LibraryActivity : AppCompatActivity() {
 
             workManager.enqueue(importRequest)
             Toast.makeText(this, "Import started...", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private val linkFileLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let {
+            try {
+                contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                val fileName = getFileName(it) ?: "linked_file.zim"
+                linkedFileRepository.addLinkedFile(LinkedZimFile(fileName, it.toString()))
+                Toast.makeText(this, "File linked", Toast.LENGTH_SHORT).show()
+                loadFiles()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(this, "Failed to link file: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -79,13 +98,19 @@ class LibraryActivity : AppCompatActivity() {
         rvDownloads = findViewById(R.id.rvDownloads)
         tvEmptyState = findViewById(R.id.tvEmptyState)
         btnImportFile = findViewById(R.id.btnImportFile)
+        btnLinkFile = findViewById(R.id.btnLinkFile)
         workManager = WorkManager.getInstance(this)
+        linkedFileRepository = LinkedFileRepository(this)
 
         rvFiles.layoutManager = LinearLayoutManager(this)
         rvDownloads.layoutManager = LinearLayoutManager(this)
 
         btnImportFile.setOnClickListener {
             importFileLauncher.launch(arrayOf("application/octet-stream", "application/zim", "*/*"))
+        }
+
+        btnLinkFile.setOnClickListener {
+            linkFileLauncher.launch(arrayOf("application/octet-stream", "application/zim", "*/*"))
         }
 
         loadFiles()
@@ -112,45 +137,81 @@ class LibraryActivity : AppCompatActivity() {
         }
     }
 
+    sealed class LibraryItem {
+        data class LocalFile(val file: File) : LibraryItem()
+        data class LinkedFile(val file: LinkedZimFile) : LibraryItem()
+    }
+
     private fun loadFiles() {
+        val items = mutableListOf<LibraryItem>()
+
+        // Load local files
         val dir = getExternalFilesDir(null)
-        val files = dir?.listFiles { file ->
+        val localFiles = dir?.listFiles { file ->
             file.isFile && (file.name.endsWith(".zim") || file.name.endsWith(".iso"))
         }?.sortedBy { it.name } ?: emptyList()
+        items.addAll(localFiles.map { LibraryItem.LocalFile(it) })
 
-        if (files.isEmpty()) {
+        // Load linked files
+        val linkedFiles = linkedFileRepository.getLinkedFiles()
+        items.addAll(linkedFiles.map { LibraryItem.LinkedFile(it) })
+
+        if (items.isEmpty()) {
             tvEmptyState.visibility = View.VISIBLE
             rvFiles.visibility = View.GONE
         } else {
             tvEmptyState.visibility = View.GONE
             rvFiles.visibility = View.VISIBLE
-            rvFiles.adapter = FileAdapter(files,
-                onClick = { file -> openFile(file) },
-                onDelete = { file -> deleteFile(file) }
+            rvFiles.adapter = FileAdapter(items,
+                onClick = { item -> openItem(item) },
+                onDelete = { item -> deleteItem(item) }
             )
         }
     }
 
-    private fun deleteFile(file: File) {
+    private fun deleteItem(item: LibraryItem) {
+        val name = when (item) {
+            is LibraryItem.LocalFile -> item.file.name
+            is LibraryItem.LinkedFile -> item.file.name
+        }
+
         androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle("Delete File")
-            .setMessage("Are you sure you want to delete ${file.name}?")
-            .setPositiveButton("Delete") { _, _ ->
-                if (file.delete()) {
-                    Toast.makeText(this, "File deleted", Toast.LENGTH_SHORT).show()
-                    loadFiles()
-                } else {
-                    Toast.makeText(this, "Failed to delete file", Toast.LENGTH_SHORT).show()
+            .setTitle("Delete/Remove File")
+            .setMessage("Are you sure you want to remove $name?")
+            .setPositiveButton("Yes") { _, _ ->
+                when (item) {
+                    is LibraryItem.LocalFile -> {
+                        if (item.file.delete()) {
+                            Toast.makeText(this, "File deleted", Toast.LENGTH_SHORT).show()
+                            loadFiles()
+                        } else {
+                            Toast.makeText(this, "Failed to delete file", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    is LibraryItem.LinkedFile -> {
+                        linkedFileRepository.removeLinkedFile(item.file)
+                        Toast.makeText(this, "Link removed", Toast.LENGTH_SHORT).show()
+                        loadFiles()
+                    }
                 }
             }
             .setNegativeButton("Cancel", null)
             .show()
     }
 
-    private fun openFile(file: File) {
+    private fun openItem(item: LibraryItem) {
         try {
             val intent = Intent(this, ZimViewerActivity::class.java)
-            intent.putExtra("ZIM_FILE_PATH", file.absolutePath)
+            when (item) {
+                is LibraryItem.LocalFile -> {
+                    intent.putExtra("ZIM_FILE_PATH", item.file.absolutePath)
+                }
+                is LibraryItem.LinkedFile -> {
+                    intent.putExtra("ZIM_FILE_URI", item.file.uriString)
+                    // Grant temporary read permission to the viewer activity
+                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+            }
             startActivity(intent)
         } catch (e: Exception) {
             Toast.makeText(this, "Error opening file: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -158,9 +219,9 @@ class LibraryActivity : AppCompatActivity() {
     }
 
     class FileAdapter(
-        private val files: List<File>,
-        private val onClick: (File) -> Unit,
-        private val onDelete: (File) -> Unit
+        private val items: List<LibraryItem>,
+        private val onClick: (LibraryItem) -> Unit,
+        private val onDelete: (LibraryItem) -> Unit
     ) : RecyclerView.Adapter<FileAdapter.ViewHolder>() {
 
         class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -176,14 +237,23 @@ class LibraryActivity : AppCompatActivity() {
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val file = files[position]
-            holder.tvFileName.text = file.name
-            holder.tvFileSize.text = formatSize(file.length())
-            holder.itemView.setOnClickListener { onClick(file) }
-            holder.btnDelete.setOnClickListener { onDelete(file) }
+            val item = items[position]
+            when (item) {
+                is LibraryItem.LocalFile -> {
+                    holder.tvFileName.text = item.file.name
+                    holder.tvFileSize.text = formatSize(item.file.length())
+                }
+                is LibraryItem.LinkedFile -> {
+                    holder.tvFileName.text = "${item.file.name} (Linked)"
+                    holder.tvFileSize.text = "External"
+                }
+            }
+
+            holder.itemView.setOnClickListener { onClick(item) }
+            holder.btnDelete.setOnClickListener { onDelete(item) }
         }
 
-        override fun getItemCount() = files.size
+        override fun getItemCount() = items.size
 
         private fun formatSize(bytes: Long): String {
             val kb = bytes / 1024
