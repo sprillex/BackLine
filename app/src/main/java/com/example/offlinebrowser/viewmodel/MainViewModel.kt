@@ -15,12 +15,16 @@ import com.example.offlinebrowser.data.repository.FeedRepository
 import com.example.offlinebrowser.data.repository.PreferencesRepository
 import com.example.offlinebrowser.data.repository.WeatherRepository
 import com.example.offlinebrowser.util.NetworkMonitor
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val database = OfflineDatabase.getDatabase(application)
     private val feedRepository = FeedRepository(application, database.feedDao(), database.articleDao(), RssParser())
@@ -38,6 +42,37 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val weatherLocations: StateFlow<List<Weather>> = weatherRepository.allWeather
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Article Filtering Logic
+    private val _articleFilter = MutableStateFlow<ArticleFilter>(ArticleFilter.All)
+
+    sealed class ArticleFilter {
+        object All : ArticleFilter()
+        data class ByCategory(val category: String) : ArticleFilter()
+        data class ByFeed(val feedId: Int) : ArticleFilter()
+    }
+
+    val currentArticles: StateFlow<List<Article>> = _articleFilter
+        .flatMapLatest { filter ->
+            when (filter) {
+                is ArticleFilter.All -> articleRepository.getAllArticles()
+                is ArticleFilter.ByCategory -> articleRepository.getArticlesByCategory(filter.category)
+                is ArticleFilter.ByFeed -> articleRepository.getArticlesForFeed(filter.feedId)
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun filterArticlesByAll() {
+        _articleFilter.value = ArticleFilter.All
+    }
+
+    fun filterArticlesByCategory(category: String) {
+        _articleFilter.value = ArticleFilter.ByCategory(category)
+    }
+
+    fun filterArticlesByFeed(feedId: Int) {
+        _articleFilter.value = ArticleFilter.ByFeed(feedId)
+    }
 
     fun addFeed(url: String, type: FeedType, downloadLimit: Int = 0, category: String? = null, syncNow: Boolean = false) {
         viewModelScope.launch {
@@ -71,15 +106,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return feedRepository.getFeedById(id)
     }
 
-    fun getArticlesForFeed(feedId: Int): StateFlow<List<Article>> {
-        return articleRepository.getArticlesForFeed(feedId)
-             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    }
-
-    fun getArticlesByCategory(category: String): StateFlow<List<Article>> {
-        return articleRepository.getArticlesByCategory(category)
-             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    }
 
     fun downloadArticle(article: Article) {
         viewModelScope.launch {

@@ -56,6 +56,7 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var ssidText: TextView
     private lateinit var weatherPager: ViewPager2
     private lateinit var tvWeatherEmpty: TextView
+    private lateinit var weatherSection: LinearLayout
     private lateinit var statusContainer: LinearLayout
     private lateinit var rvCategories: RecyclerView
     private lateinit var rvArticles: RecyclerView
@@ -88,8 +89,6 @@ class HomeActivity : AppCompatActivity() {
     private var currentViewState: ViewState = ViewState.DASHBOARD
     private var activeCategory: String? = null
     private var activeFeedId: Int = -1
-    private var articleJob: kotlinx.coroutines.Job? = null
-
     private lateinit var articleAdapter: ArticleAdapter
 
     private val requestPermissionLauncher =
@@ -165,6 +164,7 @@ class HomeActivity : AppCompatActivity() {
         ssidText = findViewById(R.id.ssid_text)
         weatherPager = findViewById(R.id.weather_pager)
         tvWeatherEmpty = findViewById(R.id.tv_weather_empty)
+        weatherSection = findViewById(R.id.weather_section)
         statusContainer = findViewById(R.id.status_container)
         rvCategories = findViewById(R.id.rv_categories)
         rvArticles = findViewById(R.id.rv_articles)
@@ -244,6 +244,16 @@ class HomeActivity : AppCompatActivity() {
                         updatePills()
                     }
                 }
+                launch {
+                    viewModel.currentArticles.collect { articles ->
+                        // Only update adapter if we are in ARTICLE_LIST state or will be
+                        // But since the view model now holds the state of which articles to show,
+                        // we can just update the adapter whenever new data comes in.
+                        // Ideally we check if we are in ARTICLE_LIST to avoid unnecessary work if hidden,
+                        // but RecyclerView handles hidden updates fine.
+                        articleAdapter.submitList(articles)
+                    }
+                }
             }
         }
     }
@@ -251,26 +261,16 @@ class HomeActivity : AppCompatActivity() {
     private fun showArticles(category: String? = null, feedId: Int = -1) {
         activeCategory = category
         activeFeedId = feedId
-        setViewState(ViewState.ARTICLE_LIST)
 
-        articleJob?.cancel()
-        articleJob = lifecycleScope.launch {
-            if (category != null) {
-                viewModel.getArticlesByCategory(category).collect { articles ->
-                    if (currentViewState == ViewState.ARTICLE_LIST && activeCategory == category) {
-                        articleAdapter.submitList(articles)
-                    }
-                }
-            } else if (feedId != -1) {
-                viewModel.getArticlesForFeed(feedId).collect { articles ->
-                    if (currentViewState == ViewState.ARTICLE_LIST && activeFeedId == feedId) {
-                        articleAdapter.submitList(articles)
-                    }
-                }
-            } else {
-                articleAdapter.submitList(emptyList())
-            }
+        if (category != null) {
+            viewModel.filterArticlesByCategory(category)
+        } else if (feedId != -1) {
+            viewModel.filterArticlesByFeed(feedId)
+        } else {
+            viewModel.filterArticlesByAll()
         }
+
+        setViewState(ViewState.ARTICLE_LIST)
     }
 
     private fun setViewState(state: ViewState) {
@@ -278,6 +278,7 @@ class HomeActivity : AppCompatActivity() {
         when (state) {
             ViewState.DASHBOARD -> {
                 dashboardScrollView.visibility = View.VISIBLE
+                weatherSection.visibility = View.VISIBLE
                 homeStandardView.visibility = View.VISIBLE
                 weatherDetailView.visibility = View.GONE
                 rvArticles.visibility = View.GONE
@@ -286,6 +287,7 @@ class HomeActivity : AppCompatActivity() {
             }
             ViewState.WEATHER_DETAIL -> {
                 dashboardScrollView.visibility = View.VISIBLE
+                weatherSection.visibility = View.GONE
                 homeStandardView.visibility = View.GONE
                 weatherDetailView.visibility = View.VISIBLE
                 rvArticles.visibility = View.GONE
@@ -294,6 +296,7 @@ class HomeActivity : AppCompatActivity() {
             }
             ViewState.ARTICLE_LIST -> {
                 dashboardScrollView.visibility = View.GONE
+                weatherSection.visibility = View.VISIBLE
                 rvArticles.visibility = View.VISIBLE
             }
         }
