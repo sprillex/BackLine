@@ -86,7 +86,8 @@ class HomeActivity : AppCompatActivity() {
         WEATHER_DETAIL,
         ARTICLE_LIST
     }
-    private var currentViewState: ViewState = ViewState.DASHBOARD
+    // Set initial state to ARTICLE_LIST (All Articles) as it is the new Home
+    private var currentViewState: ViewState = ViewState.ARTICLE_LIST
     private var activeCategory: String? = null
     private var activeFeedId: Int = -1
     private lateinit var articleAdapter: ArticleAdapter
@@ -118,12 +119,17 @@ class HomeActivity : AppCompatActivity() {
         setupListeners()
         setupObservers()
         registerNetworkCallback()
+
+        // Ensure UI is in correct state (weather visibility etc) for ARTICLE_LIST
+        setViewState(ViewState.ARTICLE_LIST)
+
         handleIntent(intent)
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (currentViewState != ViewState.DASHBOARD) {
-                    setViewState(ViewState.DASHBOARD)
+                // If in detailed views, go back to article list (which is the new home)
+                if (currentViewState == ViewState.WEATHER_DETAIL || (currentViewState == ViewState.ARTICLE_LIST && (activeCategory != null || activeFeedId != -1))) {
+                    showArticles(null)
                 } else {
                     finish()
                 }
@@ -203,7 +209,7 @@ class HomeActivity : AppCompatActivity() {
     private fun setupListeners() {
         // Bottom Nav
         findViewById<View>(R.id.nav_home).setOnClickListener {
-            setViewState(ViewState.DASHBOARD)
+            showArticles(null)
         }
         findViewById<View>(R.id.nav_content).setOnClickListener {
             showArticles(null)
@@ -416,8 +422,9 @@ class HomeActivity : AppCompatActivity() {
         pillContainer.removeAllViews()
 
         // "All" Pill
-        addPill("All", currentViewState == ViewState.DASHBOARD) {
-            setViewState(ViewState.DASHBOARD)
+        val isAllActive = currentViewState == ViewState.ARTICLE_LIST && activeCategory == null && activeFeedId == -1
+        addPill("All", isAllActive) {
+            showArticles(null)
         }
 
         // "Weather" Pill
