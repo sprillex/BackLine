@@ -16,7 +16,8 @@ import java.net.URI
 
 class ArticleAdapter(
     private val onArticleClick: (Article) -> Unit,
-    private val onDownloadClick: (Article) -> Unit
+    private val onDownloadClick: (Article) -> Unit,
+    private val onArticleLongClick: (Article, View) -> Unit
 ) : ListAdapter<Article, ArticleAdapter.ArticleViewHolder>(ArticleDiffCallback()) {
 
     class ArticleViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -51,9 +52,26 @@ class ArticleAdapter(
         }
 
         holder.itemView.setOnClickListener { onArticleClick(article) }
+        holder.itemView.setOnLongClickListener {
+            onArticleLongClick(article, it)
+            true
+        }
         holder.btnDownload.setOnClickListener { onDownloadClick(article) }
 
         holder.btnDownload.visibility = if (article.isCached) View.GONE else View.VISIBLE
+
+        // Visual indicator for Read status
+        if (article.isRead) {
+            holder.tvTitle.alpha = 0.6f
+        } else {
+            holder.tvTitle.alpha = 1.0f
+        }
+
+        // Add visual indicator for Favorite if desired, e.g., append a star to title or use a separate icon
+        // For now just appending "★" to status if favorite
+        if (article.isFavorite) {
+            holder.tvStatus.text = "${holder.tvStatus.text} ★"
+        }
     }
 }
 

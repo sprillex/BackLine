@@ -50,7 +50,9 @@ class FeedRepository(
                      val updated = article.copy(
                          id = existing.id,
                          content = if (existing.isCached) existing.content else article.content,
-                         isCached = existing.isCached
+                         isCached = existing.isCached,
+                         isFavorite = existing.isFavorite,
+                         isRead = existing.isRead
                      )
                      articleDao.insertArticle(updated)
                  } else {
