@@ -24,4 +24,12 @@ class ArticleRepository(
             articleDao.insertArticle(updatedArticle)
         }
     }
+
+    suspend fun updateArticleFavoriteStatus(id: Int, isFavorite: Boolean) {
+        articleDao.updateArticleFavoriteStatus(id, isFavorite)
+    }
+
+    suspend fun updateArticleReadStatus(id: Int, isRead: Boolean) {
+        articleDao.updateArticleReadStatus(id, isRead)
+    }
 }

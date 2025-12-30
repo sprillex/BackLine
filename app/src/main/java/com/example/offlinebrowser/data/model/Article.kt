@@ -23,5 +23,7 @@ data class Article(
     val content: String, // HTML or text content
     val publishedDate: Long,
     val isCached: Boolean = false,
-    val localPath: String? = null // Path to local file if stored as file
+    val localPath: String? = null, // Path to local file if stored as file
+    val isFavorite: Boolean = false,
+    val isRead: Boolean = false
 )

@@ -146,4 +146,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             weatherRepository.updateWeather(weather, days)
         }
     }
+
+    fun toggleArticleFavorite(article: Article) {
+        viewModelScope.launch {
+            articleRepository.updateArticleFavoriteStatus(article.id, !article.isFavorite)
+        }
+    }
+
+    fun toggleArticleRead(article: Article) {
+        viewModelScope.launch {
+            articleRepository.updateArticleReadStatus(article.id, !article.isRead)
+        }
+    }
 }

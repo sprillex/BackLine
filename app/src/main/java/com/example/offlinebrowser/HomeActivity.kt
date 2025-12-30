@@ -38,6 +38,7 @@ import com.example.offlinebrowser.ui.ArticleAdapter
 import com.example.offlinebrowser.ui.CategoryAdapter
 import com.example.offlinebrowser.ui.WeatherHomeAdapter
 import com.example.offlinebrowser.data.model.Weather
+import com.example.offlinebrowser.data.model.Article
 import com.example.offlinebrowser.ui.HourlyAdapter
 import com.example.offlinebrowser.ui.HourlyItem
 import com.example.offlinebrowser.ui.ForecastAdapter
@@ -195,12 +196,19 @@ class HomeActivity : AppCompatActivity() {
         articleAdapter = ArticleAdapter(
             onArticleClick = { article ->
                 if (article.content.isNotEmpty()) {
+                    // Mark as read when opening
+                    if (!article.isRead) {
+                        viewModel.toggleArticleRead(article)
+                    }
                     val intent = Intent(this, ArticleViewerActivity::class.java)
                     intent.putExtra("ARTICLE_ID", article.id)
                     startActivity(intent)
                 }
             },
-            onDownloadClick = { article -> viewModel.downloadArticle(article) }
+            onDownloadClick = { article -> viewModel.downloadArticle(article) },
+            onArticleLongClick = { article, view ->
+                showArticleOptions(article, view)
+            }
         )
         rvArticles.layoutManager = LinearLayoutManager(this)
         rvArticles.adapter = articleAdapter
@@ -513,6 +521,38 @@ class HomeActivity : AppCompatActivity() {
                 runOnUiThread { updateWifiStatus() }
             }
         })
+    }
+
+    private fun showArticleOptions(article: Article, view: View) {
+        val popup = androidx.appcompat.widget.PopupMenu(this, view)
+
+        // Add options based on current state
+        if (article.isFavorite) {
+            popup.menu.add(0, 1, 0, "Unfavorite")
+        } else {
+            popup.menu.add(0, 1, 0, "Favorite")
+        }
+
+        if (article.isRead) {
+            popup.menu.add(0, 2, 0, "Mark as Unread")
+        } else {
+            popup.menu.add(0, 2, 0, "Mark as Read")
+        }
+
+        popup.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                1 -> { // Toggle Favorite
+                    viewModel.toggleArticleFavorite(article)
+                    true
+                }
+                2 -> { // Toggle Read
+                    viewModel.toggleArticleRead(article)
+                    true
+                }
+                else -> false
+            }
+        }
+        popup.show()
     }
 
     @SuppressLint("MissingPermission")

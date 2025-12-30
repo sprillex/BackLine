@@ -35,10 +35,16 @@ interface ArticleDao {
     @Delete
     suspend fun deleteArticle(article: Article)
 
-    @Query("DELETE FROM articles WHERE feedId = :feedId AND publishedDate < :timestamp")
+    @Query("UPDATE articles SET isFavorite = :isFavorite WHERE id = :id")
+    suspend fun updateArticleFavoriteStatus(id: Int, isFavorite: Boolean)
+
+    @Query("UPDATE articles SET isRead = :isRead WHERE id = :id")
+    suspend fun updateArticleReadStatus(id: Int, isRead: Boolean)
+
+    @Query("DELETE FROM articles WHERE feedId = :feedId AND publishedDate < :timestamp AND isFavorite = 0")
     suspend fun deleteOldArticles(feedId: Int, timestamp: Long)
 
-    @Query("DELETE FROM articles WHERE feedId = :feedId AND id NOT IN (SELECT id FROM articles WHERE feedId = :feedId ORDER BY publishedDate DESC LIMIT :limit)")
+    @Query("DELETE FROM articles WHERE feedId = :feedId AND isFavorite = 0 AND id NOT IN (SELECT id FROM articles WHERE feedId = :feedId ORDER BY publishedDate DESC LIMIT :limit)")
     suspend fun deleteExcessArticles(feedId: Int, limit: Int)
 
     @Query("SELECT * FROM articles WHERE feedId = :feedId AND isCached = 0 ORDER BY publishedDate DESC LIMIT :limit")
