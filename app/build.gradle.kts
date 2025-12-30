@@ -78,7 +78,7 @@ dependencies {
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
 
     // Zim Reader
-    implementation("com.github.dbrant:zimdroid:0.0.14")
+    implementation(files("libs/zimdroid.aar"))
 
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 
