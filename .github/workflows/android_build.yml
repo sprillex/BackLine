@@ -2,14 +2,12 @@ name: Android Build
 
 on:
   push:
-    branches: [ "**" ]
-  pull_request:
-    branches: [ "main", "master" ]
+    # Triggers on push to every branch EXCEPT 'main'
+    branches-ignore: [ "main" ]
   workflow_dispatch:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -38,6 +36,7 @@ jobs:
       run: mv app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/BackLineDebugB.apk
 
     - name: Upload Debug APK
+      id: apk_upload  # <--- Added ID to reference the link later
       uses: actions/upload-artifact@v4
       with:
         name: debug-apk
@@ -46,10 +45,25 @@ jobs:
     - name: Send Pushover Notification
       if: always() # Runs even if the build fails
       run: |
+        # 1. Determine Title and Priority
+        if [ "${{ job.status }}" == "success" ]; then
+          PRIORITY=0
+          TITLE="${{ github.workflow }}: Success"
+        else
+          PRIORITY=1
+          TITLE="${{ github.workflow }}: Failed"
+        fi
+
+        # 2. Send Notification
+        # We include the specific Artifact URL in the message body
         curl -s \
           --form-string "token=${{ secrets.PUSHOVER_APP_TOKEN }}" \
           --form-string "user=${{ secrets.PUSHOVER_USER_KEY }}" \
-          --form-string "title=GitHub Action: ${{ github.repository }}" \
-          --form-string "message=Workflow finished with status: ${{ job.status }}" \
+          --form-string "title=$TITLE" \
+          --form-string "priority=$PRIORITY" \
+          --form-string "message=Branch: ${{ github.ref_name }}
+          Status: ${{ job.status }}
+
+          Download APK: ${{ steps.apk_upload.outputs.artifact-url }}" \
           --form-string "url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
           https://api.pushover.net/1/messages.json
