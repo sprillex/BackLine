@@ -9,7 +9,12 @@ class HtmlDownloader(private val logger: ((String) -> Unit)? = null) {
         return withContext(Dispatchers.IO) {
             try {
                 logger?.invoke("Scraping URL: $url")
-                val doc = Jsoup.connect(url).get()
+                val doc = Jsoup.connect(url)
+                    .userAgent("Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
+                    .header("Accept-Language", "en-US,en;q=0.9")
+                    .header("Connection", "keep-alive")
+                    .get()
                 logger?.invoke("Successfully scraped URL: $url")
                 // We might want to embed images/css for full offline support,
                 // but for this MVP we just store the HTML text.
