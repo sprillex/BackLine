@@ -15,10 +15,15 @@ class RssParser(private val logger: ((String) -> Unit)? = null) {
             try {
                 logger?.invoke("Fetching feed: ${feed.url}")
                 val urlConnection = URL(feed.url).openConnection() as HttpURLConnection
-                urlConnection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+                urlConnection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                 urlConnection.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
                 urlConnection.setRequestProperty("Accept-Language", "en-US,en;q=0.9")
                 urlConnection.setRequestProperty("Connection", "keep-alive")
+                urlConnection.setRequestProperty("Upgrade-Insecure-Requests", "1")
+                urlConnection.setRequestProperty("Sec-Fetch-Site", "none")
+                urlConnection.setRequestProperty("Sec-Fetch-Mode", "navigate")
+                urlConnection.setRequestProperty("Sec-Fetch-User", "?1")
+                urlConnection.setRequestProperty("Sec-Fetch-Dest", "document")
                 urlConnection.connectTimeout = 10000
                 urlConnection.readTimeout = 10000
 
