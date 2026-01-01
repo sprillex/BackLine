@@ -27,11 +27,19 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val database = OfflineDatabase.getDatabase(application)
+    private val preferencesRepository = PreferencesRepository(application)
+    private val fileLogger = com.example.offlinebrowser.util.FileLogger(application)
+
     // We don't pass RssParser here, let FeedRepository create its own with logging
     private val feedRepository = FeedRepository(application, database.feedDao(), database.articleDao())
-    private val articleRepository = ArticleRepository(database.articleDao(), HtmlDownloader())
+
+    // Inject logger into HtmlDownloader for ArticleRepository
+    private val articleRepository = ArticleRepository(database.articleDao(), HtmlDownloader { message ->
+        if (preferencesRepository.detailedDebuggingEnabled) {
+             fileLogger.log(message)
+        }
+    })
     private val weatherRepository = WeatherRepository(database.weatherDao())
-    private val preferencesRepository = PreferencesRepository(application)
     private val networkMonitor = NetworkMonitor(application)
 
     val feeds: StateFlow<List<Feed>> = feedRepository.allFeeds

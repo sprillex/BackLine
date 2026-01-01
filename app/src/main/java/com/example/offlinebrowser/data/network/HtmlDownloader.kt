@@ -4,11 +4,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 
-class HtmlDownloader {
+class HtmlDownloader(private val logger: ((String) -> Unit)? = null) {
     suspend fun downloadHtml(url: String): String? {
         return withContext(Dispatchers.IO) {
             try {
+                logger?.invoke("Scraping URL: $url")
                 val doc = Jsoup.connect(url).get()
+                logger?.invoke("Successfully scraped URL: $url")
                 // We might want to embed images/css for full offline support,
                 // but for this MVP we just store the HTML text.
                 // Or maybe we want the 'text' content for reading mode?
@@ -18,6 +20,7 @@ class HtmlDownloader {
                 doc.outerHtml()
             } catch (e: Exception) {
                 e.printStackTrace()
+                logger?.invoke("Failed to scrape URL $url: ${e.message}")
                 null
             }
         }
