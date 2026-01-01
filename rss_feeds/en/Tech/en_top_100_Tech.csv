@@ -1,0 +1,101 @@
+name,category,language,rank,url,contentType
+TechCrunch,Tech,en,1,https://techcrunch.com/feed/,Headlines
+WIRED,Tech,en,2,https://www.wired.com/feed/rss,Headlines
+Engadget,Tech,en,3,https://www.engadget.com/rss.xml,Full Articles
+The Verge » Facebook,Tech,en,4,https://www.theverge.com/rss/index.xml,Headlines
+GeekWire,Tech,en,5,https://www.geekwire.com/feed/,Full Articles
+CNET,Tech,en,6,https://www.cnet.com/rss/all/,Headlines
+Digital Trends,Tech,en,7,https://www.digitaltrends.com/feed/,Headlines
+Android Authority,Tech,en,8,https://www.androidauthority.com/feed/,Full Articles
+The Next Web,Tech,en,9,https://feeds.feedburner.com/thenextweb,Full Articles
+Silicon Valley Journals,Tech,en,10,https://siliconvalleyjournals.com/feed/,Full Articles
+The New York Times » Technology,Tech,en,11,https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml,Headlines
+CNET,Tech,en,12,https://www.cnet.com/rss/all/,Headlines
+The Washington Post » Technology,Tech,en,13,https://feeds.washingtonpost.com/rss/business/technology,Headlines
+Gadgets 360,Tech,en,14,https://www.gadgets360.com/rss/feeds,Headlines
+Techradar,Tech,en,15,https://www.techradar.com/feeds.xml,Headlines
+ZDNet,Tech,en,16,https://www.zdnet.com/news/rss.xml,Headlines
+TechSpot,Tech,en,17,https://www.techspot.com/backend.xml,Headlines
+TechRepublic,Tech,en,18,https://www.techrepublic.com/rssfeeds/articles/?feedType=rssfeeds,Headlines
+VentureBeat,Tech,en,19,https://feeds.feedburner.com/venturebeat/SZYF,Full Articles
+Digit,Tech,en,20,https://www.digit.in/feed,Full Articles
+AppleInsider,Tech,en,21,https://appleinsider.com/rss/news/,Full Articles
+MacWorld,Tech,en,22,https://www.macworld.com/feed,Full Articles
+SlashGear,Tech,en,23,https://www.slashgear.com/feed/,Headlines
+New Atlas,Tech,en,24,https://feeds.feedblitz.com/newatlas,Headlines
+gHacks,Tech,en,25,https://www.ghacks.net/feed/,Full Articles
+The Register,Tech,en,26,https://www.theregister.com/headlines.atom,Headlines
+ExtremeTech,Tech,en,27,https://www.extremetech.com/feed,Headlines
+Computer Weekly,Tech,en,28,https://www.computerweekly.com/rss/All-Computer-Weekly-content.xml,Headlines
+TechPout,Tech,en,29,https://www.techpout.com/feed/,Headlines
+Android Headlines,Tech,en,30,https://www.androidheadlines.com/feed,Full Articles
+Ubergizmo,Tech,en,31,https://www.ubergizmo.com/rss-ubergizmo/,Full Articles
+BetaNews,Tech,en,32,https://betanews.com/feed/,Headlines
+MobileSyrup,Tech,en,33,https://mobilesyrup.com/feed/,Headlines
+Redmond Pie,Tech,en,34,https://feeds.feedburner.com/RedmondPie,Full Articles
+eWeek,Tech,en,35,https://www.eweek.com/feed/,Full Articles
+Silicon Republic,Tech,en,36,https://www.siliconrepublic.com/feed/,Headlines
+Droid Life,Tech,en,37,https://www.droid-life.com/feed/,Full Articles
+Flipshope,Tech,en,38,https://flipshope.com/blog/feed/,Headlines
+iTnews,Tech,en,39,https://www.itnews.com.au/rss/rss.ashx,Headlines
+TechJuice,Tech,en,40,https://www.techjuice.pk/feed/,Headlines
+Research Snipers,Tech,en,41,https://researchsnipers.com/feed/,Headlines
+Nextgov/FCW,Tech,en,42,https://www.nextgov.com/rss/all/,Full Articles
+Naval Technology,Tech,en,43,https://www.naval-technology.com/feed/,Headlines
+Developer Tech News,Tech,en,44,https://www.developer-tech.com/feed/,Headlines
+Ausdroid,Tech,en,45,https://feeds.feedburner.com/ausdroid/feed,Headlines
+News969,Tech,en,46,https://news969.com/feed/,Headlines
+TechPlugged,Tech,en,47,https://techplugged.com/feed/,Headlines
+Latest Techno,Tech,en,48,https://latesttechno.in/feed/,Full Articles
+Platform Executive,Tech,en,49,https://www.platformexecutive.com/feed/,Full Articles
+Ohsem.me,Tech,en,50,https://ohsem.me/feed/,Full Articles
+CIO,Tech,en,51,https://www.cio.com/feed/,Full Articles
+Insider Paper,Tech,en,52,https://insiderpaper.com/feed/,Full Articles
+TechCentral.ie,Tech,en,53,http://www.techcentral.ie/feed/,Headlines
+Computerworld,Tech,en,54,https://www.computerworld.com/feed/,Full Articles
+Digital Times Nigeria,Tech,en,55,https://digitaltimesng.com/feed/,Full Articles
+FutureFive New Zealand,Tech,en,56,https://futurefive.co.nz/feed,Headlines
+DigiTech Bytes,Tech,en,57,https://digitechbytes.com/feed/,Full Articles
+TechNews City,Tech,en,58,https://www.technews.city/feeds/posts/default?alt=rss,Full Articles
+Fossbytes,Tech,en,59,https://fossbytes.com/feed/?x=1,Headlines
+iLounge,Tech,en,60,http://feeds.feedburner.com/ilounge,Headlines
+Techbullion,Tech,en,61,https://techbullion.com/feed/,Headlines
+KnowTechie,Tech,en,62,https://knowtechie.com/feed/,Full Articles
+Techfullnews,Tech,en,63,https://techfullnews.com/feed/,Headlines
+Newskart,Tech,en,64,https://www.newskart.com/feed/,Full Articles
+Ars Technica » Self Driving Cars,Tech,en,65,https://arstechnica.com/tag/self-driving-cars/feed/,Full Articles
+Vox » Technology,Tech,en,66,https://www.vox.com/rss/recode/index.xml,Headlines
+Tech in Asia,Tech,en,67,https://www.techinasia.com/feed,Headlines
+AnandTech,Tech,en,68,https://www.anandtech.com/rss,Headlines
+TechHive,Tech,en,69,https://www.techhive.com/feed,Full Articles
+GigaOM,Tech,en,70,https://gigaom.com/feed/?x=1,Headlines
+NoCamels,Tech,en,71,https://nocamels.com/feed/,Full Articles
+Rayarena,Tech,en,72,https://www.rayarena.com/feed,Full Articles
+The Encrypt,Tech,en,73,https://www.theencrypt.com/feed/,Full Articles
+ChinaTechNews.com,Tech,en,74,https://www.chinatechnews.com/feed,Headlines
+Gadgets In Nepal,Tech,en,75,https://www.gadgetsinnepal.com.np/feed/,Headlines
+Technology Drift,Tech,en,76,https://www.technologydrift.com/feed/,Headlines
+Spider Tech,Tech,en,77,https://spider760.blogspot.com/feeds/posts/default?alt=rss,Full Articles
+Tech Feed Data,Tech,en,78,https://techfeeddata.com/feed/,Headlines
+TechCavit,Tech,en,79,https://techcavit.com/feed/,Full Articles
+RT Hackers News,Tech,en,80,https://rthackersnews.blogspot.com/feeds/posts/default?alt=rss,Headlines
+The Mercury News » SiliconBeat,Tech,en,81,https://www.mercurynews.com/tag/siliconbeat/feed/,Full Articles
+iGyaan,Tech,en,82,https://feeds.feedburner.com/igyaan,Full Articles
+TechPager,Tech,en,83,https://www.techpager.org/feed/,Full Articles
+TechNewsWorld,Tech,en,84,https://www.technewsworld.com/perl/syndication/rssfull.pl,Headlines
+PCWorld,Tech,en,85,https://www.pcworld.com/index.rss,Full Articles
+Computerworld Australia,Tech,en,86,https://www.computerworld.com/au/feed/,Full Articles
+ReadWrite,Tech,en,87,https://readwrite.com/feed/,Full Articles
+Techweez,Tech,en,88,https://techweez.com/feed/,Headlines
+Betechwise,Tech,en,89,https://betechwise.com/feed/,Headlines
+TechNode,Tech,en,90,https://technode.com/feed/,Full Articles
+Techdirt,Tech,en,91,https://www.techdirt.com/techdirt_rss.xml,Full Articles
+Geekboots Tech News | Latest Tech News,Tech,en,92,https://www.geekboots.com/technology/feed,Headlines
+InfoWorld,Tech,en,93,https://www.infoworld.com/index.rss,Headlines
+Network World,Tech,en,94,https://www.networkworld.com/index.rss,Headlines
+Enterprise Talk,Tech,en,95,https://enterprisetalk.com/feed/,Headlines
+The Black Web,Tech,en,96,https://theblackweb.in/feed,Full Articles
+CRN,Tech,en,97,https://www.crn.com/rss/news,Headlines
+Technology News,Tech,en,98,https://www.blogger.com/feeds/4457929370096894305/posts/default,Headlines
+All Tech Corner,Tech,en,99,https://www.alltechcorner.com/feed/,Headlines
+sssTikTok Blog,Tech,en,100,https://techfans.co.uk/feed/,Headlines
