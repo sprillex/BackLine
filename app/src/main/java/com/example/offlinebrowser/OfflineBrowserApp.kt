@@ -23,12 +23,12 @@ class OfflineBrowserApp : Application() {
         super.onCreate()
 
         val database = OfflineDatabase.getDatabase(this)
-        suggestedFeedRepository = SuggestedFeedRepository(database.suggestedFeedDao(), this)
+        suggestedFeedRepository = SuggestedFeedRepository(database.suggestedFeedDao())
 
         // Initialize data
-        CoroutineScope(Dispatchers.IO).launch {
-            suggestedFeedRepository.initializeData()
-        }
+        // CoroutineScope(Dispatchers.IO).launch {
+        //     suggestedFeedRepository.initializeData()
+        // }
 
         scheduleSync()
     }

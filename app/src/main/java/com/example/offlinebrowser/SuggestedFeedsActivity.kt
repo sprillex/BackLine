@@ -12,6 +12,9 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.offlinebrowser.data.model.FeedType
 import com.example.offlinebrowser.ui.SuggestedFeedAdapter
+import android.view.Menu
+import android.view.MenuItem
+import com.example.offlinebrowser.ui.RepositoryBrowserDialogFragment
 import com.example.offlinebrowser.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
 
@@ -55,5 +58,18 @@ class SuggestedFeedsActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menu?.add(0, 1, 0, "Download Official Feeds")
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == 1) {
+            RepositoryBrowserDialogFragment().show(supportFragmentManager, "browser")
+            return true
+        }
+        return super.onOptionsItemSelected(item)
     }
 }
