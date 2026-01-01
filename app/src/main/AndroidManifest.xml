@@ -41,6 +41,7 @@
         <activity android:name=".ui.ZimViewerActivity" />
         <activity android:name=".SettingsActivity" />
         <activity android:name=".EditFeedActivity" />
+        <activity android:name=".SuggestedFeedsActivity" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

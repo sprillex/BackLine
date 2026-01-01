@@ -1,0 +1,11 @@
+name,category,language,rank,url,contentType
+BBC News,News,en,1,http://feeds.bbci.co.uk/news/rss.xml,Headlines
+CNN,News,en,2,http://rss.cnn.com/rss/edition.rss,Headlines
+The Verge,Tech,en,3,https://www.theverge.com/rss/index.xml,Full Articles
+Hacker News,Tech,en,4,https://news.ycombinator.com/rss,Headlines
+ESPN,Sports,en,5,https://www.espn.com/espn/rss/news,Headlines
+NASA,Science,en,6,https://www.nasa.gov/rss/dyn/breaking_news.rss,Full Articles
+XKCD,Comics,en,7,https://xkcd.com/rss.xml,Full Articles
+New York Times,News,en,8,https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml,Headlines
+Guardian,News,en,9,https://www.theguardian.com/uk/rss,Full Articles
+TechCrunch,Tech,en,10,https://techcrunch.com/feed/,Full Articles
