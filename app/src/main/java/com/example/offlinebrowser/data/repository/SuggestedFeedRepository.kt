@@ -51,7 +51,6 @@ class SuggestedFeedRepository(
                 val csvContent = response.body?.string() ?: ""
                 val feeds = parseRemoteCsv(csvContent)
                 if (feeds.isNotEmpty()) {
-                    suggestedFeedDao.deleteAll()
                     suggestedFeedDao.insertAll(feeds)
                 }
             }

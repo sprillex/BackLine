@@ -31,6 +31,11 @@ class SuggestedFeedsActivity : AppCompatActivity() {
         setSupportActionBar(toolbar)
 
         val rvSuggestedFeeds = findViewById<RecyclerView>(R.id.rvSuggestedFeeds)
+        val fab = findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.fab_add_feed)
+
+        fab.setOnClickListener {
+            RepositoryBrowserDialogFragment().show(supportFragmentManager, "browser")
+        }
 
         adapter = SuggestedFeedAdapter { suggestedFeed ->
             viewModel.addFeed(

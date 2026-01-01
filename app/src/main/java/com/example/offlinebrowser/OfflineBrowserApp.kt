@@ -25,11 +25,6 @@ class OfflineBrowserApp : Application() {
         val database = OfflineDatabase.getDatabase(this)
         suggestedFeedRepository = SuggestedFeedRepository(database.suggestedFeedDao())
 
-        // Initialize data
-        // CoroutineScope(Dispatchers.IO).launch {
-        //     suggestedFeedRepository.initializeData()
-        // }
-
         scheduleSync()
     }
 
