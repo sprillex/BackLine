@@ -12,6 +12,9 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.offlinebrowser.data.model.FeedType
 import com.example.offlinebrowser.ui.SuggestedFeedAdapter
+import android.view.Menu
+import android.view.MenuItem
+import com.example.offlinebrowser.ui.RepositoryBrowserDialogFragment
 import com.example.offlinebrowser.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
 
@@ -24,7 +27,15 @@ class SuggestedFeedsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_suggested_feeds)
 
+        val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
+        setSupportActionBar(toolbar)
+
         val rvSuggestedFeeds = findViewById<RecyclerView>(R.id.rvSuggestedFeeds)
+        val fab = findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.fab_add_feed)
+
+        fab.setOnClickListener {
+            RepositoryBrowserDialogFragment().show(supportFragmentManager, "browser")
+        }
 
         adapter = SuggestedFeedAdapter { suggestedFeed ->
             viewModel.addFeed(
@@ -55,5 +66,18 @@ class SuggestedFeedsActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menu?.add(0, 1, 0, "Download Official Feeds")
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == 1) {
+            RepositoryBrowserDialogFragment().show(supportFragmentManager, "browser")
+            return true
+        }
+        return super.onOptionsItemSelected(item)
     }
 }
