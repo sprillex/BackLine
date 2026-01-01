@@ -1,0 +1,101 @@
+name,category,language,rank,url,contentType
+BBC News - World,News,en,1,http://feeds.bbci.co.uk/news/world/rss.xml,Headlines
+CNN - Top Stories,News,en,2,http://rss.cnn.com/rss/cnn_topstories.rss,Headlines
+CNN - World,News,en,3,http://rss.cnn.com/rss/cnn_world.rss,Headlines
+New York Times - HomePage,News,en,4,https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml,Headlines
+New York Times - World,News,en,5,https://rss.nytimes.com/services/xml/rss/nyt/World.xml,Headlines
+Wall Street Journal - World,News,en,6,https://feeds.a.dj.com/rss/RSSWorldNews.xml,Headlines
+The Guardian - World,News,en,7,https://www.theguardian.com/world/rss,Headlines
+The Guardian - US,News,en,8,https://www.theguardian.com/us-news/rss,Headlines
+NPR - Top Stories,News,en,9,https://feeds.npr.org/1001/rss.xml,Full Articles
+NPR - World,News,en,10,https://feeds.npr.org/1004/rss.xml,Full Articles
+Al Jazeera - Top Stories,News,en,11,https://www.aljazeera.com/xml/rss/all.xml,Headlines
+HuffPost - Front Page,News,en,12,https://www.huffpost.com/section/front-page/feed,Headlines
+HuffPost - World,News,en,13,https://www.huffpost.com/section/world-news/feed,Full Articles
+Fox News - Politics,News,en,14,https://moxie.foxnews.com/google-publisher/politics.xml,Full Articles
+Fox News - World,News,en,15,https://moxie.foxnews.com/google-publisher/world.xml,Full Articles
+USA Today - Top Stories,News,en,16,http://rssfeeds.usatoday.com/usatoday-NewsTopStories,Headlines
+Time Magazine - Top Stories,News,en,17,http://feeds.feedburner.com/time/topstories,Full Articles
+Vox - All,News,en,18,https://www.vox.com/rss/index.xml,Headlines
+ABC News - Top Stories,News,en,19,https://abcnews.go.com/abcnews/topstories,Headlines
+ABC News - World,News,en,20,https://abcnews.go.com/abcnews/internationalheadlines,Headlines
+CBS News - Top Stories,News,en,21,https://www.cbsnews.com/latest/rss/main,Headlines
+NBC News - Top Stories,News,en,22,https://feeds.nbcnews.com/nbcnews/public/news,Headlines
+CNBC - Top News,News,en,23,https://www.cnbc.com/id/100003114/device/rss/rss.html,Headlines
+MSNBC - Top Stories,News,en,24,https://www.msnbc.com/feeds/latest,Headlines
+The Hill,News,en,25,https://thehill.com/feed/,Headlines
+Axios,News,en,26,https://www.axios.com/feeds/feed.rss,Full Articles
+Fortune,News,en,27,https://fortune.com/feed/,Full Articles
+The Economist - World,News,en,28,https://www.economist.com/the-world-this-week/rss.xml,Headlines
+Financial Times - Home,News,en,29,https://www.ft.com/rss/home,Headlines
+Business Insider,News,en,30,https://www.businessinsider.com/rss,Headlines
+MarketWatch - Top Stories,News,en,31,http://feeds.marketwatch.com/marketwatch/topstories/,Headlines
+Christian Science Monitor,News,en,32,https://rss.csmonitor.com/feeds/all,Headlines
+Pew Research Center,News,en,33,https://www.pewresearch.org/feed,Headlines
+Foreign Affairs,News,en,34,https://www.foreignaffairs.com/rss.xml,Headlines
+The Atlantic,News,en,35,https://www.theatlantic.com/feed/all,Headlines
+New Yorker,News,en,36,https://www.newyorker.com/feed/everything,Headlines
+New York Post,News,en,37,https://nypost.com/feed/,Full Articles
+Slate,News,en,38,https://slate.com/feeds/all.rss,Headlines
+The Nation,News,en,39,https://www.thenation.com/feed/?post_type=article,Headlines
+NewsNation,News,en,40,https://www.newsnationnow.com/feed/,Headlines
+Truthout,News,en,41,https://truthout.org/latest/feed,Full Articles
+Hong Kong Free Press,News,en,42,https://hongkongfp.com/feed,Full Articles
+Sky News - Home,News,en,43,https://feeds.skynews.com/feeds/rss/home.xml,Headlines
+Sky News - World,News,en,44,https://feeds.skynews.com/feeds/rss/world.xml,Headlines
+Independent - News,News,en,45,https://www.independent.co.uk/news/rss,Headlines
+Standard - Home,News,en,46,https://www.standard.co.uk/rss,Headlines
+Mirror - News,News,en,47,https://www.mirror.co.uk/news/?service=rss,Headlines
+Daily Express,News,en,48,https://www.express.co.uk/posts/rss/77/news,Headlines
+DW - Top Stories,News,en,49,https://rss.dw.com/rdf/rss-en-all,Headlines
+France 24,News,en,50,https://www.france24.com/en/rss,Headlines
+Straits Times - World,News,en,51,https://www.straitstimes.com/news/world/rss.xml,Headlines
+South China Morning Post - Global,News,en,52,https://www.scmp.com/rss/91/feed,Headlines
+Japan Times,News,en,53,https://www.japantimes.co.jp/feed/topstories,Headlines
+Times of India - Top Stories,News,en,54,https://timesofindia.indiatimes.com/rssfeedstopstories.cms,Headlines
+NDTV - Top Stories,News,en,55,https://feeds.feedburner.com/ndtvnews-top-stories,Full Articles
+Sydney Morning Herald,News,en,56,https://www.smh.com.au/rss/feed.xml,Headlines
+CBC - Top Stories,News,en,57,https://www.cbc.ca/cmlink/rss-topstories,Headlines
+CBC - World,News,en,58,https://www.cbc.ca/cmlink/rss-world,Headlines
+Global News,News,en,59,https://globalnews.ca/feed/,Full Articles
+Toronto Star,News,en,60,https://www.thestar.com/search/?f=rss&t=article&c=news*&l=50&s=start_time&sd=desc,Headlines
+RT - News,News,en,61,https://www.rt.com/rss/news/,Full Articles
+The Conversation,News,en,62,https://theconversation.com/us/articles.atom,Headlines
+The Real News Network,News,en,63,https://therealnews.com/feed,Full Articles
+Alternet,News,en,64,https://www.alternet.org/feeds/feed.rss,Headlines
+AllSides,News,en,65,https://www.allsides.com/rss/news,Headlines
+Salon,News,en,66,https://www.salon.com/feed/,Full Articles
+ProPublica,News,en,67,https://www.propublica.org/feeds/propublica/main,Full Articles
+The Intercept,News,en,68,https://theintercept.com/feed/?lang=en,Full Articles
+FiveThirtyEight,News,en,69,https://fivethirtyeight.com/all/feed,Full Articles
+Rolling Stone - Politics,News,en,70,https://www.rollingstone.com/politics/feed/,Headlines
+Vanity Fair,News,en,71,https://www.vanityfair.com/feed/rss,Headlines
+Esquire,News,en,72,https://www.esquire.com/rss/all.xml/,Headlines
+GQ,News,en,73,https://www.gq.com/feed/rss,Headlines
+Wired - Business,News,en,74,https://www.wired.com/feed/category/business/latest/rss,Headlines
+TechCrunch,News,en,75,https://techcrunch.com/feed/,Headlines
+The Verge,News,en,76,https://www.theverge.com/rss/index.xml,Headlines
+Engadget,News,en,77,https://www.engadget.com/rss.xml,Headlines
+Ars Technica,News,en,78,https://feeds.arstechnica.com/arstechnica/index,Full Articles
+Mashable,News,en,79,https://mashable.com/feeds/rss/all,Full Articles
+Gizmodo,News,en,80,https://gizmodo.com/rss,Full Articles
+Lifehacker,News,en,81,https://lifehacker.com/rss,Full Articles
+Eurogamer,News,en,82,https://www.eurogamer.net/rss,Headlines
+PC Gamer,News,en,83,https://www.pcgamer.com/rss,Headlines
+New Scientist,News,en,84,https://www.newscientist.com/feed/home,Headlines
+Smithsonian Magazine,News,en,85,https://www.smithsonianmag.com/rss/latest_articles/,Headlines
+Space.com,News,en,86,https://www.space.com/feeds/all,Headlines
+Live Science,News,en,87,https://www.livescience.com/feeds/all,Headlines
+Phys.org,News,en,88,https://phys.org/rss-feed/,Headlines
+ESPN - Top Headlines,News,en,89,https://www.espn.com/espn/rss/news,Headlines
+CBS Sports,News,en,90,https://www.cbssports.com/rss/headlines/,Headlines
+Yahoo Sports,News,en,91,https://sports.yahoo.com/rss/,Full Articles
+Los Angeles Times,News,en,92,https://www.latimes.com/world/rss2.0.xml,Full Articles
+Chicago Tribune,News,en,93,https://www.chicagotribune.com/arc/outboundfeeds/rss/?outputType=xml,Headlines
+Seattle Times,News,en,94,https://www.seattletimes.com/feed/,Headlines
+Mercury News,News,en,95,https://www.mercurynews.com/feed/,Full Articles
+Denver Post,News,en,96,https://www.denverpost.com/feed/,Full Articles
+Star Tribune,News,en,97,https://www.startribune.com/rss/?c=y&s=all,Headlines
+Jerusalem Post,News,en,98,https://www.jpost.com/rss/rssfeedsheadlines.aspx,Headlines
+Haaretz,News,en,99,https://www.haaretz.com/cmlink/1.4608778,Headlines
+Euronews - News,News,en,100,https://www.euronews.com/rss?format=mp3,Headlines
