@@ -6,6 +6,7 @@ import com.rometools.rome.io.SyndFeedInput
 import com.rometools.rome.io.XmlReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.net.HttpURLConnection
 import java.net.URL
 
 class RssParser(private val logger: ((String) -> Unit)? = null) {
@@ -13,9 +14,17 @@ class RssParser(private val logger: ((String) -> Unit)? = null) {
         return withContext(Dispatchers.IO) {
             try {
                 logger?.invoke("Fetching feed: ${feed.url}")
-                val url = URL(feed.url)
+                val urlConnection = URL(feed.url).openConnection() as HttpURLConnection
+                urlConnection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+                urlConnection.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
+                urlConnection.setRequestProperty("Accept-Language", "en-US,en;q=0.9")
+                urlConnection.setRequestProperty("Connection", "keep-alive")
+                urlConnection.connectTimeout = 10000
+                urlConnection.readTimeout = 10000
+
+                // Rome's XmlReader handles encoding detection
                 val input = SyndFeedInput()
-                val syndFeed = input.build(XmlReader(url))
+                val syndFeed = input.build(XmlReader(urlConnection.inputStream))
 
                 logger?.invoke("Successfully fetched feed: ${feed.url}. Found ${syndFeed.entries.size} entries.")
 
