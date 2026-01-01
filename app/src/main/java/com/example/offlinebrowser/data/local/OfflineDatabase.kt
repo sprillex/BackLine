@@ -13,7 +13,7 @@ import com.example.offlinebrowser.data.model.SuggestedFeed
 import com.example.offlinebrowser.data.model.TrustedServer
 import com.example.offlinebrowser.data.model.Weather
 
-@Database(entities = [Feed::class, Article::class, Weather::class, TrustedServer::class, SuggestedFeed::class], version = 6, exportSchema = false)
+@Database(entities = [Feed::class, Article::class, Weather::class, TrustedServer::class, SuggestedFeed::class], version = 7, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class OfflineDatabase : RoomDatabase() {
     abstract fun feedDao(): FeedDao
@@ -57,6 +57,12 @@ abstract class OfflineDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE suggested_feeds ADD COLUMN summary TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
         fun getDatabase(context: Context): OfflineDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -64,7 +70,7 @@ abstract class OfflineDatabase : RoomDatabase() {
                     OfflineDatabase::class.java,
                     "offline_browser_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                 .build()
                 INSTANCE = instance
                 instance

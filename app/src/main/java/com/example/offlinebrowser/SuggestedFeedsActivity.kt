@@ -1,5 +1,6 @@
 package com.example.offlinebrowser
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -31,7 +32,12 @@ class SuggestedFeedsActivity : AppCompatActivity() {
                 type = FeedType.RSS, // Assuming RSS for now based on CSV
                 downloadLimit = 0,
                 category = suggestedFeed.category,
-                syncNow = true
+                syncNow = true,
+                onFeedAdded = { feedId ->
+                    val intent = Intent(this, EditFeedActivity::class.java)
+                    intent.putExtra("FEED_ID", feedId.toInt())
+                    startActivity(intent)
+                }
             )
             Toast.makeText(this, "Added ${suggestedFeed.name}", Toast.LENGTH_SHORT).show()
         }
