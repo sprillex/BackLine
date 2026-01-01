@@ -34,15 +34,25 @@ class SuggestedFeedRepository(
             reader.readLine()
             var line: String?
             while (reader.readLine().also { line = it } != null) {
-                val tokens = line!!.split(",")
+                // Expected Format: rank,Name,language,summary,url,contentType
+                // Use Regex to split by comma but ignoring commas inside quotes
+                val tokens = line!!.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)".toRegex())
                 if (tokens.size >= 6) {
+                    val rank = tokens[0].trim().toIntOrNull() ?: 0
+                    val name = tokens[1].trim()
+                    val language = tokens[2].trim()
+                    val summary = tokens[3].trim().removeSurrounding("\"")
+                    val url = tokens[4].trim()
+                    val contentType = tokens[5].trim()
+
                     val feed = SuggestedFeed(
-                        name = tokens[0],
-                        category = tokens[1],
-                        language = tokens[2],
-                        rank = tokens[3].toIntOrNull() ?: 0,
-                        url = tokens[4],
-                        contentType = tokens[5]
+                        name = name,
+                        category = "General", // Default since category column was removed
+                        language = language,
+                        summary = summary,
+                        rank = rank,
+                        url = url,
+                        contentType = contentType
                     )
                     feeds.add(feed)
                 }

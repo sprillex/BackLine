@@ -9,6 +9,7 @@ data class SuggestedFeed @JvmOverloads constructor(
     val name: String,
     val category: String,
     val language: String,
+    val summary: String,
     val rank: Int,
     val url: String,
     val contentType: String

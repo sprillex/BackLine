@@ -74,9 +74,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _articleFilter.value = ArticleFilter.ByFeed(feedId)
     }
 
-    fun addFeed(url: String, type: FeedType, downloadLimit: Int = 0, category: String? = null, syncNow: Boolean = false) {
+    fun addFeed(url: String, type: FeedType, downloadLimit: Int = 0, category: String? = null, syncNow: Boolean = false, onFeedAdded: ((Long) -> Unit)? = null) {
         viewModelScope.launch {
             val id = feedRepository.addFeed(url, type, downloadLimit, category)
+            onFeedAdded?.invoke(id)
             if (syncNow) {
                  val feed = feedRepository.getFeedById(id.toInt())
                  if (feed != null) {
