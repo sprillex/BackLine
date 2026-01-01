@@ -21,6 +21,17 @@ A robust tool designed to generate, rank, and clean RSS feed datasets based on s
 
 ---
 
+## 📡 Data Acquisition Strategy
+
+To populate the list, the system executes the following search logic based on the inputs:
+
+1.  **Search Query:** Performs a web search for keywords: *"Top [rank] [category] RSS feeds"* (e.g., "Top 100 Tech RSS feeds").
+2.  **Extraction:** Scrapes resulting pages to identify valid RSS feed links (`.xml`, `.rss`, or `/feed`).
+3.  **Validation:** Tests each link. Only active (HTTP 200 OK) feeds are processed.
+4.  **Ranking:** Feeds are ranked (1–100) based on the order they are discovered/verified.
+
+---
+
 ## 📂 Output Structure
 
 The system automatically creates the required directory tree if it does not exist:
