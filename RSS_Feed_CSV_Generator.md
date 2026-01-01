@@ -7,7 +7,7 @@ A robust tool designed to generate, rank, and clean RSS feed datasets based on s
 * **Automated Content Detection:** Distinguishes between "Headlines" and "Full Articles" by analyzing feed tags and word counts.
 * **Smart Sanitization:** Strips HTML, escapes characters, and removes line breaks to prevent CSV breakage.
 * **Error Resilience:** Automatically logs and skips dead or unreachable feeds without crashing the process.
-* ** https check ** prefers https for security and compatibility. When given an http feed https is checked first. If https is available the secure url is stored instead of https.
+* **https First** When given an http feed https is checked first. If https is available the secure url is stored instead of http.
 * **Standardized Output:** Organizes files into a strict ISO-language/Category directory structure.
 
 ---
