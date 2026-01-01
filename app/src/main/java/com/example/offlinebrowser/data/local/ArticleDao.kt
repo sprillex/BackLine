@@ -11,13 +11,13 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ArticleDao {
-    @Query("SELECT * FROM articles WHERE feedId = :feedId ORDER BY publishedDate DESC")
+    @Query("SELECT * FROM articles WHERE feedId = :feedId ORDER BY isRead ASC, publishedDate DESC")
     fun getArticlesForFeed(feedId: Int): Flow<List<Article>>
 
-    @Query("SELECT articles.* FROM articles INNER JOIN feeds ON articles.feedId = feeds.id WHERE feeds.category = :category ORDER BY articles.publishedDate DESC")
+    @Query("SELECT articles.* FROM articles INNER JOIN feeds ON articles.feedId = feeds.id WHERE feeds.category = :category ORDER BY articles.isRead ASC, articles.publishedDate DESC")
     fun getArticlesByCategory(category: String): Flow<List<Article>>
 
-    @Query("SELECT * FROM articles ORDER BY publishedDate DESC")
+    @Query("SELECT * FROM articles ORDER BY isRead ASC, publishedDate DESC")
     fun getAllArticles(): Flow<List<Article>>
 
     @Query("SELECT * FROM articles WHERE feedId = :feedId AND url = :url LIMIT 1")

@@ -34,6 +34,7 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
 import com.example.offlinebrowser.data.repository.PreferencesRepository
 import com.example.offlinebrowser.viewmodel.MainViewModel
 import com.example.offlinebrowser.ui.ArticleAdapter
@@ -64,6 +65,8 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var rvCategories: RecyclerView
     private lateinit var rvArticles: RecyclerView
     private lateinit var dashboardScrollView: NestedScrollView
+    private lateinit var swipeRefreshArticles: androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+    private lateinit var swipeRefreshDashboard: androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 
     // New Views for Embedded Layout
     private lateinit var homeStandardView: LinearLayout
@@ -178,6 +181,8 @@ class HomeActivity : AppCompatActivity() {
         rvCategories = findViewById(R.id.rv_categories)
         rvArticles = findViewById(R.id.rv_articles)
         dashboardScrollView = findViewById(R.id.dashboard_scroll_view)
+        swipeRefreshArticles = findViewById(R.id.swipe_refresh_articles)
+        swipeRefreshDashboard = findViewById(R.id.swipe_refresh_dashboard)
 
         homeStandardView = findViewById(R.id.home_standard_view)
         weatherDetailView = findViewById(R.id.weather_detail_view)
@@ -240,6 +245,26 @@ class HomeActivity : AppCompatActivity() {
             }
             true
         }
+
+        // Swipe Refresh Listeners
+        swipeRefreshArticles.setOnRefreshListener {
+            lifecycleScope.launch {
+                // Refresh local data only (no network sync)
+                // The UI is already reactive to DB changes.
+                // We just simulate a refresh delay to acknowledge the action.
+                delay(500)
+                swipeRefreshArticles.isRefreshing = false
+            }
+        }
+
+        swipeRefreshDashboard.setOnRefreshListener {
+            lifecycleScope.launch {
+                // Refresh local data only (no network sync)
+                // The UI is already reactive to DB changes.
+                delay(500)
+                swipeRefreshDashboard.isRefreshing = false
+            }
+        }
     }
 
     private fun setupObservers() {
@@ -293,26 +318,32 @@ class HomeActivity : AppCompatActivity() {
         currentViewState = state
         when (state) {
             ViewState.DASHBOARD -> {
+                swipeRefreshDashboard.visibility = View.VISIBLE
                 dashboardScrollView.visibility = View.VISIBLE
                 weatherSection.visibility = View.VISIBLE
                 homeStandardView.visibility = View.VISIBLE
                 weatherDetailView.visibility = View.GONE
+                swipeRefreshArticles.visibility = View.GONE
                 rvArticles.visibility = View.GONE
                 activeCategory = null
                 activeFeedId = -1
             }
             ViewState.WEATHER_DETAIL -> {
+                swipeRefreshDashboard.visibility = View.VISIBLE
                 dashboardScrollView.visibility = View.VISIBLE
                 weatherSection.visibility = View.GONE
                 homeStandardView.visibility = View.GONE
                 weatherDetailView.visibility = View.VISIBLE
+                swipeRefreshArticles.visibility = View.GONE
                 rvArticles.visibility = View.GONE
                 activeCategory = null
                 activeFeedId = -1
             }
             ViewState.ARTICLE_LIST -> {
+                swipeRefreshDashboard.visibility = View.GONE
                 dashboardScrollView.visibility = View.GONE
                 weatherSection.visibility = View.VISIBLE
+                swipeRefreshArticles.visibility = View.VISIBLE
                 rvArticles.visibility = View.VISIBLE
             }
         }

@@ -168,4 +168,5 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             articleRepository.updateArticleReadStatus(article.id, !article.isRead)
         }
     }
+
 }
