@@ -168,4 +168,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             articleRepository.updateArticleReadStatus(article.id, !article.isRead)
         }
     }
+
+    suspend fun syncAllFeeds() {
+        // Sync all feeds
+        // Using the current value from the feeds StateFlow
+        feeds.value.forEach { feed ->
+             feedRepository.syncFeed(feed)
+        }
+    }
+
+    suspend fun syncAllWeather() {
+        val weatherList = weatherLocations.value
+        val days = preferencesRepository.weatherForecastDays
+        weatherList.forEach { weather ->
+             weatherRepository.updateWeather(weather, days)
+        }
+    }
 }

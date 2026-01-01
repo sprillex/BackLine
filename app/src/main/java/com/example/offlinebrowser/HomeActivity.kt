@@ -32,6 +32,8 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.example.offlinebrowser.data.repository.PreferencesRepository
 import com.example.offlinebrowser.viewmodel.MainViewModel
 import com.example.offlinebrowser.ui.ArticleAdapter
@@ -62,6 +64,8 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var rvCategories: RecyclerView
     private lateinit var rvArticles: RecyclerView
     private lateinit var dashboardScrollView: NestedScrollView
+    private lateinit var swipeRefreshArticles: androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+    private lateinit var swipeRefreshDashboard: androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 
     // New Views for Embedded Layout
     private lateinit var homeStandardView: LinearLayout
@@ -176,6 +180,8 @@ class HomeActivity : AppCompatActivity() {
         rvCategories = findViewById(R.id.rv_categories)
         rvArticles = findViewById(R.id.rv_articles)
         dashboardScrollView = findViewById(R.id.dashboard_scroll_view)
+        swipeRefreshArticles = findViewById(R.id.swipe_refresh_articles)
+        swipeRefreshDashboard = findViewById(R.id.swipe_refresh_dashboard)
 
         homeStandardView = findViewById(R.id.home_standard_view)
         weatherDetailView = findViewById(R.id.weather_detail_view)
@@ -238,6 +244,37 @@ class HomeActivity : AppCompatActivity() {
             }
             true
         }
+
+        // Swipe Refresh Listeners
+        swipeRefreshArticles.setOnRefreshListener {
+            lifecycleScope.launch {
+                // Determine what to refresh based on filter
+                if (activeFeedId != -1) {
+                    val feed = viewModel.getFeedById(activeFeedId)
+                    if (feed != null) {
+                        viewModel.syncFeed(feed)
+                    }
+                } else {
+                    // Refresh all feeds if in "All" or Category view
+                    // (For category, we ideally only refresh feeds in that category, but syncing all is safer/easier for now)
+                    viewModel.syncAllFeeds()
+                }
+                // Also refresh weather if we want? The prompt says "refresh THAT page".
+                // If we are in Article List, we are looking at feeds.
+                swipeRefreshArticles.isRefreshing = false
+            }
+        }
+
+        swipeRefreshDashboard.setOnRefreshListener {
+            lifecycleScope.launch {
+                viewModel.syncAllWeather()
+                // Also sync feeds? Dashboard shows categories which depend on feeds.
+                // But primarily it's about weather and overview.
+                // Let's sync feeds too as they populate the categories list.
+                viewModel.syncAllFeeds()
+                swipeRefreshDashboard.isRefreshing = false
+            }
+        }
     }
 
     private fun setupObservers() {
@@ -291,26 +328,32 @@ class HomeActivity : AppCompatActivity() {
         currentViewState = state
         when (state) {
             ViewState.DASHBOARD -> {
+                swipeRefreshDashboard.visibility = View.VISIBLE
                 dashboardScrollView.visibility = View.VISIBLE
                 weatherSection.visibility = View.VISIBLE
                 homeStandardView.visibility = View.VISIBLE
                 weatherDetailView.visibility = View.GONE
+                swipeRefreshArticles.visibility = View.GONE
                 rvArticles.visibility = View.GONE
                 activeCategory = null
                 activeFeedId = -1
             }
             ViewState.WEATHER_DETAIL -> {
+                swipeRefreshDashboard.visibility = View.VISIBLE
                 dashboardScrollView.visibility = View.VISIBLE
                 weatherSection.visibility = View.GONE
                 homeStandardView.visibility = View.GONE
                 weatherDetailView.visibility = View.VISIBLE
+                swipeRefreshArticles.visibility = View.GONE
                 rvArticles.visibility = View.GONE
                 activeCategory = null
                 activeFeedId = -1
             }
             ViewState.ARTICLE_LIST -> {
+                swipeRefreshDashboard.visibility = View.GONE
                 dashboardScrollView.visibility = View.GONE
                 weatherSection.visibility = View.VISIBLE
+                swipeRefreshArticles.visibility = View.VISIBLE
                 rvArticles.visibility = View.VISIBLE
             }
         }
@@ -453,6 +496,48 @@ class HomeActivity : AppCompatActivity() {
             addPill(category, currentViewState == ViewState.ARTICLE_LIST && activeCategory == category) {
                  showArticles(category = category)
             }
+        }
+
+        // Debug Pill
+        if (preferencesRepository.detailedDebuggingEnabled) {
+            addPill("Debug", false) {
+                showDebugLog()
+            }
+        }
+    }
+
+    private fun showDebugLog() {
+        lifecycleScope.launch {
+            val logFile = java.io.File(filesDir, "debug_log.txt")
+            val content = withContext(Dispatchers.IO) {
+                if (logFile.exists()) {
+                    logFile.readText()
+                } else {
+                    "No logs found."
+                }
+            }
+
+            val textView = TextView(this@HomeActivity).apply {
+                text = content
+                setPadding(32, 32, 32, 32)
+                setTextIsSelectable(true)
+            }
+
+            val scrollView = NestedScrollView(this@HomeActivity).apply {
+                addView(textView)
+            }
+
+            AlertDialog.Builder(this@HomeActivity)
+                .setTitle("Debug Logs")
+                .setView(scrollView)
+                .setPositiveButton("Close", null)
+                .setNeutralButton("Clear") { _, _ ->
+                     if (logFile.exists()) {
+                         logFile.delete()
+                         Toast.makeText(this@HomeActivity, "Logs cleared", Toast.LENGTH_SHORT).show()
+                     }
+                }
+                .show()
         }
     }
 
