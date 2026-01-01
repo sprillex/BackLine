@@ -27,6 +27,9 @@ class SuggestedFeedsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_suggested_feeds)
 
+        val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
+        setSupportActionBar(toolbar)
+
         val rvSuggestedFeeds = findViewById<RecyclerView>(R.id.rvSuggestedFeeds)
 
         adapter = SuggestedFeedAdapter { suggestedFeed ->
