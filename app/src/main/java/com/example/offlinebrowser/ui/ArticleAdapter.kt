@@ -75,6 +75,11 @@ class ArticleAdapter(
             }
         }
 
+        // Add visual indicator for Read if desired
+        if (article.isRead) {
+            holder.tvStatus.text = "${holder.tvStatus.text} ✓"
+        }
+
         // Add visual indicator for Favorite if desired, e.g., append a star to title or use a separate icon
         // For now just appending "★" to status if favorite
         if (article.isFavorite) {
