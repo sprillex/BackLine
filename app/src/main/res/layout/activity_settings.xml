@@ -11,6 +11,20 @@
         android:layout_height="wrap_content"
         android:text="WiFi Only (Never use cell data)" />
 
+    <CheckBox
+        android:id="@+id/cbDetailedDebugging"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Enable Detailed Debugging" />
+
+    <Button
+        android:id="@+id/btnDownloadLogs"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Download Debug Logs"
+        android:visibility="gone"
+        android:layout_marginTop="8dp"/>
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

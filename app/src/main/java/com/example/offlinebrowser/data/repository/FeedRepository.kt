@@ -11,15 +11,33 @@ import java.util.concurrent.TimeUnit
 import android.content.Context
 
 import com.example.offlinebrowser.data.network.HtmlDownloader
+import com.example.offlinebrowser.util.FileLogger
 
 class FeedRepository(
     private val context: Context,
     private val feedDao: FeedDao,
     private val articleDao: ArticleDao,
-    private val rssParser: RssParser,
-    private val htmlDownloader: HtmlDownloader = HtmlDownloader()
+    private val rssParser: RssParser? = null,
+    private val htmlDownloader: HtmlDownloader? = null
 ) {
     private val preferencesRepository = PreferencesRepository(context)
+    private val fileLogger = FileLogger(context)
+
+    private val logCallback: (String) -> Unit = { message ->
+        if (preferencesRepository.detailedDebuggingEnabled) {
+            fileLogger.log(message)
+        }
+    }
+
+    // Use passed parser or create one with logging if needed
+    private val parser: RssParser by lazy {
+        rssParser ?: RssParser(logCallback)
+    }
+
+    private val downloader: HtmlDownloader by lazy {
+        htmlDownloader ?: HtmlDownloader(logCallback)
+    }
+
     val allFeeds: Flow<List<Feed>> = feedDao.getAllFeeds()
 
     suspend fun addFeed(url: String, type: FeedType, downloadLimit: Int = 0, category: String? = null): Long {
@@ -41,7 +59,10 @@ class FeedRepository(
 
     suspend fun syncFeed(feed: Feed) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         if (feed.type == FeedType.RSS || feed.type == FeedType.MASTODON) {
-            val articles = rssParser.fetchFeed(feed)
+            if (preferencesRepository.detailedDebuggingEnabled) {
+                fileLogger.log("Starting sync for feed: ${feed.url}")
+            }
+            val articles = parser.fetchFeed(feed)
 
             for (article in articles) {
                  val existing = articleDao.getArticleByUrl(feed.id, article.url)
@@ -67,7 +88,7 @@ class FeedRepository(
             if (feed.downloadLimit > 0) {
                 val articlesToDownload = articleDao.getTopUncachedArticles(feed.id, feed.downloadLimit)
                 for (article in articlesToDownload) {
-                    val content = htmlDownloader.downloadHtml(article.url)
+                    val content = downloader.downloadHtml(article.url)
                     if (content != null) {
                         val downloaded = article.copy(content = content, isCached = true)
                         articleDao.updateArticle(downloaded)
@@ -90,7 +111,7 @@ class FeedRepository(
             val existing = articleDao.getArticleByUrl(feed.id, article.url)
             if (existing == null) {
                 // New article, download content immediately
-                val content = htmlDownloader.downloadHtml(feed.url)
+                val content = downloader.downloadHtml(feed.url)
                 if (content != null) {
                     val downloadedArticle = article.copy(content = content, isCached = true)
                     articleDao.insertArticle(downloadedArticle)
@@ -100,7 +121,7 @@ class FeedRepository(
                 }
             } else {
                  // Update content if needed? For simple HTML page feed, we assume we always want latest.
-                 val content = htmlDownloader.downloadHtml(feed.url)
+                 val content = downloader.downloadHtml(feed.url)
                  if (content != null) {
                      val updated = existing.copy(
                          content = content,
