@@ -34,6 +34,7 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
 import com.example.offlinebrowser.data.repository.PreferencesRepository
 import com.example.offlinebrowser.viewmodel.MainViewModel
 import com.example.offlinebrowser.ui.ArticleAdapter
@@ -248,30 +249,19 @@ class HomeActivity : AppCompatActivity() {
         // Swipe Refresh Listeners
         swipeRefreshArticles.setOnRefreshListener {
             lifecycleScope.launch {
-                // Determine what to refresh based on filter
-                if (activeFeedId != -1) {
-                    val feed = viewModel.getFeedById(activeFeedId)
-                    if (feed != null) {
-                        viewModel.syncFeed(feed)
-                    }
-                } else {
-                    // Refresh all feeds if in "All" or Category view
-                    // (For category, we ideally only refresh feeds in that category, but syncing all is safer/easier for now)
-                    viewModel.syncAllFeeds()
-                }
-                // Also refresh weather if we want? The prompt says "refresh THAT page".
-                // If we are in Article List, we are looking at feeds.
+                // Refresh local data only (no network sync)
+                // The UI is already reactive to DB changes.
+                // We just simulate a refresh delay to acknowledge the action.
+                delay(500)
                 swipeRefreshArticles.isRefreshing = false
             }
         }
 
         swipeRefreshDashboard.setOnRefreshListener {
             lifecycleScope.launch {
-                viewModel.syncAllWeather()
-                // Also sync feeds? Dashboard shows categories which depend on feeds.
-                // But primarily it's about weather and overview.
-                // Let's sync feeds too as they populate the categories list.
-                viewModel.syncAllFeeds()
+                // Refresh local data only (no network sync)
+                // The UI is already reactive to DB changes.
+                delay(500)
                 swipeRefreshDashboard.isRefreshing = false
             }
         }
