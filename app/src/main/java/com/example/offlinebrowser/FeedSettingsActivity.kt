@@ -35,6 +35,7 @@ class FeedSettingsActivity : AppCompatActivity() {
         val btnAddRss = findViewById<Button>(R.id.btnAddRss)
         val btnAddMastodon = findViewById<Button>(R.id.btnAddMastodon)
         val btnAddHtml = findViewById<Button>(R.id.btnAddHtml)
+        val btnBrowseTopFeeds = findViewById<Button>(R.id.btnBrowseTopFeeds)
         val rvFeeds = findViewById<RecyclerView>(R.id.rvFeeds)
         val btnWeather = findViewById<Button>(R.id.btnWeather)
         val btnBindery = findViewById<Button>(R.id.btnBindery)
@@ -86,6 +87,11 @@ class FeedSettingsActivity : AppCompatActivity() {
                 showAddFeedDialog(url, FeedType.HTML)
                 etUrl.text.clear()
             }
+        }
+
+        btnBrowseTopFeeds.setOnClickListener {
+            val intent = Intent(this, SuggestedFeedsActivity::class.java)
+            startActivity(intent)
         }
 
         btnWeather.setOnClickListener {

@@ -6,13 +6,30 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.example.offlinebrowser.data.local.OfflineDatabase
 import com.example.offlinebrowser.data.repository.PreferencesRepository
+import com.example.offlinebrowser.data.repository.SuggestedFeedRepository
 import com.example.offlinebrowser.workers.SyncWorker
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
 class OfflineBrowserApp : Application() {
+
+    lateinit var suggestedFeedRepository: SuggestedFeedRepository
+
     override fun onCreate() {
         super.onCreate()
+
+        val database = OfflineDatabase.getDatabase(this)
+        suggestedFeedRepository = SuggestedFeedRepository(database.suggestedFeedDao(), this)
+
+        // Initialize data
+        CoroutineScope(Dispatchers.IO).launch {
+            suggestedFeedRepository.initializeData()
+        }
+
         scheduleSync()
     }
 

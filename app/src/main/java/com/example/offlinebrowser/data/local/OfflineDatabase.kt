@@ -9,16 +9,18 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.offlinebrowser.data.model.Article
 import com.example.offlinebrowser.data.model.Feed
+import com.example.offlinebrowser.data.model.SuggestedFeed
 import com.example.offlinebrowser.data.model.TrustedServer
 import com.example.offlinebrowser.data.model.Weather
 
-@Database(entities = [Feed::class, Article::class, Weather::class, TrustedServer::class], version = 5, exportSchema = false)
+@Database(entities = [Feed::class, Article::class, Weather::class, TrustedServer::class, SuggestedFeed::class], version = 6, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class OfflineDatabase : RoomDatabase() {
     abstract fun feedDao(): FeedDao
     abstract fun articleDao(): ArticleDao
     abstract fun weatherDao(): WeatherDao
     abstract fun trustedServerDao(): TrustedServerDao
+    abstract fun suggestedFeedDao(): SuggestedFeedDao
 
     companion object {
         @Volatile
@@ -49,6 +51,12 @@ abstract class OfflineDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("CREATE TABLE IF NOT EXISTS `suggested_feeds` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `category` TEXT NOT NULL, `language` TEXT NOT NULL, `rank` INTEGER NOT NULL, `url` TEXT NOT NULL, `contentType` TEXT NOT NULL)")
+            }
+        }
+
         fun getDatabase(context: Context): OfflineDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -56,7 +64,7 @@ abstract class OfflineDatabase : RoomDatabase() {
                     OfflineDatabase::class.java,
                     "offline_browser_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                 .build()
                 INSTANCE = instance
                 instance
