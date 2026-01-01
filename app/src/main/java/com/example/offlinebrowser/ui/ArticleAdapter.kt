@@ -62,9 +62,17 @@ class ArticleAdapter(
 
         // Visual indicator for Read status
         if (article.isRead) {
-            holder.tvTitle.alpha = 0.6f
+            holder.tvTitle.setTextColor(android.graphics.Color.GRAY)
         } else {
-            holder.tvTitle.alpha = 1.0f
+            // Reset to default text color (assuming it's black/primary from theme)
+            // Ideally we should get this from the theme attributes to support dark mode correctly
+            val typedValue = android.util.TypedValue()
+            holder.itemView.context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
+            if (typedValue.resourceId != 0) {
+                 holder.tvTitle.setTextColor(androidx.core.content.ContextCompat.getColor(holder.itemView.context, typedValue.resourceId))
+            } else {
+                 holder.tvTitle.setTextColor(typedValue.data)
+            }
         }
 
         // Add visual indicator for Favorite if desired, e.g., append a star to title or use a separate icon
