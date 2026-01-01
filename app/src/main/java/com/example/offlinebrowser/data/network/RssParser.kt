@@ -8,13 +8,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.URL
 
-class RssParser {
+class RssParser(private val logger: ((String) -> Unit)? = null) {
     suspend fun fetchFeed(feed: Feed): List<Article> {
         return withContext(Dispatchers.IO) {
             try {
+                logger?.invoke("Fetching feed: ${feed.url}")
                 val url = URL(feed.url)
                 val input = SyndFeedInput()
                 val syndFeed = input.build(XmlReader(url))
+
+                logger?.invoke("Successfully fetched feed: ${feed.url}. Found ${syndFeed.entries.size} entries.")
 
                 syndFeed.entries.map { entry ->
                     Article(
@@ -27,6 +30,7 @@ class RssParser {
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+                logger?.invoke("Failed to fetch feed ${feed.url}: ${e.message}")
                 emptyList()
             }
         }

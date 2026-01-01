@@ -27,7 +27,8 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val database = OfflineDatabase.getDatabase(application)
-    private val feedRepository = FeedRepository(application, database.feedDao(), database.articleDao(), RssParser())
+    // We don't pass RssParser here, let FeedRepository create its own with logging
+    private val feedRepository = FeedRepository(application, database.feedDao(), database.articleDao())
     private val articleRepository = ArticleRepository(database.articleDao(), HtmlDownloader())
     private val weatherRepository = WeatherRepository(database.weatherDao())
     private val preferencesRepository = PreferencesRepository(application)

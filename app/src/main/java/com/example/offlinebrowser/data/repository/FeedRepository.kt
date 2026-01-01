@@ -11,15 +11,27 @@ import java.util.concurrent.TimeUnit
 import android.content.Context
 
 import com.example.offlinebrowser.data.network.HtmlDownloader
+import com.example.offlinebrowser.util.FileLogger
 
 class FeedRepository(
     private val context: Context,
     private val feedDao: FeedDao,
     private val articleDao: ArticleDao,
-    private val rssParser: RssParser,
+    private val rssParser: RssParser? = null,
     private val htmlDownloader: HtmlDownloader = HtmlDownloader()
 ) {
     private val preferencesRepository = PreferencesRepository(context)
+    private val fileLogger = FileLogger(context)
+
+    // Use passed parser or create one with logging if needed
+    private val parser: RssParser by lazy {
+        rssParser ?: RssParser { message ->
+            if (preferencesRepository.detailedDebuggingEnabled) {
+                fileLogger.log(message)
+            }
+        }
+    }
+
     val allFeeds: Flow<List<Feed>> = feedDao.getAllFeeds()
 
     suspend fun addFeed(url: String, type: FeedType, downloadLimit: Int = 0, category: String? = null): Long {
@@ -41,7 +53,10 @@ class FeedRepository(
 
     suspend fun syncFeed(feed: Feed) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         if (feed.type == FeedType.RSS || feed.type == FeedType.MASTODON) {
-            val articles = rssParser.fetchFeed(feed)
+            if (preferencesRepository.detailedDebuggingEnabled) {
+                fileLogger.log("Starting sync for feed: ${feed.url}")
+            }
+            val articles = parser.fetchFeed(feed)
 
             for (article in articles) {
                  val existing = articleDao.getArticleByUrl(feed.id, article.url)

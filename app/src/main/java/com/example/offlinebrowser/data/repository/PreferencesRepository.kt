@@ -37,4 +37,8 @@ class PreferencesRepository(context: Context) {
     var weatherForecastDays: Int
         get() = prefs.getInt("weather_forecast_days", 7)
         set(value) = prefs.edit().putInt("weather_forecast_days", value.coerceIn(1, 16)).apply()
+
+    var detailedDebuggingEnabled: Boolean
+        get() = prefs.getBoolean("detailed_debugging_enabled", false)
+        set(value) = prefs.edit().putBoolean("detailed_debugging_enabled", value).apply()
 }

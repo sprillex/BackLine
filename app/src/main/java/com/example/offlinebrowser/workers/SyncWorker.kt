@@ -24,8 +24,7 @@ class SyncWorker(appContext: Context, workerParams: WorkerParameters) :
         val feedRepository = com.example.offlinebrowser.data.repository.FeedRepository(
             applicationContext,
             database.feedDao(),
-            database.articleDao(),
-            com.example.offlinebrowser.data.network.RssParser()
+            database.articleDao()
         )
         val weatherRepository = com.example.offlinebrowser.data.repository.WeatherRepository(database.weatherDao())
 

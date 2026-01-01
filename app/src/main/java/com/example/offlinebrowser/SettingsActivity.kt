@@ -19,6 +19,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.offlinebrowser.data.repository.ConfigRepository
 import com.example.offlinebrowser.data.repository.PreferencesRepository
+import com.example.offlinebrowser.util.FileLogger
 import com.example.offlinebrowser.workers.SyncWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -75,6 +76,35 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
+    private val saveLogLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
+        uri?.let {
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val logFile = FileLogger(this@SettingsActivity).getLogFile()
+                    if (logFile.exists()) {
+                         contentResolver.openOutputStream(it)?.use { output ->
+                             logFile.inputStream().use { input ->
+                                 input.copyTo(output)
+                             }
+                         }
+                         withContext(Dispatchers.Main) {
+                             Toast.makeText(this@SettingsActivity, "Logs saved successfully", Toast.LENGTH_SHORT).show()
+                         }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@SettingsActivity, "No logs to save", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@SettingsActivity, "Failed to save logs: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+    }
+
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
              val fineLocation = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
@@ -110,6 +140,8 @@ class SettingsActivity : AppCompatActivity() {
         configRepository = ConfigRepository(this)
 
         val cbWifiOnly = findViewById<CheckBox>(R.id.cbWifiOnly)
+        val cbDetailedDebugging = findViewById<CheckBox>(R.id.cbDetailedDebugging)
+        val btnDownloadLogs = findViewById<Button>(R.id.btnDownloadLogs)
         val etSsids = findViewById<EditText>(R.id.etSsids)
 
         val ssidToAdd = intent.getStringExtra("EXTRA_ADD_SSID")
@@ -139,6 +171,9 @@ class SettingsActivity : AppCompatActivity() {
         val btnImport = findViewById<Button>(R.id.btnImport)
 
         cbWifiOnly.isChecked = preferencesRepository.wifiOnly
+        cbDetailedDebugging.isChecked = preferencesRepository.detailedDebuggingEnabled
+        btnDownloadLogs.visibility = if (preferencesRepository.detailedDebuggingEnabled) android.view.View.VISIBLE else android.view.View.GONE
+
         etSsids.setText(preferencesRepository.allowedWifiSsids.joinToString(","))
         etInterval.setText(preferencesRepository.refreshIntervalMinutes.toString())
         etLimitCount.setText(preferencesRepository.feedLimitCount.toString())
@@ -153,6 +188,7 @@ class SettingsActivity : AppCompatActivity() {
 
         btnSave.setOnClickListener {
             preferencesRepository.wifiOnly = cbWifiOnly.isChecked
+            preferencesRepository.detailedDebuggingEnabled = cbDetailedDebugging.isChecked
 
             val ssids = etSsids.text.toString().split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
             preferencesRepository.allowedWifiSsids = ssids
@@ -173,6 +209,14 @@ class SettingsActivity : AppCompatActivity() {
             scheduleSync(interval, cbWifiOnly.isChecked)
 
             finish()
+        }
+
+        cbDetailedDebugging.setOnCheckedChangeListener { _, isChecked ->
+            btnDownloadLogs.visibility = if (isChecked) android.view.View.VISIBLE else android.view.View.GONE
+        }
+
+        btnDownloadLogs.setOnClickListener {
+            saveLogLauncher.launch("debug_log.txt")
         }
 
         btnRequestPerm.setOnClickListener {
