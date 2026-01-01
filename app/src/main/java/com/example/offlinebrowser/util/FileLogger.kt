@@ -8,7 +8,7 @@ import java.util.Date
 import java.util.Locale
 
 class FileLogger(private val context: Context) {
-    private val logFile: File
+    val logFile: File
         get() = File(context.filesDir, "debug_log.txt")
 
     fun log(message: String) {
@@ -20,8 +20,6 @@ class FileLogger(private val context: Context) {
             e.printStackTrace()
         }
     }
-
-    fun getLogFile(): File = logFile
 
     fun clear() {
         if (logFile.exists()) {

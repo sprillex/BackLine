@@ -80,7 +80,7 @@ class SettingsActivity : AppCompatActivity() {
         uri?.let {
             CoroutineScope(Dispatchers.IO).launch {
                 try {
-                    val logFile = FileLogger(this@SettingsActivity).getLogFile()
+                    val logFile = FileLogger(this@SettingsActivity).logFile
                     if (logFile.exists()) {
                          contentResolver.openOutputStream(it)?.use { output ->
                              logFile.inputStream().use { input ->
