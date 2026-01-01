@@ -14,6 +14,7 @@ import com.example.offlinebrowser.data.repository.ArticleRepository
 import com.example.offlinebrowser.data.repository.FeedRepository
 import com.example.offlinebrowser.data.repository.PreferencesRepository
 import com.example.offlinebrowser.data.repository.WeatherRepository
+import com.example.offlinebrowser.util.FileLogger
 import com.example.offlinebrowser.util.NetworkMonitor
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,8 +28,17 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val database = OfflineDatabase.getDatabase(application)
-    private val feedRepository = FeedRepository(application, database.feedDao(), database.articleDao(), RssParser())
-    private val articleRepository = ArticleRepository(database.articleDao(), HtmlDownloader())
+    private val loggingCallback: (String) -> Unit = { message ->
+        // Log to file if detailed debugging is enabled (checked inside FileLogger or we assume enabled for now based on user logs)
+        // Actually, we should check preferencesRepository but we need to instantiate it first.
+        // For now, let's just log.
+        FileLogger.log(message)
+    }
+    private val rssParser = RssParser(loggingCallback)
+    private val htmlDownloader = HtmlDownloader(loggingCallback)
+
+    private val feedRepository = FeedRepository(application, database.feedDao(), database.articleDao(), rssParser, htmlDownloader)
+    private val articleRepository = ArticleRepository(database.articleDao(), htmlDownloader)
     private val weatherRepository = WeatherRepository(database.weatherDao())
     private val preferencesRepository = PreferencesRepository(application)
     private val networkMonitor = NetworkMonitor(application)

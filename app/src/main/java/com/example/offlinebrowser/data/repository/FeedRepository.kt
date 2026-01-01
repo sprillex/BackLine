@@ -17,7 +17,7 @@ class FeedRepository(
     private val feedDao: FeedDao,
     private val articleDao: ArticleDao,
     private val rssParser: RssParser,
-    private val htmlDownloader: HtmlDownloader = HtmlDownloader()
+    private val htmlDownloader: HtmlDownloader
 ) {
     private val preferencesRepository = PreferencesRepository(context)
     val allFeeds: Flow<List<Feed>> = feedDao.getAllFeeds()
