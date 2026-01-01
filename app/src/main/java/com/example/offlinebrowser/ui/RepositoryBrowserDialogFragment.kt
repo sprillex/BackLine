@@ -123,6 +123,8 @@ class RepositoryBrowserDialogFragment : DialogFragment() {
             holder.itemView.setOnClickListener { onItemClick(item) }
         }
 
+        override fun getItemCount(): Int = items.size
+
         class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
             val textView: TextView = view.findViewById(android.R.id.text1)
         }
