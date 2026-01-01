@@ -10,10 +10,15 @@ class HtmlDownloader(private val logger: ((String) -> Unit)? = null) {
             try {
                 logger?.invoke("Scraping URL: $url")
                 val doc = Jsoup.connect(url)
-                    .userAgent("Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                     .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
                     .header("Accept-Language", "en-US,en;q=0.9")
                     .header("Connection", "keep-alive")
+                    .header("Upgrade-Insecure-Requests", "1")
+                    .header("Sec-Fetch-Site", "none")
+                    .header("Sec-Fetch-Mode", "navigate")
+                    .header("Sec-Fetch-User", "?1")
+                    .header("Sec-Fetch-Dest", "document")
                     .get()
                 logger?.invoke("Successfully scraped URL: $url")
                 // We might want to embed images/css for full offline support,

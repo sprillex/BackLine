@@ -32,6 +32,8 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.example.offlinebrowser.data.repository.PreferencesRepository
 import com.example.offlinebrowser.viewmodel.MainViewModel
 import com.example.offlinebrowser.ui.ArticleAdapter
@@ -453,6 +455,48 @@ class HomeActivity : AppCompatActivity() {
             addPill(category, currentViewState == ViewState.ARTICLE_LIST && activeCategory == category) {
                  showArticles(category = category)
             }
+        }
+
+        // Debug Pill
+        if (preferencesRepository.detailedDebuggingEnabled) {
+            addPill("Debug", false) {
+                showDebugLog()
+            }
+        }
+    }
+
+    private fun showDebugLog() {
+        lifecycleScope.launch {
+            val logFile = java.io.File(filesDir, "debug_log.txt")
+            val content = withContext(Dispatchers.IO) {
+                if (logFile.exists()) {
+                    logFile.readText()
+                } else {
+                    "No logs found."
+                }
+            }
+
+            val textView = TextView(this@HomeActivity).apply {
+                text = content
+                setPadding(32, 32, 32, 32)
+                setTextIsSelectable(true)
+            }
+
+            val scrollView = NestedScrollView(this@HomeActivity).apply {
+                addView(textView)
+            }
+
+            AlertDialog.Builder(this@HomeActivity)
+                .setTitle("Debug Logs")
+                .setView(scrollView)
+                .setPositiveButton("Close", null)
+                .setNeutralButton("Clear") { _, _ ->
+                     if (logFile.exists()) {
+                         logFile.delete()
+                         Toast.makeText(this@HomeActivity, "Logs cleared", Toast.LENGTH_SHORT).show()
+                     }
+                }
+                .show()
         }
     }
 
