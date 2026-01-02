@@ -48,6 +48,7 @@ import com.example.offlinebrowser.ui.ForecastAdapter
 import com.example.offlinebrowser.ui.ForecastItem
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -408,6 +409,9 @@ class HomeActivity : AppCompatActivity() {
                 val hourlyTemps = hourly.getAsJsonArray("temperature_2m")
                 val hourlyCodes = hourly.getAsJsonArray("weathercode")
 
+                val currentDateTime = LocalDateTime.now()
+                val currentHourStr = currentDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:00"))
+
                 for (i in 0 until dailyTimes.size()) {
                     if (i < maxTemps.size() && i < minTemps.size() && i < dailyCodes.size()) {
                         val dateStr = dailyTimes[i].asString
@@ -423,10 +427,13 @@ class HomeActivity : AppCompatActivity() {
                         val endIndex = startIndex + 24
                         for (h in startIndex until endIndex) {
                             if (h < hourlyTimes.size() && h < hourlyTemps.size() && h < hourlyCodes.size()) {
+                                val timeStr = hourlyTimes[h].asString
+                                val isCurrentHour = timeStr == currentHourStr
                                 dayHourlyItems.add(HourlyItem(
-                                    hourlyTimes[h].asString,
+                                    timeStr,
                                     hourlyTemps[h].asDouble,
-                                    hourlyCodes[h].asInt
+                                    hourlyCodes[h].asInt,
+                                    isCurrentHour
                                 ))
                             }
                         }

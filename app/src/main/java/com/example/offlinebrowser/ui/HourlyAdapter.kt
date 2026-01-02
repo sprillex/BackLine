@@ -7,7 +7,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.offlinebrowser.R
 
-data class HourlyItem(val time: String, val temp: Double, val code: Int)
+data class HourlyItem(val time: String, val temp: Double, val code: Int, val isCurrentHour: Boolean = false)
 
 class HourlyAdapter(private val items: List<HourlyItem>, private val useImperial: Boolean) : RecyclerView.Adapter<HourlyAdapter.HourlyViewHolder>() {
 
@@ -56,6 +56,18 @@ class HourlyAdapter(private val items: List<HourlyItem>, private val useImperial
         }
 
         holder.tvCondition.text = getWeatherCondition(item.code)
+
+        if (item.isCurrentHour) {
+            holder.tvHour.setTypeface(null, android.graphics.Typeface.BOLD)
+            holder.tvTemp.setTypeface(null, android.graphics.Typeface.BOLD)
+            holder.tvCondition.setTypeface(null, android.graphics.Typeface.BOLD)
+            holder.itemView.setBackgroundColor(holder.itemView.context.getColor(R.color.bg_pill_active_transparent))
+        } else {
+            holder.tvHour.setTypeface(null, android.graphics.Typeface.NORMAL)
+            holder.tvTemp.setTypeface(null, android.graphics.Typeface.NORMAL)
+            holder.tvCondition.setTypeface(null, android.graphics.Typeface.NORMAL)
+            holder.itemView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        }
     }
 
     override fun getItemCount(): Int = items.size

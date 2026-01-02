@@ -8,14 +8,14 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Download Limit (0 for default):" />
+        android:text="Download Limit (0 to disable):" />
 
     <EditText
         android:id="@+id/etDownloadLimit"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:inputType="number"
-        android:text="0" />
+        android:text="5" />
 
     <TextView
         android:layout_width="wrap_content"
