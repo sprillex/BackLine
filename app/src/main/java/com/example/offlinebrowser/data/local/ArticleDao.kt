@@ -7,18 +7,19 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.example.offlinebrowser.data.model.Article
+import com.example.offlinebrowser.data.model.ArticleListItem
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ArticleDao {
-    @Query("SELECT * FROM articles WHERE feedId = :feedId ORDER BY isRead ASC, publishedDate DESC")
-    fun getArticlesForFeed(feedId: Int): Flow<List<Article>>
+    @Query("SELECT id, feedId, title, url, publishedDate, isCached, localPath, isFavorite, isRead FROM articles WHERE feedId = :feedId ORDER BY isRead ASC, publishedDate DESC")
+    fun getArticlesForFeed(feedId: Int): Flow<List<ArticleListItem>>
 
-    @Query("SELECT articles.* FROM articles INNER JOIN feeds ON articles.feedId = feeds.id WHERE feeds.category = :category ORDER BY articles.isRead ASC, articles.publishedDate DESC")
-    fun getArticlesByCategory(category: String): Flow<List<Article>>
+    @Query("SELECT articles.id, articles.feedId, articles.title, articles.url, articles.publishedDate, articles.isCached, articles.localPath, articles.isFavorite, articles.isRead FROM articles INNER JOIN feeds ON articles.feedId = feeds.id WHERE feeds.category = :category ORDER BY articles.isRead ASC, articles.publishedDate DESC")
+    fun getArticlesByCategory(category: String): Flow<List<ArticleListItem>>
 
-    @Query("SELECT * FROM articles ORDER BY isRead ASC, publishedDate DESC")
-    fun getAllArticles(): Flow<List<Article>>
+    @Query("SELECT id, feedId, title, url, publishedDate, isCached, localPath, isFavorite, isRead FROM articles ORDER BY isRead ASC, publishedDate DESC")
+    fun getAllArticles(): Flow<List<ArticleListItem>>
 
     @Query("SELECT * FROM articles WHERE feedId = :feedId AND url = :url LIMIT 1")
     suspend fun getArticleByUrl(feedId: Int, url: String): Article?
