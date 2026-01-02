@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.offlinebrowser.data.local.OfflineDatabase
 import com.example.offlinebrowser.data.model.Article
+import com.example.offlinebrowser.data.model.ArticleListItem
 import com.example.offlinebrowser.data.model.Feed
 import com.example.offlinebrowser.data.model.FeedType
 import com.example.offlinebrowser.data.model.Weather
@@ -61,7 +62,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         data class ByFeed(val feedId: Int) : ArticleFilter()
     }
 
-    val currentArticles: StateFlow<List<Article>> = _articleFilter
+    val currentArticles: StateFlow<List<ArticleListItem>> = _articleFilter
         .flatMapLatest { filter ->
             when (filter) {
                 is ArticleFilter.All -> articleRepository.getAllArticles()
@@ -117,7 +118,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
 
-    fun downloadArticle(article: Article) {
+    fun downloadArticle(article: ArticleListItem) {
         viewModelScope.launch {
             if (preferencesRepository.wifiOnly && !networkMonitor.isWifiConnected()) {
                 // Skip download if WiFi only is enabled but not connected to WiFi
@@ -157,13 +158,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun toggleArticleFavorite(article: Article) {
+    fun toggleArticleFavorite(article: ArticleListItem) {
         viewModelScope.launch {
             articleRepository.updateArticleFavoriteStatus(article.id, !article.isFavorite)
         }
     }
 
-    fun toggleArticleRead(article: Article) {
+    fun toggleArticleRead(article: ArticleListItem) {
         viewModelScope.launch {
             articleRepository.updateArticleReadStatus(article.id, !article.isRead)
         }
