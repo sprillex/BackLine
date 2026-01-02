@@ -409,7 +409,13 @@ class HomeActivity : AppCompatActivity() {
                 val hourlyTemps = hourly.getAsJsonArray("temperature_2m")
                 val hourlyCodes = hourly.getAsJsonArray("weathercode")
 
-                val currentDateTime = LocalDateTime.now()
+                val utcOffsetSeconds = if (jsonObject.has("utc_offset_seconds")) {
+                    jsonObject.get("utc_offset_seconds").asInt
+                } else {
+                    0
+                }
+
+                val currentDateTime = LocalDateTime.ofInstant(java.time.Instant.now(), java.time.ZoneOffset.ofTotalSeconds(utcOffsetSeconds))
                 val currentHourStr = currentDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:00"))
 
                 for (i in 0 until dailyTimes.size()) {
