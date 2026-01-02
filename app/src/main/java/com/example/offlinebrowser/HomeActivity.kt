@@ -285,12 +285,22 @@ class HomeActivity : AppCompatActivity() {
                 }
                 launch {
                     viewModel.currentArticles.collect { articles ->
-                        // Only update adapter if we are in ARTICLE_LIST state or will be
-                        // But since the view model now holds the state of which articles to show,
-                        // we can just update the adapter whenever new data comes in.
-                        // Ideally we check if we are in ARTICLE_LIST to avoid unnecessary work if hidden,
-                        // but RecyclerView handles hidden updates fine.
-                        articleAdapter.submitList(articles)
+                        // Save current scroll state to prevent jumping when items are reordered (e.g. marked read)
+                        val layoutManager = rvArticles.layoutManager as? LinearLayoutManager
+                        val firstVisiblePosition = layoutManager?.findFirstVisibleItemPosition() ?: 0
+                        val offset = if (firstVisiblePosition != RecyclerView.NO_POSITION) {
+                            layoutManager?.findViewByPosition(firstVisiblePosition)?.top ?: 0
+                        } else {
+                            0
+                        }
+
+                        articleAdapter.submitList(articles) {
+                            // Restore scroll position to keep the viewport stable
+                            // This prevents the view from scrolling to the bottom if the top item moves there
+                            if (firstVisiblePosition != RecyclerView.NO_POSITION) {
+                                layoutManager?.scrollToPositionWithOffset(firstVisiblePosition, offset)
+                            }
+                        }
                     }
                 }
             }
