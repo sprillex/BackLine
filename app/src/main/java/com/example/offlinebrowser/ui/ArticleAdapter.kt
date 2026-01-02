@@ -11,14 +11,14 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.offlinebrowser.R
-import com.example.offlinebrowser.data.model.Article
+import com.example.offlinebrowser.data.model.ArticleListItem
 import java.net.URI
 
 class ArticleAdapter(
-    private val onArticleClick: (Article) -> Unit,
-    private val onDownloadClick: (Article) -> Unit,
-    private val onArticleLongClick: (Article, View) -> Unit
-) : ListAdapter<Article, ArticleAdapter.ArticleViewHolder>(ArticleDiffCallback()) {
+    private val onArticleClick: (ArticleListItem) -> Unit,
+    private val onDownloadClick: (ArticleListItem) -> Unit,
+    private val onArticleLongClick: (ArticleListItem, View) -> Unit
+) : ListAdapter<ArticleListItem, ArticleAdapter.ArticleViewHolder>(ArticleDiffCallback()) {
 
     class ArticleViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val ivFavicon: ImageView = itemView.findViewById(R.id.ivFavicon)
@@ -83,7 +83,7 @@ class ArticleAdapter(
     }
 }
 
-class ArticleDiffCallback : DiffUtil.ItemCallback<Article>() {
-    override fun areItemsTheSame(oldItem: Article, newItem: Article): Boolean = oldItem.id == newItem.id
-    override fun areContentsTheSame(oldItem: Article, newItem: Article): Boolean = oldItem == newItem
+class ArticleDiffCallback : DiffUtil.ItemCallback<ArticleListItem>() {
+    override fun areItemsTheSame(oldItem: ArticleListItem, newItem: ArticleListItem): Boolean = oldItem.id == newItem.id
+    override fun areContentsTheSame(oldItem: ArticleListItem, newItem: ArticleListItem): Boolean = oldItem == newItem
 }
