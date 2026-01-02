@@ -30,20 +30,18 @@ class FeedSettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_feed_settings)
 
-        val etUrl = findViewById<EditText>(R.id.etUrl)
         val btnSettings = findViewById<Button>(R.id.btnSettings)
-        val btnAddRss = findViewById<Button>(R.id.btnAddRss)
-        val btnAddMastodon = findViewById<Button>(R.id.btnAddMastodon)
-        val btnAddHtml = findViewById<Button>(R.id.btnAddHtml)
+        val btnCustomFeeds = findViewById<Button>(R.id.btnCustomFeeds)
         val btnBrowseTopFeeds = findViewById<Button>(R.id.btnBrowseTopFeeds)
         val rvFeeds = findViewById<RecyclerView>(R.id.rvFeeds)
         val btnWeather = findViewById<Button>(R.id.btnWeather)
-        val btnBindery = findViewById<Button>(R.id.btnBindery)
-        val btnKiwix = findViewById<Button>(R.id.btnKiwix)
-        val btnLibrary = findViewById<Button>(R.id.btnLibrary)
 
         btnSettings.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
+        }
+
+        btnCustomFeeds.setOnClickListener {
+            startActivity(Intent(this, CustomFeedsActivity::class.java))
         }
 
         feedAdapter = FeedAdapter(
@@ -65,30 +63,6 @@ class FeedSettingsActivity : AppCompatActivity() {
         rvFeeds.layoutManager = LinearLayoutManager(this)
         rvFeeds.adapter = feedAdapter
 
-        btnAddRss.setOnClickListener {
-            val url = etUrl.text.toString()
-            if (url.isNotEmpty()) {
-                showAddFeedDialog(url, FeedType.RSS)
-                etUrl.text.clear()
-            }
-        }
-
-        btnAddMastodon.setOnClickListener {
-            val url = etUrl.text.toString()
-            if (url.isNotEmpty()) {
-                showAddFeedDialog(url, FeedType.MASTODON)
-                etUrl.text.clear()
-            }
-        }
-
-        btnAddHtml.setOnClickListener {
-            val url = etUrl.text.toString()
-            if (url.isNotEmpty()) {
-                showAddFeedDialog(url, FeedType.HTML)
-                etUrl.text.clear()
-            }
-        }
-
         btnBrowseTopFeeds.setOnClickListener {
             val intent = Intent(this, SuggestedFeedsActivity::class.java)
             startActivity(intent)
@@ -97,21 +71,6 @@ class FeedSettingsActivity : AppCompatActivity() {
         btnWeather.setOnClickListener {
              val intent = Intent(this, WeatherActivity::class.java)
              startActivity(intent)
-        }
-
-        btnBindery.setOnClickListener {
-            val intent = Intent(this, BinderyActivity::class.java)
-            startActivity(intent)
-        }
-
-        btnKiwix.setOnClickListener {
-            val intent = Intent(this, KiwixSearchActivity::class.java)
-            startActivity(intent)
-        }
-
-        btnLibrary.setOnClickListener {
-            val intent = Intent(this, LibraryActivity::class.java)
-            startActivity(intent)
         }
 
         lifecycleScope.launch {
@@ -123,22 +82,4 @@ class FeedSettingsActivity : AppCompatActivity() {
         }
     }
 
-    private fun showAddFeedDialog(url: String, type: FeedType) {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_add_feed, null)
-        val etDownloadLimit = dialogView.findViewById<EditText>(R.id.etDownloadLimit)
-        val etCategory = dialogView.findViewById<EditText>(R.id.etCategory)
-        val cbSyncNow = dialogView.findViewById<android.widget.CheckBox>(R.id.cbSyncNow)
-
-        androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle("Add Feed Settings")
-            .setView(dialogView)
-            .setPositiveButton("Add") { _, _ ->
-                val limit = etDownloadLimit.text.toString().toIntOrNull() ?: 0
-                val category = etCategory.text.toString().takeIf { it.isNotEmpty() }
-                val syncNow = cbSyncNow.isChecked
-                viewModel.addFeed(url, type, limit, category, syncNow)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
 }
