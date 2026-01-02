@@ -434,13 +434,15 @@ class HomeActivity : AppCompatActivity() {
                         for (h in startIndex until endIndex) {
                             if (h < hourlyTimes.size() && h < hourlyTemps.size() && h < hourlyCodes.size()) {
                                 val timeStr = hourlyTimes[h].asString
-                                val isCurrentHour = timeStr == currentHourStr
-                                dayHourlyItems.add(HourlyItem(
-                                    timeStr,
-                                    hourlyTemps[h].asDouble,
-                                    hourlyCodes[h].asInt,
-                                    isCurrentHour
-                                ))
+                                if (timeStr >= currentHourStr) {
+                                    val isCurrentHour = timeStr == currentHourStr
+                                    dayHourlyItems.add(HourlyItem(
+                                        timeStr,
+                                        hourlyTemps[h].asDouble,
+                                        hourlyCodes[h].asInt,
+                                        isCurrentHour
+                                    ))
+                                }
                             }
                         }
                         forecastItems.add(ForecastItem(
