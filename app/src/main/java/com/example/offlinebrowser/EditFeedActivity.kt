@@ -48,7 +48,7 @@ class EditFeedActivity : AppCompatActivity() {
         btnSave.setOnClickListener {
             val newTitle = etTitle.text.toString()
             val newLimitStr = etDownloadLimit.text.toString()
-            val newLimit = newLimitStr.toIntOrNull() ?: 0
+            val newLimit = newLimitStr.toIntOrNull() ?: 5
 
             if (currentFeed != null) {
                 val updatedFeed = currentFeed!!.copy(
@@ -58,6 +58,12 @@ class EditFeedActivity : AppCompatActivity() {
                 // Use lifecycleScope to wait for the job to complete
                 lifecycleScope.launch {
                     viewModel.updateFeed(updatedFeed).join()
+
+                    // Trigger sync if download limit changed
+                    if (currentFeed!!.downloadLimit != updatedFeed.downloadLimit) {
+                         viewModel.syncFeed(updatedFeed)
+                    }
+
                     finish()
                 }
             }

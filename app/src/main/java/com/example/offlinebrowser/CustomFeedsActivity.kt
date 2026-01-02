@@ -78,7 +78,7 @@ class CustomFeedsActivity : AppCompatActivity() {
             .setTitle("Add Feed Settings")
             .setView(dialogView)
             .setPositiveButton("Add") { _, _ ->
-                val limit = etDownloadLimit.text.toString().toIntOrNull() ?: 0
+                val limit = etDownloadLimit.text.toString().toIntOrNull() ?: 5
                 val category = etCategory.text.toString().takeIf { it.isNotEmpty() }
                 val syncNow = cbSyncNow.isChecked
                 viewModel.addFeed(url, type, limit, category, syncNow)
