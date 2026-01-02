@@ -11,6 +11,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.offlinebrowser.data.model.FeedType
+import com.example.offlinebrowser.data.model.SuggestedFeed
 import com.example.offlinebrowser.ui.SuggestedFeedAdapter
 import android.view.Menu
 import android.view.MenuItem
@@ -22,6 +23,8 @@ class SuggestedFeedsActivity : AppCompatActivity() {
 
     private val viewModel: MainViewModel by viewModels()
     private lateinit var adapter: SuggestedFeedAdapter
+    private var allFeeds: List<SuggestedFeed> = emptyList()
+    private var currentQuery: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,22 +65,52 @@ class SuggestedFeedsActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 repository.suggestedFeeds.collect { feeds ->
-                    adapter.submitList(feeds)
+                    allFeeds = feeds
+                    filterFeeds(currentQuery)
                 }
             }
         }
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menu?.add(0, 1, 0, "Download Official Feeds")
+        menuInflater.inflate(R.menu.menu_suggested_feeds, menu)
+
+        val searchItem = menu?.findItem(R.id.action_search)
+        val searchView = searchItem?.actionView as? androidx.appcompat.widget.SearchView
+
+        searchView?.setOnQueryTextListener(object : androidx.appcompat.widget.SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                return false
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                currentQuery = newText ?: ""
+                filterFeeds(currentQuery)
+                return true
+            }
+        })
+
         return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (item.itemId == 1) {
+        if (item.itemId == R.id.action_download_feeds) {
             RepositoryBrowserDialogFragment().show(supportFragmentManager, "browser")
             return true
         }
         return super.onOptionsItemSelected(item)
+    }
+
+    private fun filterFeeds(query: String) {
+        val filteredList = if (query.isEmpty()) {
+            allFeeds
+        } else {
+            allFeeds.filter { feed ->
+                feed.name.contains(query, ignoreCase = true) ||
+                        feed.category.contains(query, ignoreCase = true) ||
+                        feed.url.contains(query, ignoreCase = true)
+            }
+        }
+        adapter.submitList(filteredList)
     }
 }
