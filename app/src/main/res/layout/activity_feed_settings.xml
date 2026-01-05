@@ -23,6 +23,12 @@
         android:layout_height="wrap_content"
         android:text="Browse Top Feeds" />
 
+    <Button
+        android:id="@+id/btnImportFeedList"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Import Feed List" />
+
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

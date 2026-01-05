@@ -2,8 +2,11 @@ package com.example.offlinebrowser
 
 import android.content.Intent
 import android.os.Bundle
+import android.net.Uri
 import android.widget.Button
 import android.widget.EditText
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle
@@ -26,6 +29,12 @@ class FeedSettingsActivity : AppCompatActivity() {
     private val viewModel: MainViewModel by viewModels()
     private lateinit var feedAdapter: FeedAdapter
 
+    private val importCsvLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let {
+            importFeedsFromCsv(it)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_feed_settings)
@@ -33,11 +42,16 @@ class FeedSettingsActivity : AppCompatActivity() {
         val btnSettings = findViewById<Button>(R.id.btnSettings)
         val btnCustomFeeds = findViewById<Button>(R.id.btnCustomFeeds)
         val btnBrowseTopFeeds = findViewById<Button>(R.id.btnBrowseTopFeeds)
+        val btnImportFeedList = findViewById<Button>(R.id.btnImportFeedList)
         val rvFeeds = findViewById<RecyclerView>(R.id.rvFeeds)
         val btnWeather = findViewById<Button>(R.id.btnWeather)
 
         btnSettings.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
+        }
+
+        btnImportFeedList.setOnClickListener {
+            importCsvLauncher.launch("text/*")
         }
 
         btnCustomFeeds.setOnClickListener {
@@ -82,4 +96,90 @@ class FeedSettingsActivity : AppCompatActivity() {
         }
     }
 
+    private fun importFeedsFromCsv(uri: Uri) {
+        lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                contentResolver.openInputStream(uri)?.use { inputStream ->
+                    java.io.BufferedReader(java.io.InputStreamReader(inputStream)).use { reader ->
+                        val lines = reader.readLines()
+                        val feeds = parseCsvLines(lines)
+                        var addedCount = 0
+                        feeds.forEach { (name, url, category) ->
+                            viewModel.addFeed(
+                                url = url,
+                                name = name,
+                                category = category,
+                                type = FeedType.RSS, // Defaulting to RSS
+                                downloadLimit = 5,
+                                syncNow = false
+                            )
+                            addedCount++
+                        }
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                            Toast.makeText(this@FeedSettingsActivity, "Imported $addedCount feeds", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                     Toast.makeText(this@FeedSettingsActivity, "Error importing CSV: ${e.message}", Toast.LENGTH_LONG).show()
+                 }
+                 e.printStackTrace()
+            }
+        }
+    }
+
+    private data class ParsedFeed(val name: String, val url: String, val category: String)
+
+    private fun parseCsvLines(lines: List<String>): List<ParsedFeed> {
+        val feeds = mutableListOf<ParsedFeed>()
+        if (lines.isEmpty()) return feeds
+
+        val headerTokens = lines[0].lowercase().split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)".toRegex()).map { it.trim().removeSurrounding("\"") }
+
+        var nameIdx = -1
+        var urlIdx = -1
+        var catIdx = -1
+
+        if (headerTokens.contains("url")) {
+            urlIdx = headerTokens.indexOf("url")
+            nameIdx = headerTokens.indexOf("name")
+            catIdx = headerTokens.indexOf("category")
+        }
+
+        val startRow = if (urlIdx != -1) 1 else 0
+
+        for (i in startRow until lines.size) {
+            val line = lines[i]
+            if (line.isBlank()) continue
+            val tokens = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)".toRegex()).map { it.trim().removeSurrounding("\"") }
+
+            var name = ""
+            var url = ""
+            var category = "Imported"
+
+            if (urlIdx != -1) {
+                // Header based parsing
+                if (urlIdx < tokens.size) url = tokens[urlIdx]
+                if (nameIdx != -1 && nameIdx < tokens.size) name = tokens[nameIdx]
+                if (catIdx != -1 && catIdx < tokens.size) category = tokens[catIdx]
+            } else {
+                // Fallback parsing (Simple mode)
+                if (tokens.size == 1) {
+                     url = tokens[0]
+                     name = url
+                } else if (tokens.size >= 2) {
+                     name = tokens[0]
+                     url = tokens[1]
+                }
+            }
+
+            if (url.isNotBlank()) {
+                if (name.isBlank()) name = url
+                feeds.add(ParsedFeed(name, url, category))
+            }
+        }
+
+        return feeds
+    }
 }

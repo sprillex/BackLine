@@ -40,8 +40,8 @@ class FeedRepository(
 
     val allFeeds: Flow<List<Feed>> = feedDao.getAllFeeds()
 
-    suspend fun addFeed(url: String, type: FeedType, downloadLimit: Int = 0, category: String? = null): Long {
-        val feed = Feed(url = url, title = url, type = type, downloadLimit = downloadLimit, category = category)
+    suspend fun addFeed(url: String, type: FeedType, downloadLimit: Int = 0, category: String? = null, name: String? = null): Long {
+        val feed = Feed(url = url, title = name ?: url, type = type, downloadLimit = downloadLimit, category = category)
         return feedDao.insertFeed(feed)
     }
 
