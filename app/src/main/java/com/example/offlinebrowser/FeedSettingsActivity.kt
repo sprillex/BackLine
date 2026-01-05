@@ -131,50 +131,86 @@ class FeedSettingsActivity : AppCompatActivity() {
 
     private data class ParsedFeed(val name: String, val url: String, val category: String)
 
+    private val csvSplitRegex = ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)".toRegex()
+
     private fun parseCsvLines(lines: List<String>): List<ParsedFeed> {
         val feeds = mutableListOf<ParsedFeed>()
         if (lines.isEmpty()) return feeds
 
-        val headerTokens = lines[0].lowercase().split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)".toRegex()).map { it.trim().removeSurrounding("\"") }
-
         var nameIdx = -1
         var urlIdx = -1
         var catIdx = -1
+        var headerRowIndex = -1
 
-        if (headerTokens.contains("url")) {
-            urlIdx = headerTokens.indexOf("url")
-            nameIdx = headerTokens.indexOf("name")
-            catIdx = headerTokens.indexOf("category")
+        // 1. Try to find a header row
+        for (i in 0 until minOf(lines.size, 5)) {
+            val line = lines[i]
+            if (line.isBlank()) continue
+            val tokens = line.lowercase().split(csvSplitRegex).map { it.trim().removeSurrounding("\"") }
+
+            if (tokens.contains("url") || tokens.contains("link") || tokens.contains("address")) {
+                headerRowIndex = i
+                urlIdx = tokens.indexOfFirst { it == "url" || it == "link" || it == "address" }
+                nameIdx = tokens.indexOf("name")
+                catIdx = tokens.indexOf("category")
+                break
+            }
         }
 
-        val startRow = if (urlIdx != -1) 1 else 0
+        // 2. If no header found, try to sniff columns from data
+        if (urlIdx == -1) {
+             for (i in 0 until minOf(lines.size, 5)) {
+                val line = lines[i]
+                if (line.isBlank()) continue
+                val tokens = line.split(csvSplitRegex).map { it.trim().removeSurrounding("\"") }
+
+                // Find a token that looks like a URL
+                val foundUrlIdx = tokens.indexOfFirst { it.startsWith("http://", true) || it.startsWith("https://", true) }
+                if (foundUrlIdx != -1) {
+                    urlIdx = foundUrlIdx
+                    // Guess name index
+                    if (urlIdx > 0) nameIdx = 0
+                    break
+                }
+             }
+        }
+
+        // 3. Parse data
+        val startRow = if (headerRowIndex != -1) headerRowIndex + 1 else 0
 
         for (i in startRow until lines.size) {
             val line = lines[i]
             if (line.isBlank()) continue
-            val tokens = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)".toRegex()).map { it.trim().removeSurrounding("\"") }
+            val tokens = line.split(csvSplitRegex).map { it.trim().removeSurrounding("\"") }
 
             var name = ""
             var url = ""
             var category = "Imported"
 
             if (urlIdx != -1) {
-                // Header based parsing
                 if (urlIdx < tokens.size) url = tokens[urlIdx]
                 if (nameIdx != -1 && nameIdx < tokens.size) name = tokens[nameIdx]
                 if (catIdx != -1 && catIdx < tokens.size) category = tokens[catIdx]
             } else {
-                // Fallback parsing (Simple mode)
+                // Total fallback (Simple mode) - assumes URL is first or second column if not detected
                 if (tokens.size == 1) {
                      url = tokens[0]
                      name = url
                 } else if (tokens.size >= 2) {
+                     // If we couldn't detect URL column, usually Name, URL is safer guess than URL, Name?
+                     // But wait, standard is Name, URL.
                      name = tokens[0]
                      url = tokens[1]
                 }
             }
 
-            if (url.isNotBlank()) {
+            // Clean up
+            url = url.trim()
+            name = name.trim()
+            category = category.trim()
+
+            // Validate URL roughly
+            if (url.isNotBlank() && (url.startsWith("http", true))) {
                 if (name.isBlank()) name = url
                 feeds.add(ParsedFeed(name, url, category))
             }
