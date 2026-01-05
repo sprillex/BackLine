@@ -49,5 +49,21 @@ class ScraperPluginRepository(private val context: Context) {
                 e.printStackTrace()
             }
         }
+
+        val wtolFile = File(pluginsDir, "wtol.json")
+        if (!wtolFile.exists()) {
+            val wtolRecipe = ScraperRecipe(
+                domainPattern = ".*wtol\\.com",
+                strategy = ExtractionStrategy.CSS_SELECTOR,
+                targetIdentifier = "",
+                contentPath = ".article__body",
+                titlePath = "h1.article__headline"
+            )
+            try {
+                wtolFile.writeText(gson.toJson(wtolRecipe))
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 }
