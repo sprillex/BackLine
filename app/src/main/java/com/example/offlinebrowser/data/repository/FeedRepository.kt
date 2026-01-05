@@ -22,6 +22,7 @@ class FeedRepository(
 ) {
     private val preferencesRepository = PreferencesRepository(context)
     private val fileLogger = FileLogger(context)
+    private val scraperPluginRepository = ScraperPluginRepository(context)
 
     private val logCallback: (String) -> Unit = { message ->
         if (preferencesRepository.detailedDebuggingEnabled) {
@@ -58,6 +59,11 @@ class FeedRepository(
     }
 
     suspend fun syncFeed(feed: Feed) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        // Ensure plugins are loaded before any scraping happens
+        scraperPluginRepository.ensureDefaultPlugins()
+        val recipes = scraperPluginRepository.loadAllRecipes()
+        downloader.scraperEngine.loadRecipes(recipes)
+
         if (feed.type == FeedType.RSS || feed.type == FeedType.MASTODON) {
             if (preferencesRepository.detailedDebuggingEnabled) {
                 fileLogger.log("Starting sync for feed: ${feed.url}")
