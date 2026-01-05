@@ -32,6 +32,7 @@ class FeedSettingsActivity : AppCompatActivity() {
 
         val btnSettings = findViewById<Button>(R.id.btnSettings)
         val btnCustomFeeds = findViewById<Button>(R.id.btnCustomFeeds)
+        val btnManagePlugins = findViewById<Button>(R.id.btnManagePlugins)
         val btnBrowseTopFeeds = findViewById<Button>(R.id.btnBrowseTopFeeds)
         val rvFeeds = findViewById<RecyclerView>(R.id.rvFeeds)
         val btnWeather = findViewById<Button>(R.id.btnWeather)
@@ -42,6 +43,10 @@ class FeedSettingsActivity : AppCompatActivity() {
 
         btnCustomFeeds.setOnClickListener {
             startActivity(Intent(this, CustomFeedsActivity::class.java))
+        }
+
+        btnManagePlugins.setOnClickListener {
+            startActivity(Intent(this, PluginsActivity::class.java))
         }
 
         feedAdapter = FeedAdapter(

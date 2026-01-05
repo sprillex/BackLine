@@ -44,6 +44,7 @@
         <activity android:name=".CustomFeedsActivity" />
         <activity android:name=".EditFeedActivity" />
         <activity android:name=".SuggestedFeedsActivity" />
+        <activity android:name=".PluginsActivity" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
