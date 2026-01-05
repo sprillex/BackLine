@@ -9,22 +9,33 @@ import com.google.gson.JsonParser
 import java.util.concurrent.CopyOnWriteArrayList
 
 class ScraperEngine {
-    private val recipes = CopyOnWriteArrayList<ScraperRecipe>()
+    // Store pairs of Recipe and its compiled Regex
+    private val recipes = CopyOnWriteArrayList<Pair<ScraperRecipe, Regex>>()
     private val gson = Gson()
 
     fun loadRecipes(newRecipes: List<ScraperRecipe>) {
         recipes.clear()
-        recipes.addAll(newRecipes)
+        // Compile regexes upfront
+        newRecipes.forEach { recipe ->
+            addRecipe(recipe)
+        }
     }
 
     fun addRecipe(recipe: ScraperRecipe) {
-        recipes.add(recipe)
+        try {
+            val regex = Regex(recipe.domainPattern)
+            recipes.add(recipe to regex)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     fun process(url: String, html: String): String? {
-        // Use the pre-compiled regex from the recipe
-        val recipe = recipes.find { it.regex.containsMatchIn(url) }
+        // Iterate through the cache of compiled regexes
+        val match = recipes.find { (_, regex) -> regex.containsMatchIn(url) }
             ?: return null
+
+        val recipe = match.first
 
         return try {
             when (recipe.strategy) {

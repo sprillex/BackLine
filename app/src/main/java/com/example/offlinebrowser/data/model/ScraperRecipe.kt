@@ -13,7 +13,4 @@ data class ScraperRecipe(
     val targetIdentifier: String, // e.g., the variable name "pgStoryZeroJSON"
     val contentPath: String,      // e.g., "articles[0].body"
     val titlePath: String? = null // e.g., "articles[0].title"
-) {
-    // Compiled regex for performance
-    val regex: Regex by lazy { Regex(domainPattern) }
-}
+)
