@@ -18,6 +18,12 @@
         android:text="Custom Feeds" />
 
     <Button
+        android:id="@+id/btnManagePlugins"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Manage Plugins" />
+
+    <Button
         android:id="@+id/btnBrowseTopFeeds"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

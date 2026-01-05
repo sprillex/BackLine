@@ -589,6 +589,7 @@ class HomeActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         updateWifiStatus()
+        viewModel.refreshPlugins()
     }
 
     private fun updateWeatherVisibility() {
