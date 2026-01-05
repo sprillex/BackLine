@@ -7,6 +7,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import java.util.concurrent.CopyOnWriteArrayList
+import org.jsoup.Jsoup
 
 class ScraperEngine {
     // Store pairs of Recipe and its compiled Regex
@@ -40,11 +41,26 @@ class ScraperEngine {
         return try {
             when (recipe.strategy) {
                 ExtractionStrategy.EXTRACT_FROM_JS_VAR -> extractFromJsVar(html, recipe)
+                ExtractionStrategy.CSS_SELECTOR -> extractFromCssSelector(html, recipe)
             }
         } catch (e: Exception) {
             e.printStackTrace()
             null
         }
+    }
+
+    private fun extractFromCssSelector(html: String, recipe: ScraperRecipe): String? {
+        val doc = Jsoup.parse(html)
+        val title = if (recipe.titlePath != null) {
+            doc.select(recipe.titlePath).first()?.text() ?: "No Title"
+        } else {
+            "No Title"
+        }
+
+        val bodyElement = doc.select(recipe.contentPath).first() ?: return null
+        val body = bodyElement.html()
+
+        return buildSimpleHtml(title, body)
     }
 
     private fun extractFromJsVar(html: String, recipe: ScraperRecipe): String? {

@@ -2,8 +2,7 @@ package com.example.offlinebrowser.data.model
 
 enum class ExtractionStrategy {
     EXTRACT_FROM_JS_VAR,
-    // Future strategies can be added here:
-    // CSS_SELECTOR,
+    CSS_SELECTOR,
     // READABILITY
 }
 
