@@ -87,4 +87,9 @@ class FeedSettingsActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        viewModel.refreshPlugins()
+    }
+
 }

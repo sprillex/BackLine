@@ -47,6 +47,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val networkMonitor = NetworkMonitor(application)
 
     init {
+        refreshPlugins()
+    }
+
+    fun refreshPlugins() {
         viewModelScope.launch {
             scraperPluginRepository.ensureDefaultPlugins()
             val recipes = scraperPluginRepository.loadAllRecipes()
