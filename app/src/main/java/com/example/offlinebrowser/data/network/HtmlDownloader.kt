@@ -25,8 +25,9 @@ class HtmlDownloader(private val logger: ((String) -> Unit)? = null) {
                 logger?.invoke("Successfully scraped URL: $url")
 
                 val html = doc.outerHtml()
+                val finalUrl = doc.location()
                 // Try to process via ScraperEngine for specific sites like Toledo Blade
-                val scrapedContent = scraperEngine.process(url, html)
+                val scrapedContent = scraperEngine.process(finalUrl, html)
 
                 if (scrapedContent != null) {
                     logger?.invoke("ScraperEngine successfully processed URL: $url")
