@@ -14,6 +14,7 @@ import com.example.offlinebrowser.data.network.RssParser
 import com.example.offlinebrowser.data.repository.ArticleRepository
 import com.example.offlinebrowser.data.repository.FeedRepository
 import com.example.offlinebrowser.data.repository.PreferencesRepository
+import com.example.offlinebrowser.data.repository.ScraperPluginRepository
 import com.example.offlinebrowser.data.repository.WeatherRepository
 import com.example.offlinebrowser.util.NetworkMonitor
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -30,18 +31,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val database = OfflineDatabase.getDatabase(application)
     private val preferencesRepository = PreferencesRepository(application)
     private val fileLogger = com.example.offlinebrowser.util.FileLogger(application)
+    private val scraperPluginRepository = ScraperPluginRepository(application)
 
     // We don't pass RssParser here, let FeedRepository create its own with logging
     private val feedRepository = FeedRepository(application, database.feedDao(), database.articleDao())
 
     // Inject logger into HtmlDownloader for ArticleRepository
-    private val articleRepository = ArticleRepository(database.articleDao(), HtmlDownloader { message ->
+    private val htmlDownloader = HtmlDownloader { message ->
         if (preferencesRepository.detailedDebuggingEnabled) {
              fileLogger.log(message)
         }
-    })
+    }
+    private val articleRepository = ArticleRepository(database.articleDao(), htmlDownloader)
     private val weatherRepository = WeatherRepository(database.weatherDao())
     private val networkMonitor = NetworkMonitor(application)
+
+    init {
+        viewModelScope.launch {
+            scraperPluginRepository.ensureDefaultPlugins()
+            val recipes = scraperPluginRepository.loadAllRecipes()
+            htmlDownloader.scraperEngine.loadRecipes(recipes)
+        }
+    }
 
     val feeds: StateFlow<List<Feed>> = feedRepository.allFeeds
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())

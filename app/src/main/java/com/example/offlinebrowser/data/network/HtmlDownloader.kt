@@ -5,7 +5,7 @@ import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 
 class HtmlDownloader(private val logger: ((String) -> Unit)? = null) {
-    private val scraperEngine = ScraperEngine()
+    val scraperEngine = ScraperEngine()
 
     suspend fun downloadHtml(url: String): String? {
         return withContext(Dispatchers.IO) {

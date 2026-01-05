@@ -6,19 +6,20 @@ import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import java.util.concurrent.CopyOnWriteArrayList
 
 class ScraperEngine {
-    private val recipes = listOf(
-        ScraperRecipe(
-            domainPattern = ".*toledoblade\\.com",
-            strategy = ExtractionStrategy.EXTRACT_FROM_JS_VAR,
-            targetIdentifier = "pgStoryZeroJSON",
-            contentPath = "articles[0].body",
-            titlePath = "articles[0].title"
-        )
-    )
-
+    private val recipes = CopyOnWriteArrayList<ScraperRecipe>()
     private val gson = Gson()
+
+    fun loadRecipes(newRecipes: List<ScraperRecipe>) {
+        recipes.clear()
+        recipes.addAll(newRecipes)
+    }
+
+    fun addRecipe(recipe: ScraperRecipe) {
+        recipes.add(recipe)
+    }
 
     fun process(url: String, html: String): String? {
         // Use the pre-compiled regex from the recipe
