@@ -6,6 +6,7 @@ import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import org.jsoup.Jsoup
 import java.util.concurrent.CopyOnWriteArrayList
 
 class ScraperEngine {
@@ -40,11 +41,24 @@ class ScraperEngine {
         return try {
             when (recipe.strategy) {
                 ExtractionStrategy.EXTRACT_FROM_JS_VAR -> extractFromJsVar(html, recipe)
+                ExtractionStrategy.CSS_SELECTOR -> extractFromCssSelector(html, recipe)
             }
         } catch (e: Exception) {
             e.printStackTrace()
             null
         }
+    }
+
+    private fun extractFromCssSelector(html: String, recipe: ScraperRecipe): String? {
+        val document = Jsoup.parse(html)
+
+        val titleElement = if (recipe.titlePath != null) document.select(recipe.titlePath).first() else null
+        val title = titleElement?.text() ?: "No Title"
+
+        val contentElement = document.select(recipe.contentPath).first() ?: return null
+        val body = contentElement.html() // Use html() to preserve formatting like <p> tags
+
+        return buildSimpleHtml(title, body)
     }
 
     private fun extractFromJsVar(html: String, recipe: ScraperRecipe): String? {
