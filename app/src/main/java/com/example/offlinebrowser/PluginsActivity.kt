@@ -71,12 +71,17 @@ class PluginsActivity : AppCompatActivity() {
         btnImport.setOnClickListener {
             importPluginLauncher.launch("application/json")
         }
+    }
 
+    override fun onResume() {
+        super.onResume()
         loadPlugins()
     }
 
     private fun loadPlugins() {
         lifecycleScope.launch {
+            // Ensure defaults exist before loading
+            scraperPluginRepository.ensureDefaultPlugins()
             val plugins = scraperPluginRepository.loadAllRecipes()
             pluginAdapter.updateList(plugins)
         }
