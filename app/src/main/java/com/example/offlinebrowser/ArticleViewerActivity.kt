@@ -1,6 +1,7 @@
 package com.example.offlinebrowser
 
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import android.view.View
 import android.webkit.WebView
@@ -24,6 +25,12 @@ class ArticleViewerActivity : AppCompatActivity() {
         setContentView(R.layout.activity_article_viewer)
 
         val webView = findViewById<WebView>(R.id.webView)
+        // Set WebView background to transparent to allow activity background to show through if needed,
+        // but typically we want the HTML body to define the background.
+        // However, for Force Dark to work effectively, keeping it default or handling it via content is best.
+        // Setting it to transparent might help avoid the white flash or white background if content is transparent.
+        webView.setBackgroundColor(Color.TRANSPARENT)
+
         val fabDarkMode = findViewById<FloatingActionButton>(R.id.fab_dark_mode)
 
         val articleId = intent.getIntExtra("ARTICLE_ID", -1)
@@ -38,7 +45,13 @@ class ArticleViewerActivity : AppCompatActivity() {
                 }
 
                 if (feed != null) {
-                    webView.loadDataWithBaseURL(null, feed.content, "text/html", "UTF-8", null)
+                    val content = feed.content
+                    val html = if (content.contains("<html", ignoreCase = true)) {
+                        content
+                    } else {
+                        wrapContent(content)
+                    }
+                    webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
                 }
             }
         }
@@ -50,10 +63,45 @@ class ArticleViewerActivity : AppCompatActivity() {
         setupBottomNav()
     }
 
+    private fun wrapContent(content: String): String {
+        return """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <style>
+                    body {
+                        font-family: system-ui, -apple-system, sans-serif;
+                        line-height: 1.6;
+                        padding: 16px;
+                        color: #212121;
+                        background-color: #ffffff;
+                    }
+                    img { max-width: 100%; height: auto; }
+                    /* Support system dark mode preference */
+                    @media (prefers-color-scheme: dark) {
+                        body {
+                            color: #e0e0e0;
+                            background-color: #121212;
+                        }
+                        a { color: #8ab4f8; }
+                    }
+                </style>
+            </head>
+            <body>
+                $content
+            </body>
+            </html>
+        """.trimIndent()
+    }
+
     private fun toggleDarkMode(webView: WebView) {
         if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
             isDarkMode = !isDarkMode
             if (isDarkMode) {
+                // FORCE_DARK_ON will force dark mode even if the content doesn't support it.
+                // It might invert our already dark-themed content if we are not careful,
+                // but usually it respects dark themes if they are explicit.
                 WebSettingsCompat.setForceDark(webView.settings, WebSettingsCompat.FORCE_DARK_ON)
                 Toast.makeText(this, "Dark Mode On", Toast.LENGTH_SHORT).show()
             } else {
