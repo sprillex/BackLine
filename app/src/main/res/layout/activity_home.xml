@@ -252,7 +252,7 @@
         android:id="@+id/bottom_nav"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#1a1a1a"
+        android:background="@color/bottom_nav_bg"
         android:paddingTop="15dp"
         android:paddingBottom="15dp"
         android:orientation="horizontal"
