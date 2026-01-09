@@ -29,6 +29,9 @@ class ArticleViewerActivity : AppCompatActivity() {
 
         // Block network images to save data and ensure offline behavior
         webView.settings.blockNetworkImage = true
+        // Allow file access to load locally cached images
+        webView.settings.allowFileAccess = true
+        webView.settings.allowFileAccessFromFileURLs = true
 
         // Handle user preference for showing images in article view
         // Since we are blocking network images, this mostly controls local/injected images
@@ -47,7 +50,17 @@ class ArticleViewerActivity : AppCompatActivity() {
                 }
 
                 if (feed != null) {
-                    webView.loadDataWithBaseURL(null, feed.content, "text/html", "UTF-8", null)
+                    var content = feed.content
+                    val imageUrl = feed.imageUrl
+                    val localImagePath = feed.localImagePath
+
+                    if (!localImagePath.isNullOrEmpty() && !imageUrl.isNullOrEmpty()) {
+                         // Replace remote URL with local file path to ensure offline display
+                         content = content.replace(imageUrl, "file://$localImagePath")
+                    }
+
+                    // Use file:/// base URL to allow loading local images
+                    webView.loadDataWithBaseURL("file:///", content, "text/html", "UTF-8", null)
                 }
             }
         }
