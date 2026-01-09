@@ -68,6 +68,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val weatherLocations: StateFlow<List<Weather>> = weatherRepository.allWeather
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val showArticleThumbnails: Boolean
+        get() = preferencesRepository.showArticleThumbnails
+
     // Article Filtering Logic
     private val _articleFilter = MutableStateFlow<ArticleFilter>(ArticleFilter.All)
 

@@ -590,6 +590,9 @@ class HomeActivity : AppCompatActivity() {
         super.onResume()
         updateWifiStatus()
         viewModel.refreshPlugins()
+        if (::articleAdapter.isInitialized) {
+            articleAdapter.setShowImages(viewModel.showArticleThumbnails)
+        }
     }
 
     private fun updateWeatherVisibility() {

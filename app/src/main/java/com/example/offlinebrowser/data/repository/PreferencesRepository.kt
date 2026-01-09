@@ -41,4 +41,8 @@ class PreferencesRepository(context: Context) {
     var detailedDebuggingEnabled: Boolean
         get() = prefs.getBoolean("detailed_debugging_enabled", false)
         set(value) = prefs.edit().putBoolean("detailed_debugging_enabled", value).apply()
+
+    var showArticleThumbnails: Boolean
+        get() = prefs.getBoolean("show_article_thumbnails", true)
+        set(value) = prefs.edit().putBoolean("show_article_thumbnails", value).apply()
 }

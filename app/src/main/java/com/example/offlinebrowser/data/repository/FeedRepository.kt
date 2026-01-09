@@ -78,8 +78,10 @@ class FeedRepository(
                          id = existing.id,
                          content = if (existing.isCached) existing.content else article.content,
                          isCached = existing.isCached,
+                         localPath = existing.localPath,
                          isFavorite = existing.isFavorite,
-                         isRead = existing.isRead
+                         isRead = existing.isRead,
+                         imageUrl = if (existing.imageUrl != null) existing.imageUrl else article.imageUrl
                      )
                      articleDao.insertArticle(updated)
                  } else {
@@ -94,9 +96,14 @@ class FeedRepository(
             if (feed.downloadLimit > 0) {
                 val articlesToDownload = articleDao.getTopUncachedArticles(feed.id, feed.downloadLimit)
                 for (article in articlesToDownload) {
-                    val content = downloader.downloadHtml(article.url)
+                    val content = downloader.downloadHtml(article.url, article.imageUrl)
                     if (content != null) {
-                        val downloaded = article.copy(content = content, isCached = true)
+                        // Extract image if missing
+                        var imageUrl = article.imageUrl
+                        if (imageUrl == null) {
+                            imageUrl = downloader.scraperEngine.extractImage(content)
+                        }
+                        val downloaded = article.copy(content = content, isCached = true, imageUrl = imageUrl)
                         articleDao.updateArticle(downloaded)
                     }
                 }
@@ -111,13 +118,14 @@ class FeedRepository(
                 title = feed.url, // Default title
                 url = feed.url,
                 content = "", // Will be filled by ArticleRepository
-                publishedDate = System.currentTimeMillis()
+                publishedDate = System.currentTimeMillis(),
+                imageUrl = null
             )
 
             val existing = articleDao.getArticleByUrl(feed.id, article.url)
             if (existing == null) {
                 // New article, download content immediately
-                val content = downloader.downloadHtml(feed.url)
+                val content = downloader.downloadHtml(feed.url, null)
                 if (content != null) {
                     val downloadedArticle = article.copy(content = content, isCached = true)
                     articleDao.insertArticle(downloadedArticle)
@@ -127,7 +135,7 @@ class FeedRepository(
                 }
             } else {
                  // Update content if needed? For simple HTML page feed, we assume we always want latest.
-                 val content = downloader.downloadHtml(feed.url)
+                 val content = downloader.downloadHtml(feed.url, existing.imageUrl)
                  if (content != null) {
                      val updated = existing.copy(
                          content = content,

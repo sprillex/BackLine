@@ -31,7 +31,7 @@ class ScraperEngine {
         }
     }
 
-    fun process(url: String, html: String): String? {
+    fun process(url: String, html: String, rssImageUrl: String? = null): String? {
         // Iterate through the cache of compiled regexes
         val match = recipes.find { (_, regex) -> regex.containsMatchIn(url) }
             ?: return null
@@ -40,8 +40,8 @@ class ScraperEngine {
 
         return try {
             when (recipe.strategy) {
-                ExtractionStrategy.EXTRACT_FROM_JS_VAR -> extractFromJsVar(html, recipe)
-                ExtractionStrategy.CSS_SELECTOR -> extractFromCssSelector(html, recipe)
+                ExtractionStrategy.EXTRACT_FROM_JS_VAR -> extractFromJsVar(html, recipe, rssImageUrl)
+                ExtractionStrategy.CSS_SELECTOR -> extractFromCssSelector(html, recipe, rssImageUrl)
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -49,7 +49,7 @@ class ScraperEngine {
         }
     }
 
-    private fun extractFromCssSelector(html: String, recipe: ScraperRecipe): String? {
+    private fun extractFromCssSelector(html: String, recipe: ScraperRecipe, rssImageUrl: String? = null): String? {
         val doc = Jsoup.parse(html)
         val title = if (recipe.titlePath != null) {
             doc.select(recipe.titlePath).first()?.text() ?: "No Title"
@@ -60,10 +60,37 @@ class ScraperEngine {
         val bodyElement = doc.select(recipe.contentPath).first() ?: return null
         val body = bodyElement.html()
 
-        return buildSimpleHtml(title, body)
+        return buildSimpleHtml(title, body, if (recipe.injectRssImage) rssImageUrl else null)
     }
 
-    private fun extractFromJsVar(html: String, recipe: ScraperRecipe): String? {
+    fun extractImage(html: String): String? {
+        val doc = Jsoup.parse(html)
+        // 1. Check OpenGraph image
+        val ogImage = doc.select("meta[property=og:image]").attr("content")
+        if (ogImage.isNotEmpty()) return ogImage
+
+        // 2. Check Twitter card image
+        val twitterImage = doc.select("meta[name=twitter:image]").attr("content")
+        if (twitterImage.isNotEmpty()) return twitterImage
+
+        // 3. Find first significant image in body
+        // We look for img tags with src, filtering out small icons/pixels if possible
+        // This is a heuristic.
+        val images = doc.select("img[src]")
+        for (img in images) {
+            val src = img.attr("src")
+            // Simple heuristic: skip very small or common icon names if possible, but for now just take the first valid one.
+            // Maybe check width/height attributes if available.
+            val width = img.attr("width").toIntOrNull()
+            val height = img.attr("height").toIntOrNull()
+            if ((width == null || width > 50) && (height == null || height > 50)) {
+                if (src.isNotEmpty()) return src
+            }
+        }
+        return null
+    }
+
+    private fun extractFromJsVar(html: String, recipe: ScraperRecipe, rssImageUrl: String? = null): String? {
         // More robust finding of the variable assignment:
         // 1. Find the identifier
         val idIndex = html.indexOf(recipe.targetIdentifier)
@@ -117,7 +144,7 @@ class ScraperEngine {
         val title = traversePath(jsonElement, recipe.titlePath) ?: "No Title"
         val body = traversePath(jsonElement, recipe.contentPath) ?: return null
 
-        return buildSimpleHtml(title, body)
+        return buildSimpleHtml(title, body, if (recipe.injectRssImage) rssImageUrl else null)
     }
 
     private fun traversePath(element: JsonElement, path: String?): String? {
@@ -152,7 +179,8 @@ class ScraperEngine {
         return if (current.isJsonPrimitive) current.asString else null
     }
 
-    private fun buildSimpleHtml(title: String, body: String): String {
+    private fun buildSimpleHtml(title: String, body: String, imageUrl: String? = null): String {
+        val imageHtml = if (imageUrl != null) "<img src=\"$imageUrl\" alt=\"Article Image\" style=\"width:100%; height:auto; margin-bottom:16px;\" /><br/>" else ""
         return """
             <!DOCTYPE html>
             <html>
@@ -171,6 +199,7 @@ class ScraperEngine {
             </head>
             <body>
                 <h1>$title</h1>
+                $imageHtml
                 <div class="content">$body</div>
             </body>
             </html>

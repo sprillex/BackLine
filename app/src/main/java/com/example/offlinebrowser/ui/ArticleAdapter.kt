@@ -20,8 +20,18 @@ class ArticleAdapter(
     private val onArticleLongClick: (ArticleListItem, View) -> Unit
 ) : ListAdapter<ArticleListItem, ArticleAdapter.ArticleViewHolder>(ArticleDiffCallback()) {
 
+    private var showImages: Boolean = true
+
+    fun setShowImages(enabled: Boolean) {
+        if (showImages != enabled) {
+            showImages = enabled
+            notifyDataSetChanged()
+        }
+    }
+
     class ArticleViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val ivFavicon: ImageView = itemView.findViewById(R.id.ivFavicon)
+        val ivArticleImage: ImageView = itemView.findViewById(R.id.ivArticleImage)
         val tvTitle: TextView = itemView.findViewById(R.id.tvTitle)
         val tvStatus: TextView = itemView.findViewById(R.id.tvStatus)
         val btnDownload: Button = itemView.findViewById(R.id.btnDownload)
@@ -36,6 +46,18 @@ class ArticleAdapter(
         val article = getItem(position)
         holder.tvTitle.text = article.title
         holder.tvStatus.text = if (article.isCached) "Cached" else "Online"
+
+        // Load Article Image
+        if (showImages && !article.imageUrl.isNullOrEmpty()) {
+            holder.ivArticleImage.visibility = View.VISIBLE
+            Glide.with(holder.itemView.context)
+                .load(article.imageUrl)
+                .placeholder(R.drawable.bg_pill_active) // Fallback placeholder if available, or just standard grey
+                .centerCrop()
+                .into(holder.ivArticleImage)
+        } else {
+            holder.ivArticleImage.visibility = View.GONE
+        }
 
         try {
             val uri = URI(article.url)
