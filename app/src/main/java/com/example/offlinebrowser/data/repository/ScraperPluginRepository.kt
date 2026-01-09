@@ -33,6 +33,22 @@ class ScraperPluginRepository(private val context: Context) {
         recipes
     }
 
+    suspend fun deletePlugin(recipe: ScraperRecipe) = withContext(Dispatchers.IO) {
+        val files = pluginsDir.listFiles { _, name -> name.endsWith(".json") }
+        files?.forEach { file ->
+            try {
+                val json = file.readText()
+                val loadedRecipe = gson.fromJson(json, ScraperRecipe::class.java)
+                if (loadedRecipe == recipe) {
+                    file.delete()
+                    return@forEach
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     suspend fun ensureDefaultPlugins() = withContext(Dispatchers.IO) {
         val toledoBladeFile = File(pluginsDir, "toledo_blade.json")
         if (!toledoBladeFile.exists()) {
