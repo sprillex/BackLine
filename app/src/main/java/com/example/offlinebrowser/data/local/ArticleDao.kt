@@ -12,13 +12,13 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ArticleDao {
-    @Query("SELECT id, feedId, title, url, publishedDate, isCached, localPath, isFavorite, isRead FROM articles WHERE feedId = :feedId ORDER BY isRead ASC, publishedDate DESC")
+    @Query("SELECT id, feedId, title, url, publishedDate, isCached, localPath, isFavorite, isRead, imageUrl FROM articles WHERE feedId = :feedId ORDER BY isRead ASC, publishedDate DESC")
     fun getArticlesForFeed(feedId: Int): Flow<List<ArticleListItem>>
 
-    @Query("SELECT articles.id, articles.feedId, articles.title, articles.url, articles.publishedDate, articles.isCached, articles.localPath, articles.isFavorite, articles.isRead FROM articles INNER JOIN feeds ON articles.feedId = feeds.id WHERE feeds.category = :category ORDER BY articles.isRead ASC, articles.publishedDate DESC")
+    @Query("SELECT articles.id, articles.feedId, articles.title, articles.url, articles.publishedDate, articles.isCached, articles.localPath, articles.isFavorite, articles.isRead, articles.imageUrl FROM articles INNER JOIN feeds ON articles.feedId = feeds.id WHERE feeds.category = :category ORDER BY articles.isRead ASC, articles.publishedDate DESC")
     fun getArticlesByCategory(category: String): Flow<List<ArticleListItem>>
 
-    @Query("SELECT id, feedId, title, url, publishedDate, isCached, localPath, isFavorite, isRead FROM articles ORDER BY isRead ASC, publishedDate DESC")
+    @Query("SELECT id, feedId, title, url, publishedDate, isCached, localPath, isFavorite, isRead, imageUrl FROM articles ORDER BY isRead ASC, publishedDate DESC")
     fun getAllArticles(): Flow<List<ArticleListItem>>
 
     @Query("SELECT * FROM articles WHERE feedId = :feedId AND url = :url LIMIT 1")

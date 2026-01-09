@@ -78,8 +78,10 @@ class FeedRepository(
                          id = existing.id,
                          content = if (existing.isCached) existing.content else article.content,
                          isCached = existing.isCached,
+                         localPath = existing.localPath,
                          isFavorite = existing.isFavorite,
-                         isRead = existing.isRead
+                         isRead = existing.isRead,
+                         imageUrl = if (existing.imageUrl != null) existing.imageUrl else article.imageUrl
                      )
                      articleDao.insertArticle(updated)
                  } else {
@@ -96,7 +98,12 @@ class FeedRepository(
                 for (article in articlesToDownload) {
                     val content = downloader.downloadHtml(article.url)
                     if (content != null) {
-                        val downloaded = article.copy(content = content, isCached = true)
+                        // Extract image if missing
+                        var imageUrl = article.imageUrl
+                        if (imageUrl == null) {
+                            imageUrl = downloader.scraperEngine.extractImage(content)
+                        }
+                        val downloaded = article.copy(content = content, isCached = true, imageUrl = imageUrl)
                         articleDao.updateArticle(downloaded)
                     }
                 }
@@ -111,7 +118,8 @@ class FeedRepository(
                 title = feed.url, // Default title
                 url = feed.url,
                 content = "", // Will be filled by ArticleRepository
-                publishedDate = System.currentTimeMillis()
+                publishedDate = System.currentTimeMillis(),
+                imageUrl = null
             )
 
             val existing = articleDao.getArticleByUrl(feed.id, article.url)
