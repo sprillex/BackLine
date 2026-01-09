@@ -12,5 +12,6 @@ data class ArticleListItem(
     val localPath: String?,
     val isFavorite: Boolean,
     val isRead: Boolean,
-    val imageUrl: String?
+    val imageUrl: String?,
+    val localImagePath: String?
 )
