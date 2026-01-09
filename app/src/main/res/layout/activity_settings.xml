@@ -17,6 +17,12 @@
         android:layout_height="wrap_content"
         android:text="Enable Detailed Debugging" />
 
+    <CheckBox
+        android:id="@+id/cbShowArticleThumbnails"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Show Article Thumbnails" />
+
     <Button
         android:id="@+id/btnDownloadLogs"
         android:layout_width="wrap_content"
