@@ -26,6 +26,9 @@ class ArticleViewerActivity : AppCompatActivity() {
         val webView = findViewById<WebView>(R.id.webView)
         val fabDarkMode = findViewById<FloatingActionButton>(R.id.fab_dark_mode)
 
+        // Block network images to save data and ensure offline behavior
+        webView.settings.blockNetworkImage = true
+
         val articleId = intent.getIntExtra("ARTICLE_ID", -1)
         if (articleId != -1) {
             // Fetch content from DB
