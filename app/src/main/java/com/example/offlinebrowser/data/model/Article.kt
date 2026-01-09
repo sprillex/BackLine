@@ -25,5 +25,6 @@ data class Article(
     val isCached: Boolean = false,
     val localPath: String? = null, // Path to local file if stored as file
     val isFavorite: Boolean = false,
-    val isRead: Boolean = false
+    val isRead: Boolean = false,
+    val imageUrl: String? = null
 )

@@ -63,6 +63,33 @@ class ScraperEngine {
         return buildSimpleHtml(title, body)
     }
 
+    fun extractImage(html: String): String? {
+        val doc = Jsoup.parse(html)
+        // 1. Check OpenGraph image
+        val ogImage = doc.select("meta[property=og:image]").attr("content")
+        if (ogImage.isNotEmpty()) return ogImage
+
+        // 2. Check Twitter card image
+        val twitterImage = doc.select("meta[name=twitter:image]").attr("content")
+        if (twitterImage.isNotEmpty()) return twitterImage
+
+        // 3. Find first significant image in body
+        // We look for img tags with src, filtering out small icons/pixels if possible
+        // This is a heuristic.
+        val images = doc.select("img[src]")
+        for (img in images) {
+            val src = img.attr("src")
+            // Simple heuristic: skip very small or common icon names if possible, but for now just take the first valid one.
+            // Maybe check width/height attributes if available.
+            val width = img.attr("width").toIntOrNull()
+            val height = img.attr("height").toIntOrNull()
+            if ((width == null || width > 50) && (height == null || height > 50)) {
+                if (src.isNotEmpty()) return src
+            }
+        }
+        return null
+    }
+
     private fun extractFromJsVar(html: String, recipe: ScraperRecipe): String? {
         // More robust finding of the variable assignment:
         // 1. Find the identifier

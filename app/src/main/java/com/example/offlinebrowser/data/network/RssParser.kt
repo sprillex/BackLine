@@ -39,7 +39,8 @@ class RssParser(private val logger: ((String) -> Unit)? = null) {
                         title = entry.title ?: "",
                         url = entry.link ?: "",
                         content = entry.description?.value ?: "",
-                        publishedDate = entry.publishedDate?.time ?: System.currentTimeMillis()
+                        publishedDate = entry.publishedDate?.time ?: System.currentTimeMillis(),
+                        imageUrl = extractImageUrl(entry)
                     )
                 }
             } catch (e: Exception) {
@@ -48,5 +49,35 @@ class RssParser(private val logger: ((String) -> Unit)? = null) {
                 emptyList()
             }
         }
+    }
+
+    private fun extractImageUrl(entry: com.rometools.rome.feed.synd.SyndEntry): String? {
+        // 1. Check enclosures (e.g. <enclosure type="image/..." /> or parsed <media:content>)
+        val enclosure = entry.enclosures.firstOrNull { it.type?.startsWith("image/") == true }
+        if (enclosure != null) return enclosure.url
+
+        // 2. Fallback: Parse description for <img> tag
+        val description = entry.description?.value
+        if (description != null) {
+            val match = Regex("<img[^>]+src\\s*=\\s*['\"]([^'\"]+)['\"]").find(description)
+            if (match != null) {
+                return match.groupValues[1]
+            }
+        }
+
+        // 3. Fallback: Check contents list (often used for full content in Atom/RSS)
+        if (entry.contents.isNotEmpty()) {
+            for (content in entry.contents) {
+                val value = content.value
+                if (value != null) {
+                    val match = Regex("<img[^>]+src\\s*=\\s*['\"]([^'\"]+)['\"]").find(value)
+                    if (match != null) {
+                        return match.groupValues[1]
+                    }
+                }
+            }
+        }
+
+        return null
     }
 }
