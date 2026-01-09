@@ -45,4 +45,8 @@ class PreferencesRepository(context: Context) {
     var showArticleThumbnails: Boolean
         get() = prefs.getBoolean("show_article_thumbnails", true)
         set(value) = prefs.edit().putBoolean("show_article_thumbnails", value).apply()
+
+    var showImagesInArticleView: Boolean
+        get() = prefs.getBoolean("show_images_in_article_view", true)
+        set(value) = prefs.edit().putBoolean("show_images_in_article_view", value).apply()
 }

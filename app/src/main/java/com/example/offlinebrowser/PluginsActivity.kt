@@ -64,7 +64,13 @@ class PluginsActivity : AppCompatActivity() {
         val btnImport = findViewById<Button>(R.id.btnImportPlugin)
         val rvPlugins = findViewById<RecyclerView>(R.id.rvPlugins)
 
-        pluginAdapter = PluginAdapter(emptyList())
+        pluginAdapter = PluginAdapter(emptyList()) { recipe ->
+            lifecycleScope.launch {
+                scraperPluginRepository.deletePlugin(recipe)
+                loadPlugins()
+                Toast.makeText(this@PluginsActivity, "Plugin deleted", Toast.LENGTH_SHORT).show()
+            }
+        }
         rvPlugins.layoutManager = LinearLayoutManager(this)
         rvPlugins.adapter = pluginAdapter
 

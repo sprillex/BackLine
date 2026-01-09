@@ -142,6 +142,7 @@ class SettingsActivity : AppCompatActivity() {
         val cbWifiOnly = findViewById<CheckBox>(R.id.cbWifiOnly)
         val cbDetailedDebugging = findViewById<CheckBox>(R.id.cbDetailedDebugging)
         val cbShowArticleThumbnails = findViewById<CheckBox>(R.id.cbShowArticleThumbnails)
+        val cbShowImagesInArticle = findViewById<CheckBox>(R.id.cbShowImagesInArticle)
         val btnDownloadLogs = findViewById<Button>(R.id.btnDownloadLogs)
         val etSsids = findViewById<EditText>(R.id.etSsids)
 
@@ -174,6 +175,7 @@ class SettingsActivity : AppCompatActivity() {
         cbWifiOnly.isChecked = preferencesRepository.wifiOnly
         cbDetailedDebugging.isChecked = preferencesRepository.detailedDebuggingEnabled
         cbShowArticleThumbnails.isChecked = preferencesRepository.showArticleThumbnails
+        cbShowImagesInArticle.isChecked = preferencesRepository.showImagesInArticleView
         btnDownloadLogs.visibility = if (preferencesRepository.detailedDebuggingEnabled) android.view.View.VISIBLE else android.view.View.GONE
 
         etSsids.setText(preferencesRepository.allowedWifiSsids.joinToString(","))
@@ -192,6 +194,7 @@ class SettingsActivity : AppCompatActivity() {
             preferencesRepository.wifiOnly = cbWifiOnly.isChecked
             preferencesRepository.detailedDebuggingEnabled = cbDetailedDebugging.isChecked
             preferencesRepository.showArticleThumbnails = cbShowArticleThumbnails.isChecked
+            preferencesRepository.showImagesInArticleView = cbShowImagesInArticle.isChecked
 
             val ssids = etSsids.text.toString().split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
             preferencesRepository.allowedWifiSsids = ssids

@@ -7,7 +7,7 @@ import org.jsoup.Jsoup
 class HtmlDownloader(private val logger: ((String) -> Unit)? = null) {
     val scraperEngine = ScraperEngine()
 
-    suspend fun downloadHtml(url: String): String? {
+    suspend fun downloadHtml(url: String, rssImageUrl: String? = null): String? {
         return withContext(Dispatchers.IO) {
             try {
                 logger?.invoke("Scraping URL: $url")
@@ -27,7 +27,7 @@ class HtmlDownloader(private val logger: ((String) -> Unit)? = null) {
                 val html = doc.outerHtml()
                 val finalUrl = doc.location()
                 // Try to process via ScraperEngine for specific sites like Toledo Blade
-                val scrapedContent = scraperEngine.process(finalUrl, html)
+                val scrapedContent = scraperEngine.process(finalUrl, html, rssImageUrl)
 
                 if (scrapedContent != null) {
                     logger?.invoke("ScraperEngine successfully processed URL: $url")

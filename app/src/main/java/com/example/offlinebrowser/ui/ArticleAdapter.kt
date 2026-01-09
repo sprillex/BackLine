@@ -48,10 +48,13 @@ class ArticleAdapter(
         holder.tvStatus.text = if (article.isCached) "Cached" else "Online"
 
         // Load Article Image
-        if (showImages && !article.imageUrl.isNullOrEmpty()) {
+        // Prefer local path if available (offline support), otherwise fallback to remote URL
+        val imageSource = article.localImagePath ?: article.imageUrl
+
+        if (showImages && !imageSource.isNullOrEmpty()) {
             holder.ivArticleImage.visibility = View.VISIBLE
             Glide.with(holder.itemView.context)
-                .load(article.imageUrl)
+                .load(imageSource)
                 .placeholder(R.drawable.bg_pill_active) // Fallback placeholder if available, or just standard grey
                 .centerCrop()
                 .into(holder.ivArticleImage)
