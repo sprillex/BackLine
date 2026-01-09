@@ -23,6 +23,12 @@
         android:layout_height="wrap_content"
         android:text="Show Article Thumbnails" />
 
+    <CheckBox
+        android:id="@+id/cbShowImagesInArticle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Show Images in Article" />
+
     <Button
         android:id="@+id/btnDownloadLogs"
         android:layout_width="wrap_content"

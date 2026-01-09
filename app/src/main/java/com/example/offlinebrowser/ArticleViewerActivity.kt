@@ -10,6 +10,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewFeature
 import com.example.offlinebrowser.data.local.OfflineDatabase
+import com.example.offlinebrowser.data.repository.PreferencesRepository
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -28,6 +29,11 @@ class ArticleViewerActivity : AppCompatActivity() {
 
         // Block network images to save data and ensure offline behavior
         webView.settings.blockNetworkImage = true
+
+        // Handle user preference for showing images in article view
+        // Since we are blocking network images, this mostly controls local/injected images
+        val preferencesRepository = PreferencesRepository(this)
+        webView.settings.loadsImagesAutomatically = preferencesRepository.showImagesInArticleView
 
         val articleId = intent.getIntExtra("ARTICLE_ID", -1)
         if (articleId != -1) {
