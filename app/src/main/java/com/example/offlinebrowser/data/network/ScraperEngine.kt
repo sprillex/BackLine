@@ -8,6 +8,8 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import java.util.concurrent.CopyOnWriteArrayList
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
+import org.jsoup.nodes.Element
 
 class ScraperEngine {
     // Store pairs of Recipe and its compiled Regex
@@ -52,8 +54,8 @@ class ScraperEngine {
     private fun extractFromCssSelector(html: String, recipe: ScraperRecipe, rssImageUrl: String? = null): String? {
         val doc = Jsoup.parse(html)
 
-        recipe.removeSelectors?.forEach { selector ->
-            doc.select(selector).remove()
+        if (!recipe.removeSelectors.isNullOrEmpty()) {
+            removeElementsAndEmptyParents(doc, recipe.removeSelectors)
         }
 
         val title = if (recipe.titlePath != null) {
@@ -151,13 +153,29 @@ class ScraperEngine {
 
         if (!recipe.removeSelectors.isNullOrEmpty()) {
             val bodyDoc = Jsoup.parseBodyFragment(body)
-            recipe.removeSelectors.forEach { selector ->
-                bodyDoc.select(selector).remove()
-            }
+            removeElementsAndEmptyParents(bodyDoc, recipe.removeSelectors)
             body = bodyDoc.body().html()
         }
 
         return buildSimpleHtml(title, body, if (recipe.injectRssImage) rssImageUrl else null)
+    }
+
+    private fun removeElementsAndEmptyParents(root: Element, selectors: List<String>) {
+        selectors.forEach { selector ->
+            val elements = root.select(selector)
+            for (element in elements) {
+                var parent = element.parent()
+                element.remove()
+
+                // Recursively remove empty parents
+                // We check if the parent has no text (whitespace is ignored) and no children elements.
+                while (parent != null && parent != root && !parent.hasText() && parent.children().isEmpty()) {
+                    val nextParent = parent.parent()
+                    parent.remove()
+                    parent = nextParent
+                }
+            }
+        }
     }
 
     private fun traversePath(element: JsonElement, path: String?): String? {

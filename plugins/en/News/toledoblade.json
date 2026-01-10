@@ -6,6 +6,10 @@
   "titlePath": "articles[0].title",
   "injectRssImage": true,
   "removeSelectors": [
-    "iframe"
+    "iframe",
+    "script",
+    ".embed-container",
+    ".video-container",
+    ".iframe-wrapper"
   ]
 }
