@@ -4,5 +4,8 @@
   "targetIdentifier": "pgStoryZeroJSON",
   "contentPath": "articles[0].body",
   "titlePath": "articles[0].title",
-  "injectRssImage": true
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe"
+  ]
 }

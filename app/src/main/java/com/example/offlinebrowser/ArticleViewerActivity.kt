@@ -3,7 +3,10 @@ package com.example.offlinebrowser
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -12,6 +15,7 @@ import androidx.webkit.WebViewFeature
 import com.example.offlinebrowser.data.local.OfflineDatabase
 import com.example.offlinebrowser.data.repository.PreferencesRepository
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import java.io.ByteArrayInputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -27,10 +31,23 @@ class ArticleViewerActivity : AppCompatActivity() {
         val webView = findViewById<WebView>(R.id.webView)
         val fabDarkMode = findViewById<FloatingActionButton>(R.id.fab_dark_mode)
 
-        // Block network images to save data and ensure offline behavior
-        webView.settings.blockNetworkImage = true
+        // Do not block network images globally; we will filter them in WebViewClient to allow local/cached content
+        webView.settings.blockNetworkImage = false
         // Allow file access to load locally cached images
         webView.settings.allowFileAccess = true
+
+        webView.webViewClient = object : WebViewClient() {
+            override fun shouldInterceptRequest(
+                view: WebView?,
+                request: WebResourceRequest?
+            ): WebResourceResponse? {
+                val url = request?.url ?: return null
+                if (url.scheme == "http" || url.scheme == "https") {
+                    return WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream("".toByteArray()))
+                }
+                return super.shouldInterceptRequest(view, request)
+            }
+        }
 
         // Handle user preference for showing images in article view
         // Since we are blocking network images, this mostly controls local/injected images

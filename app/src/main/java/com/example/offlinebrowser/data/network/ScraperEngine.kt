@@ -51,6 +51,11 @@ class ScraperEngine {
 
     private fun extractFromCssSelector(html: String, recipe: ScraperRecipe, rssImageUrl: String? = null): String? {
         val doc = Jsoup.parse(html)
+
+        recipe.removeSelectors?.forEach { selector ->
+            doc.select(selector).remove()
+        }
+
         val title = if (recipe.titlePath != null) {
             doc.select(recipe.titlePath).first()?.text() ?: "No Title"
         } else {
@@ -142,7 +147,15 @@ class ScraperEngine {
 
         val jsonElement = JsonParser.parseString(jsonString)
         val title = traversePath(jsonElement, recipe.titlePath) ?: "No Title"
-        val body = traversePath(jsonElement, recipe.contentPath) ?: return null
+        var body = traversePath(jsonElement, recipe.contentPath) ?: return null
+
+        if (!recipe.removeSelectors.isNullOrEmpty()) {
+            val bodyDoc = Jsoup.parseBodyFragment(body)
+            recipe.removeSelectors.forEach { selector ->
+                bodyDoc.select(selector).remove()
+            }
+            body = bodyDoc.body().html()
+        }
 
         return buildSimpleHtml(title, body, if (recipe.injectRssImage) rssImageUrl else null)
     }
