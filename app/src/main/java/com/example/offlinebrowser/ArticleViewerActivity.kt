@@ -49,8 +49,17 @@ class ArticleViewerActivity : AppCompatActivity() {
                 }
 
                 if (feed != null) {
+                    var content = feed.content
+                    // Dynamically replace remote image URL with local path if available
+                    // This ensures that even if the HTML was saved with the remote URL, we use the cached image
+                    val imageUrl = feed.imageUrl
+                    val localImagePath = feed.localImagePath
+                    if (!imageUrl.isNullOrEmpty() && !localImagePath.isNullOrEmpty()) {
+                         content = content.replace(imageUrl, "file://$localImagePath")
+                    }
+
                     // Use file:/// base URL to allow loading local images
-                    webView.loadDataWithBaseURL("file:///", feed.content, "text/html", "UTF-8", null)
+                    webView.loadDataWithBaseURL("file:///", content, "text/html", "UTF-8", null)
                 }
             }
         }
