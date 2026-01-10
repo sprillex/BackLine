@@ -35,7 +35,9 @@ class ArticleViewerActivity : AppCompatActivity() {
         val fabDarkMode = findViewById<FloatingActionButton>(R.id.fab_dark_mode)
 
         // Block network images to save data and ensure offline behavior
-        webView.settings.blockNetworkImage = true
+        // Note: We set this to false to avoid potentially blocking local file images,
+        // and instead manually block network requests in shouldInterceptRequest.
+        webView.settings.blockNetworkImage = false
         // Allow file access to load locally cached images
         webView.settings.allowFileAccess = true
         // Allow file access from file URLs (important since we use file:/// base URL)
@@ -63,6 +65,36 @@ class ArticleViewerActivity : AppCompatActivity() {
                 if (preferencesRepository.detailedDebuggingEnabled) {
                     fileLogger.log("WebView Error: ${error?.description} for ${request?.url}")
                 }
+            }
+
+            override fun shouldInterceptRequest(view: WebView?, request: android.webkit.WebResourceRequest?): android.webkit.WebResourceResponse? {
+                val url = request?.url?.toString() ?: return null
+                if (preferencesRepository.detailedDebuggingEnabled) {
+                    fileLogger.log("WebView Intercept: $url")
+                }
+
+                if (url.startsWith("http") || url.startsWith("https")) {
+                    // Block network requests
+                    return android.webkit.WebResourceResponse("text/plain", "UTF-8", null)
+                }
+
+                if (url.startsWith("file://")) {
+                    // Manually serve local files if needed (though WebView should handle this)
+                    // This can help debug if file access is the issue
+                    try {
+                         val file = File(java.net.URI(url))
+                         if (file.exists()) {
+                             val mimeType = if (url.endsWith(".jpg") || url.endsWith(".jpeg")) "image/jpeg" else if (url.endsWith(".png")) "image/png" else "application/octet-stream"
+                             return android.webkit.WebResourceResponse(mimeType, "UTF-8", java.io.FileInputStream(file))
+                         }
+                    } catch (e: Exception) {
+                        if (preferencesRepository.detailedDebuggingEnabled) {
+                            fileLogger.log("Failed to load local file in intercept: ${e.message}")
+                        }
+                    }
+                }
+
+                return super.shouldInterceptRequest(view, request)
             }
         }
 
