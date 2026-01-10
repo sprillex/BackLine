@@ -37,12 +37,31 @@ class ArticleViewerActivity : AppCompatActivity() {
         webView.settings.blockNetworkImage = true
         // Allow file access to load locally cached images
         webView.settings.allowFileAccess = true
+        // Allow file access from file URLs (important since we use file:/// base URL)
+        webView.settings.allowFileAccessFromFileURLs = true
+        webView.settings.allowUniversalAccessFromFileURLs = true
 
         // Capture WebView console messages for debugging
         webView.webChromeClient = object : WebChromeClient() {
             override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
                 fileLogger.log("WebView Console: ${consoleMessage.message()} -- From line ${consoleMessage.lineNumber()} of ${consoleMessage.sourceId()}")
                 return true
+            }
+        }
+
+        webView.webViewClient = object : android.webkit.WebViewClient() {
+            override fun onLoadResource(view: WebView?, url: String?) {
+                super.onLoadResource(view, url)
+                if (preferencesRepository.detailedDebuggingEnabled) {
+                     fileLogger.log("WebView Loading Resource: $url")
+                }
+            }
+
+            override fun onReceivedError(view: WebView?, request: android.webkit.WebResourceRequest?, error: android.webkit.WebResourceError?) {
+                super.onReceivedError(view, request, error)
+                if (preferencesRepository.detailedDebuggingEnabled) {
+                    fileLogger.log("WebView Error: ${error?.description} for ${request?.url}")
+                }
             }
         }
 
