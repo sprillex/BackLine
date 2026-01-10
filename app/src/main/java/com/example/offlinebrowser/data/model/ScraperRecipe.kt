@@ -12,5 +12,6 @@ data class ScraperRecipe(
     val targetIdentifier: String, // e.g., the variable name "pgStoryZeroJSON"
     val contentPath: String,      // e.g., "articles[0].body"
     val titlePath: String? = null, // e.g., "articles[0].title"
-    val injectRssImage: Boolean = false // If true, injects the RSS image at the top of the body
+    val injectRssImage: Boolean = false, // If true, injects the RSS image at the top of the body
+    val removeSelectors: List<String>? = null // CSS selectors to remove from the content
 )
