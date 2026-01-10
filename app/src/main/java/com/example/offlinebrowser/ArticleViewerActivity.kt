@@ -30,6 +30,7 @@ class ArticleViewerActivity : AppCompatActivity() {
         setContentView(R.layout.activity_article_viewer)
 
         fileLogger = FileLogger(this)
+        val preferencesRepository = PreferencesRepository(this)
         val webView = findViewById<WebView>(R.id.webView)
         val fabDarkMode = findViewById<FloatingActionButton>(R.id.fab_dark_mode)
 
@@ -67,7 +68,6 @@ class ArticleViewerActivity : AppCompatActivity() {
 
         // Handle user preference for showing images in article view
         // Since we are blocking network images, this mostly controls local/injected images
-        val preferencesRepository = PreferencesRepository(this)
         val showImages = preferencesRepository.showImagesInArticleView
         webView.settings.loadsImagesAutomatically = showImages
 
