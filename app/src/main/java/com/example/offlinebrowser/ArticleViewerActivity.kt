@@ -55,7 +55,33 @@ class ArticleViewerActivity : AppCompatActivity() {
                     val imageUrl = feed.imageUrl
                     val localImagePath = feed.localImagePath
                     if (!imageUrl.isNullOrEmpty() && !localImagePath.isNullOrEmpty()) {
-                         content = content.replace(imageUrl, "file://$localImagePath")
+                         // 1. Try to replace existing remote URL
+                         val newContent = content.replace(imageUrl, "file://$localImagePath")
+
+                         // 2. If replacement didn't happen (or URL wasn't there) and it's not already injected
+                         if (newContent == content && !content.contains("file://$localImagePath")) {
+                             // Inject the image manually
+                             val imgTag = "<img src=\"file://$localImagePath\" alt=\"Article Image\" style=\"width:100%; height:auto; margin-bottom:16px;\" /><br/>"
+
+                             // Try to insert after </h1> to match ScraperEngine style
+                             val h1End = "</h1>"
+                             val index = content.indexOf(h1End)
+                             content = if (index != -1) {
+                                 content.substring(0, index + h1End.length) + imgTag + content.substring(index + h1End.length)
+                             } else {
+                                 // Try to insert after <body>
+                                 val bodyStart = "<body>"
+                                 val bodyIndex = content.indexOf(bodyStart)
+                                 if (bodyIndex != -1) {
+                                     content.substring(0, bodyIndex + bodyStart.length) + imgTag + content.substring(bodyIndex + bodyStart.length)
+                                 } else {
+                                     // Just prepend
+                                     imgTag + content
+                                 }
+                             }
+                         } else {
+                             content = newContent
+                         }
                     }
 
                     // Use file:/// base URL to allow loading local images
