@@ -3,6 +3,8 @@ package com.example.offlinebrowser
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.webkit.ConsoleMessage
+import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -11,19 +13,23 @@ import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewFeature
 import com.example.offlinebrowser.data.local.OfflineDatabase
 import com.example.offlinebrowser.data.repository.PreferencesRepository
+import com.example.offlinebrowser.util.FileLogger
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 class ArticleViewerActivity : AppCompatActivity() {
 
     private var isDarkMode = false
+    private lateinit var fileLogger: FileLogger
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_article_viewer)
 
+        fileLogger = FileLogger(this)
         val webView = findViewById<WebView>(R.id.webView)
         val fabDarkMode = findViewById<FloatingActionButton>(R.id.fab_dark_mode)
 
@@ -32,10 +38,23 @@ class ArticleViewerActivity : AppCompatActivity() {
         // Allow file access to load locally cached images
         webView.settings.allowFileAccess = true
 
+        // Capture WebView console messages for debugging
+        webView.webChromeClient = object : WebChromeClient() {
+            override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
+                fileLogger.log("WebView Console: ${consoleMessage.message()} -- From line ${consoleMessage.lineNumber()} of ${consoleMessage.sourceId()}")
+                return true
+            }
+        }
+
         // Handle user preference for showing images in article view
         // Since we are blocking network images, this mostly controls local/injected images
         val preferencesRepository = PreferencesRepository(this)
-        webView.settings.loadsImagesAutomatically = preferencesRepository.showImagesInArticleView
+        val showImages = preferencesRepository.showImagesInArticleView
+        webView.settings.loadsImagesAutomatically = showImages
+
+        if (preferencesRepository.detailedDebuggingEnabled) {
+            fileLogger.log("ArticleViewer: detailedDebuggingEnabled=true, showImages=$showImages")
+        }
 
         val articleId = intent.getIntExtra("ARTICLE_ID", -1)
         if (articleId != -1) {
@@ -44,48 +63,66 @@ class ArticleViewerActivity : AppCompatActivity() {
 
             lifecycleScope.launch {
                 val feed = withContext(Dispatchers.IO) {
-                    // We need a method to get article by ID
-                     database.articleDao().getArticleById(articleId)
+                    val article = database.articleDao().getArticleById(articleId)
+                    if (article != null) {
+                        if (preferencesRepository.detailedDebuggingEnabled) {
+                            fileLogger.log("ArticleViewer: Loaded article ${article.id}: ${article.title}")
+                            fileLogger.log("ArticleViewer: imageUrl=${article.imageUrl}")
+                            fileLogger.log("ArticleViewer: localImagePath=${article.localImagePath}")
+                            if (article.localImagePath != null) {
+                                val file = File(article.localImagePath)
+                                fileLogger.log("ArticleViewer: Local file exists? ${file.exists()}, Path: ${file.absolutePath}, Size: ${if(file.exists()) file.length() else 0}")
+                            }
+                        }
+
+                        var content = article.content
+                        // Dynamically replace remote image URL with local path if available
+                        val imageUrl = article.imageUrl
+                        val localImagePath = article.localImagePath
+                        if (!imageUrl.isNullOrEmpty() && !localImagePath.isNullOrEmpty()) {
+                             // 1. Try to replace existing remote URL
+                             val newContent = content.replace(imageUrl, "file://$localImagePath")
+
+                             // 2. If replacement didn't happen (or URL wasn't there) and it's not already injected
+                             if (newContent == content && !content.contains("file://$localImagePath")) {
+                                 fileLogger.log("ArticleViewer: Image URL not found in content or no replacement made. Attempting injection.")
+                                 // Inject the image manually
+                                 val imgTag = "<img src=\"file://$localImagePath\" alt=\"Article Image\" style=\"width:100%; height:auto; margin-bottom:16px;\" /><br/>"
+
+                                 // Try to insert after </h1> to match ScraperEngine style
+                                 val h1End = "</h1>"
+                                 val index = content.indexOf(h1End)
+                                 content = if (index != -1) {
+                                     content.substring(0, index + h1End.length) + imgTag + content.substring(index + h1End.length)
+                                 } else {
+                                     // Try to insert after <body>
+                                     val bodyStart = "<body>"
+                                     val bodyIndex = content.indexOf(bodyStart)
+                                     if (bodyIndex != -1) {
+                                         content.substring(0, bodyIndex + bodyStart.length) + imgTag + content.substring(bodyIndex + bodyStart.length)
+                                     } else {
+                                         // Just prepend
+                                         imgTag + content
+                                     }
+                                 }
+                                 fileLogger.log("ArticleViewer: Injected image tag.")
+                             } else {
+                                 fileLogger.log("ArticleViewer: Replaced remote URL with local path.")
+                                 content = newContent
+                             }
+                        } else {
+                            fileLogger.log("ArticleViewer: No image URL or local path to process.")
+                        }
+                        content
+                    } else {
+                        fileLogger.log("ArticleViewer: Article $articleId not found in database.")
+                        null
+                    }
                 }
 
                 if (feed != null) {
-                    var content = feed.content
-                    // Dynamically replace remote image URL with local path if available
-                    // This ensures that even if the HTML was saved with the remote URL, we use the cached image
-                    val imageUrl = feed.imageUrl
-                    val localImagePath = feed.localImagePath
-                    if (!imageUrl.isNullOrEmpty() && !localImagePath.isNullOrEmpty()) {
-                         // 1. Try to replace existing remote URL
-                         val newContent = content.replace(imageUrl, "file://$localImagePath")
-
-                         // 2. If replacement didn't happen (or URL wasn't there) and it's not already injected
-                         if (newContent == content && !content.contains("file://$localImagePath")) {
-                             // Inject the image manually
-                             val imgTag = "<img src=\"file://$localImagePath\" alt=\"Article Image\" style=\"width:100%; height:auto; margin-bottom:16px;\" /><br/>"
-
-                             // Try to insert after </h1> to match ScraperEngine style
-                             val h1End = "</h1>"
-                             val index = content.indexOf(h1End)
-                             content = if (index != -1) {
-                                 content.substring(0, index + h1End.length) + imgTag + content.substring(index + h1End.length)
-                             } else {
-                                 // Try to insert after <body>
-                                 val bodyStart = "<body>"
-                                 val bodyIndex = content.indexOf(bodyStart)
-                                 if (bodyIndex != -1) {
-                                     content.substring(0, bodyIndex + bodyStart.length) + imgTag + content.substring(bodyIndex + bodyStart.length)
-                                 } else {
-                                     // Just prepend
-                                     imgTag + content
-                                 }
-                             }
-                         } else {
-                             content = newContent
-                         }
-                    }
-
                     // Use file:/// base URL to allow loading local images
-                    webView.loadDataWithBaseURL("file:///", content, "text/html", "UTF-8", null)
+                    webView.loadDataWithBaseURL("file:///", feed, "text/html", "UTF-8", null)
                 }
             }
         }
