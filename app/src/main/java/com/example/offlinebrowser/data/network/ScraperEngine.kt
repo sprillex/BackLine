@@ -67,7 +67,7 @@ class ScraperEngine {
         val bodyElement = doc.select(recipe.contentPath).first() ?: return null
         val body = bodyElement.html()
 
-        return buildSimpleHtml(title, body, if (recipe.injectRssImage) rssImageUrl else null)
+        return buildSimpleHtml(title, body, if (recipe.injectRssImage) rssImageUrl else null, recipe.sourceName)
     }
 
     fun extractImage(html: String): String? {
@@ -157,7 +157,7 @@ class ScraperEngine {
             body = bodyDoc.body().html()
         }
 
-        return buildSimpleHtml(title, body, if (recipe.injectRssImage) rssImageUrl else null)
+        return buildSimpleHtml(title, body, if (recipe.injectRssImage) rssImageUrl else null, recipe.sourceName)
     }
 
     private fun removeElementsAndEmptyParents(root: Element, selectors: List<String>) {
@@ -210,8 +210,9 @@ class ScraperEngine {
         return if (current.isJsonPrimitive) current.asString else null
     }
 
-    private fun buildSimpleHtml(title: String, body: String, imageUrl: String? = null): String {
+    private fun buildSimpleHtml(title: String, body: String, imageUrl: String? = null, sourceName: String? = null): String {
         val imageHtml = if (imageUrl != null) "<img src=\"$imageUrl\" alt=\"Article Image\" style=\"width:100%; height:auto; margin-bottom:16px;\" /><br/>" else ""
+        val sourceHtml = if (sourceName != null) "<p style=\"color: #666; font-size: 0.9em; margin-bottom: 8px;\">$sourceName</p>" else ""
         return """
             <!DOCTYPE html>
             <html>
@@ -229,6 +230,7 @@ class ScraperEngine {
                 </style>
             </head>
             <body>
+                $sourceHtml
                 <h1>$title</h1>
                 $imageHtml
                 <div class="content">$body</div>

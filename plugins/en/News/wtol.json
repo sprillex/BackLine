@@ -4,5 +4,6 @@
   "targetIdentifier": "ignored",
   "contentPath": "div.article__body",
   "titlePath": "h1.article__headline",
-  "injectRssImage": true
+  "injectRssImage": true,
+  "sourceName": "WTOL"
 }
