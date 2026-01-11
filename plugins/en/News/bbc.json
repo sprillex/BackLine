@@ -3,7 +3,7 @@
   "strategy": "CSS_SELECTOR",
   "targetIdentifier": "ignored",
   "contentPath": "div[data-component='text-block']",
-  "titlePath": "h1#main-heading",
+  "titlePath": "h1",
   "injectRssImage": true,
   "removeSelectors": [
     "header",
