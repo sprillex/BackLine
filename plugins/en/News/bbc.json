@@ -1,0 +1,16 @@
+{
+  "domainPattern": ".*bbc\\.(co\\.uk|com)",
+  "strategy": "CSS_SELECTOR",
+  "targetIdentifier": "ignored",
+  "contentPath": "div[data-component='text-block']",
+  "titlePath": "h1#main-heading",
+  "injectRssImage": true,
+  "removeSelectors": [
+    "header",
+    "footer",
+    ".ssrcss-11r1m41-StyledFollow",
+    "[data-component='unordered-list-block']",
+    "figure"
+  ],
+  "sourceName": "BBC News"
+}

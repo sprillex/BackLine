@@ -1,0 +1,19 @@
+{
+  "domainPattern": ".*newscientist\\.com",
+  "strategy": "CSS_SELECTOR",
+  "targetIdentifier": "ignored",
+  "contentPath": "section.ArticleContent",
+  "titlePath": "h1.ArticleHeader__Heading",
+  "injectRssImage": true,
+  "removeSelectors": [
+    ".NewsletterPromotion",
+    ".Advert",
+    ".js-content-prompt-opportunity",
+    ".ArticleTopics",
+    ".MPUSidebar",
+    ".SidebarNewsletterWrapper",
+    ".ReadMore",
+    ".ReadMoreWithImage"
+  ],
+  "sourceName": "New Scientist"
+}

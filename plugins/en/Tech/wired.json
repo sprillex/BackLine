@@ -1,0 +1,15 @@
+{
+  "domainPattern": ".*wired\\.com",
+  "strategy": "CSS_SELECTOR",
+  "targetIdentifier": "ignored",
+  "contentPath": "div.body__container",
+  "titlePath": "h1[data-testid='ContentHeaderHed']",
+  "injectRssImage": true,
+  "removeSelectors": [
+    ".ad-unit",
+    ".content-header__social-icons",
+    ".recirc-list",
+    ".content-footer"
+  ],
+  "sourceName": "Wired"
+}

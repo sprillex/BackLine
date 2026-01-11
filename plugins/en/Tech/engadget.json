@@ -1,0 +1,21 @@
+{
+  "domainPattern": ".*engadget\\.com",
+  "strategy": "CSS_SELECTOR",
+  "targetIdentifier": "ignored",
+  "contentPath": "div[data-article-body='true']",
+  "titlePath": "h1.layout-h1",
+  "injectRssImage": true,
+  "removeSelectors": [
+    "section.engadget-header",
+    ".top-center-ad",
+    ".ad",
+    ".advertisement",
+    "iframe",
+    "aside",
+    ".topic-subnavigation-non-sticky",
+    "#search",
+    "footer",
+    ".social-share"
+  ],
+  "sourceName": "Engadget"
+}
