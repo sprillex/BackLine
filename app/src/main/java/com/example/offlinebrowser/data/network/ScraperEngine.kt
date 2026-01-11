@@ -8,6 +8,8 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import java.util.concurrent.CopyOnWriteArrayList
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
+import org.jsoup.nodes.Element
 
 class ScraperEngine {
     // Store pairs of Recipe and its compiled Regex
@@ -52,8 +54,8 @@ class ScraperEngine {
     private fun extractFromCssSelector(html: String, recipe: ScraperRecipe, rssImageUrl: String? = null): String? {
         val doc = Jsoup.parse(html)
 
-        recipe.removeSelectors?.forEach { selector ->
-            doc.select(selector).remove()
+        if (!recipe.removeSelectors.isNullOrEmpty()) {
+            removeElementsAndEmptyParents(doc, recipe.removeSelectors)
         }
 
         val title = if (recipe.titlePath != null) {
@@ -65,7 +67,7 @@ class ScraperEngine {
         val bodyElement = doc.select(recipe.contentPath).first() ?: return null
         val body = bodyElement.html()
 
-        return buildSimpleHtml(title, body, if (recipe.injectRssImage) rssImageUrl else null)
+        return buildSimpleHtml(title, body, if (recipe.injectRssImage) rssImageUrl else null, recipe.sourceName)
     }
 
     fun extractImage(html: String): String? {
@@ -151,13 +153,39 @@ class ScraperEngine {
 
         if (!recipe.removeSelectors.isNullOrEmpty()) {
             val bodyDoc = Jsoup.parseBodyFragment(body)
-            recipe.removeSelectors.forEach { selector ->
-                bodyDoc.select(selector).remove()
-            }
+            removeElementsAndEmptyParents(bodyDoc, recipe.removeSelectors)
             body = bodyDoc.body().html()
         }
 
-        return buildSimpleHtml(title, body, if (recipe.injectRssImage) rssImageUrl else null)
+        return buildSimpleHtml(title, body, if (recipe.injectRssImage) rssImageUrl else null, recipe.sourceName)
+    }
+
+    private fun removeElementsAndEmptyParents(root: Element, selectors: List<String>) {
+        selectors.forEach { selector ->
+            val elements = root.select(selector)
+            for (element in elements) {
+                var parent = element.parent()
+                element.remove()
+
+                // Recursively remove empty parents
+                // We check if the parent has no text (whitespace is ignored) and no significant children elements.
+                while (parent != null && parent != root && isEffectivelyEmpty(parent)) {
+                    val nextParent = parent.parent()
+                    parent.remove()
+                    parent = nextParent
+                }
+            }
+        }
+    }
+
+    private fun isEffectivelyEmpty(element: Element): Boolean {
+        if (element.hasText()) return false
+        // Check children: if any child is NOT a <br> and NOT empty itself, then the element is not empty
+        for (child in element.children()) {
+            if (child.tagName().equals("br", ignoreCase = true)) continue
+            if (!isEffectivelyEmpty(child)) return false
+        }
+        return true
     }
 
     private fun traversePath(element: JsonElement, path: String?): String? {
@@ -192,8 +220,10 @@ class ScraperEngine {
         return if (current.isJsonPrimitive) current.asString else null
     }
 
-    private fun buildSimpleHtml(title: String, body: String, imageUrl: String? = null): String {
-        val imageHtml = if (imageUrl != null) "<img src=\"$imageUrl\" alt=\"Article Image\" style=\"width:100%; height:auto; margin-bottom:16px;\" /><br/>" else ""
+    private fun buildSimpleHtml(title: String, body: String, imageUrl: String? = null, sourceName: String? = null): String {
+        val safeImageUrl = imageUrl?.replace("\"", "&quot;")
+        val imageHtml = if (safeImageUrl != null) "<img src=\"$safeImageUrl\" alt=\"Article Image\" style=\"width:100%; height:auto; margin-bottom:16px;\" /><br/>" else ""
+        val sourceHtml = if (sourceName != null) "<p style=\"color: #666; font-size: 0.9em; margin-bottom: 8px;\">$sourceName</p>" else ""
         return """
             <!DOCTYPE html>
             <html>
@@ -211,6 +241,7 @@ class ScraperEngine {
                 </style>
             </head>
             <body>
+                $sourceHtml
                 <h1>$title</h1>
                 $imageHtml
                 <div class="content">$body</div>
