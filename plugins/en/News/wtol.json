@@ -13,6 +13,8 @@
     ".embed-container",
     ".iframe-wrapper",
     ".video-player",
-    ".jwplayer-container"
+    ".jwplayer-container",
+    "figure:has(iframe)",
+    "div.embed-youtube"
   ]
 }

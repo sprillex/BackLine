@@ -19,6 +19,7 @@ import java.io.ByteArrayInputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jsoup.Jsoup
 
 class ArticleViewerActivity : AppCompatActivity() {
 
@@ -68,8 +69,43 @@ class ArticleViewerActivity : AppCompatActivity() {
                 if (feed != null) {
                     var content = feed.content
                     // If we have a local cached image, replace the remote URL in the content with the local path
-                    if (feed.localImagePath != null && feed.imageUrl != null) {
-                        content = content.replace(feed.imageUrl, "file://${feed.localImagePath}")
+                    if (feed.localImagePath != null) {
+                        try {
+                            val doc = Jsoup.parse(content)
+                            var changed = false
+
+                            // Strategy 1: Find by exact src match (handling HTML entities via Jsoup)
+                            if (feed.imageUrl != null) {
+                                val images = doc.select("img[src]")
+                                for (img in images) {
+                                    // Jsoup's attr("src") returns the decoded URL
+                                    if (img.attr("src") == feed.imageUrl) {
+                                        img.attr("src", "file://${feed.localImagePath}")
+                                        changed = true
+                                    }
+                                }
+                            }
+
+                            // Strategy 2: Fallback to "Article Image" alt text if specific replacement failed
+                            // This catches cases where the URL might differ slightly or Strategy 1 missed it
+                            if (!changed) {
+                                val injectedImage = doc.select("img[alt='Article Image']").first()
+                                if (injectedImage != null) {
+                                    injectedImage.attr("src", "file://${feed.localImagePath}")
+                                    changed = true
+                                }
+                            }
+
+                            if (changed) {
+                                content = doc.outerHtml()
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            // Fallback to simple replacement if Jsoup fails for some reason
+                            if (feed.imageUrl != null) {
+                                content = content.replace(feed.imageUrl, "file://${feed.localImagePath}")
+                            }
+                        }
                     }
                     // Use file:/// base URL to allow loading local images
                     webView.loadDataWithBaseURL("file:///", content, "text/html", "UTF-8", null)

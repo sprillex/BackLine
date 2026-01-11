@@ -168,14 +168,24 @@ class ScraperEngine {
                 element.remove()
 
                 // Recursively remove empty parents
-                // We check if the parent has no text (whitespace is ignored) and no children elements.
-                while (parent != null && parent != root && !parent.hasText() && parent.children().isEmpty()) {
+                // We check if the parent has no text (whitespace is ignored) and no significant children elements.
+                while (parent != null && parent != root && isEffectivelyEmpty(parent)) {
                     val nextParent = parent.parent()
                     parent.remove()
                     parent = nextParent
                 }
             }
         }
+    }
+
+    private fun isEffectivelyEmpty(element: Element): Boolean {
+        if (element.hasText()) return false
+        // Check children: if any child is NOT a <br> and NOT empty itself, then the element is not empty
+        for (child in element.children()) {
+            if (child.tagName().equals("br", ignoreCase = true)) continue
+            if (!isEffectivelyEmpty(child)) return false
+        }
+        return true
     }
 
     private fun traversePath(element: JsonElement, path: String?): String? {
@@ -211,7 +221,8 @@ class ScraperEngine {
     }
 
     private fun buildSimpleHtml(title: String, body: String, imageUrl: String? = null, sourceName: String? = null): String {
-        val imageHtml = if (imageUrl != null) "<img src=\"$imageUrl\" alt=\"Article Image\" style=\"width:100%; height:auto; margin-bottom:16px;\" /><br/>" else ""
+        val safeImageUrl = imageUrl?.replace("\"", "&quot;")
+        val imageHtml = if (safeImageUrl != null) "<img src=\"$safeImageUrl\" alt=\"Article Image\" style=\"width:100%; height:auto; margin-bottom:16px;\" /><br/>" else ""
         val sourceHtml = if (sourceName != null) "<p style=\"color: #666; font-size: 0.9em; margin-bottom: 8px;\">$sourceName</p>" else ""
         return """
             <!DOCTYPE html>

@@ -10,7 +10,9 @@
     "script",
     ".embed-container",
     ".video-container",
-    ".iframe-wrapper"
+    ".iframe-wrapper",
+    "figure:has(iframe)",
+    "div.embed-youtube"
   ],
   "sourceName": "The Toledo Blade"
 }
