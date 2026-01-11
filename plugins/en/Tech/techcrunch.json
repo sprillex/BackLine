@@ -1,0 +1,17 @@
+{
+  "domainPattern": ".*techcrunch\\.com",
+  "strategy": "CSS_SELECTOR",
+  "targetIdentifier": "ignored",
+  "contentPath": "div.entry-content",
+  "titlePath": "h1.wp-block-post-title",
+  "injectRssImage": true,
+  "removeSelectors": [
+    ".ad-unit",
+    ".wp-block-techcrunch-inline-cta",
+    ".wp-block-techcrunch-social-share",
+    ".wp-block-tc23-post-relevant-terms",
+    ".wp-block-spacer",
+    "#speakable-summary"
+  ],
+  "sourceName": "TechCrunch"
+}
