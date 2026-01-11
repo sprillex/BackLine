@@ -2,6 +2,17 @@
   "domainPattern": ".*404media\\.co",
   "strategy": "CSS_SELECTOR",
   "targetIdentifier": "ignored",
-  "contentPath": "div.post-content__content",
-  "titlePath": "h1.post-hero__title"
+  "contentPath": "div.post__content",
+  "titlePath": "h1.post-hero__title",
+  "injectRssImage": true,
+  "removeSelectors": [
+    "div.kg-callout-card",
+    "div.outpost-pub-container",
+    "iframe",
+    "script",
+    "div.ad-leaderboard",
+    "div.ad",
+    ".post-hero__ad"
+  ],
+  "sourceName": "404 Media"
 }
