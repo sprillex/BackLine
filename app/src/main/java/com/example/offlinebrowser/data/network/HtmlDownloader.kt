@@ -26,8 +26,12 @@ class HtmlDownloader(private val logger: ((String) -> Unit)? = null) {
 
                 val html = doc.outerHtml()
                 val finalUrl = doc.location()
+
+                // If rssImageUrl is missing, try to find one in the raw HTML so we can inject it
+                val effectiveRssImageUrl = rssImageUrl ?: scraperEngine.extractImage(html)
+
                 // Try to process via ScraperEngine for specific sites like Toledo Blade
-                val scrapedContent = scraperEngine.process(finalUrl, html, rssImageUrl)
+                val scrapedContent = scraperEngine.process(finalUrl, html, effectiveRssImageUrl)
 
                 if (scrapedContent != null) {
                     logger?.invoke("ScraperEngine successfully processed URL: $url")
