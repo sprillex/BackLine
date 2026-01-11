@@ -13,8 +13,12 @@ import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 
 class ConfigRepository(private val context: Context) {
     private val database = OfflineDatabase.getDatabase(context)
@@ -22,8 +26,88 @@ class ConfigRepository(private val context: Context) {
     private val feedDao = database.feedDao()
     private val weatherDao = database.weatherDao()
     private val gson = Gson()
+    private val pluginsDir = File(context.filesDir, "plugins")
 
     suspend fun exportConfig(outputStream: OutputStream) {
+        val config = createAppConfig()
+        withContext(Dispatchers.IO) {
+            outputStream.write(gson.toJson(config).toByteArray())
+        }
+    }
+
+    suspend fun importConfig(inputStream: InputStream) {
+        val json = withContext(Dispatchers.IO) {
+            inputStream.bufferedReader().use { it.readText() }
+        }
+        val config = gson.fromJson(json, AppConfig::class.java)
+        restoreAppConfig(config)
+    }
+
+    suspend fun exportFullBackup(outputStream: OutputStream) {
+        val config = createAppConfig()
+        val configJson = gson.toJson(config)
+
+        withContext(Dispatchers.IO) {
+            ZipOutputStream(outputStream).use { zipOut ->
+                // Add config.json
+                val configEntry = ZipEntry("config.json")
+                zipOut.putNextEntry(configEntry)
+                zipOut.write(configJson.toByteArray())
+                zipOut.closeEntry()
+
+                // Add plugins
+                if (pluginsDir.exists() && pluginsDir.isDirectory) {
+                    pluginsDir.listFiles()?.forEach { file ->
+                        if (file.isFile && file.name.endsWith(".json")) {
+                            val entry = ZipEntry("plugins/${file.name}")
+                            zipOut.putNextEntry(entry)
+                            file.inputStream().use { input ->
+                                input.copyTo(zipOut)
+                            }
+                            zipOut.closeEntry()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    suspend fun importFullBackup(inputStream: InputStream) {
+        withContext(Dispatchers.IO) {
+            ZipInputStream(inputStream).use { zipIn ->
+                var entry = zipIn.nextEntry
+                while (entry != null) {
+                    if (entry.name == "config.json") {
+                        val json = zipIn.bufferedReader().readText() // Note: reading fully from ZipInputStream directly via Reader might close it? No, bufferedReader wraps it.
+                        // Wait, bufferedReader().readText() reads until end of stream. For ZipInputStream, that's until current entry ends?
+                        // Actually, ZipInputStream behaves like a stream for the current entry.
+                        // However, strictly speaking, we should be careful. `readText` closes the reader, which closes the underlying stream.
+                        // We must NOT close the ZipInputStream here.
+
+                        // Safer approach: read bytes for this entry
+                        val bytes = zipIn.readBytes() // This reads until current entry EOF.
+                        val jsonContent = String(bytes)
+                        val config = gson.fromJson(jsonContent, AppConfig::class.java)
+                        restoreAppConfig(config)
+                    } else if (entry.name.startsWith("plugins/") && entry.name.endsWith(".json")) {
+                        // Extract plugin
+                        if (!pluginsDir.exists()) {
+                            pluginsDir.mkdirs()
+                        }
+                        val fileName = File(entry.name).name // Get just filename, ignore path components if any
+                        val outFile = File(pluginsDir, fileName)
+                        outFile.outputStream().use { output ->
+                            zipIn.copyTo(output)
+                        }
+                    }
+                    zipIn.closeEntry()
+                    entry = zipIn.nextEntry
+                }
+            }
+        }
+    }
+
+    private suspend fun createAppConfig(): AppConfig {
         val feeds = feedDao.getAllFeeds().first().map {
             FeedConfig(
                 url = it.url,
@@ -50,23 +134,14 @@ class ConfigRepository(private val context: Context) {
             weatherUnits = preferencesRepository.weatherUnits
         )
 
-        val config = AppConfig(
+        return AppConfig(
             settings = settings,
             feeds = feeds,
             weatherLocations = weatherLocations
         )
-
-        withContext(Dispatchers.IO) {
-            outputStream.write(gson.toJson(config).toByteArray())
-        }
     }
 
-    suspend fun importConfig(inputStream: InputStream) {
-        val json = withContext(Dispatchers.IO) {
-            inputStream.bufferedReader().use { it.readText() }
-        }
-        val config = gson.fromJson(json, AppConfig::class.java)
-
+    private suspend fun restoreAppConfig(config: AppConfig) {
         // Restore settings
         preferencesRepository.wifiOnly = config.settings.wifiOnly
         preferencesRepository.refreshIntervalMinutes = config.settings.refreshInterval
@@ -79,7 +154,6 @@ class ConfigRepository(private val context: Context) {
 
         config.feeds.forEach { feedConfig ->
             // Check if exists to preserve ID
-            // We consume the existing list to prevent multiple config entries from updating the same DB row
             val existing = existingFeeds.find { it.url == feedConfig.url }
 
             if (existing != null) {
@@ -93,15 +167,13 @@ class ConfigRepository(private val context: Context) {
                 type = try { FeedType.valueOf(feedConfig.type) } catch (e: Exception) { FeedType.RSS },
                 downloadLimit = feedConfig.downloadLimit,
                 category = feedConfig.category
-                // lastUpdated defaults to 0, which is good for forcing update
             )
             feedDao.insertFeed(feed)
         }
 
+        // Restore Weather
         val existingWeather = weatherDao.getAllWeather().first().toMutableList()
         config.weatherLocations.forEach { weatherConfig ->
-            // Match by name AND location to handle cases where user has multiple locations with same coords
-            // but different names (or simply to correctly map specific config entries to specific DB rows).
             val existing = existingWeather.find {
                 it.locationName == weatherConfig.locationName &&
                 it.latitude == weatherConfig.latitude &&
@@ -117,7 +189,7 @@ class ConfigRepository(private val context: Context) {
                 locationName = weatherConfig.locationName,
                 latitude = weatherConfig.latitude,
                 longitude = weatherConfig.longitude,
-                dataJson = "", // Clear data to force update
+                dataJson = "",
                 lastUpdated = 0
             )
             weatherDao.insertWeather(weather)

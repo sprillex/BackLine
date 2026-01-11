@@ -76,6 +76,49 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
+    private val createFullBackupLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        uri?.let {
+            CoroutineScope(Dispatchers.Main).launch {
+                try {
+                    val outputStream = contentResolver.openOutputStream(it)
+                    outputStream?.use { stream ->
+                        configRepository.exportFullBackup(stream)
+                    }
+                    Toast.makeText(this@SettingsActivity, "Full backup created successfully", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    Toast.makeText(this@SettingsActivity, "Backup failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    private val openFullBackupLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let {
+            CoroutineScope(Dispatchers.Main).launch {
+                try {
+                    val inputStream = contentResolver.openInputStream(it)
+                    inputStream?.use { stream ->
+                        configRepository.importFullBackup(stream)
+                    }
+                    Toast.makeText(this@SettingsActivity, "Full backup restored. Updating content...", Toast.LENGTH_SHORT).show()
+
+                    // Trigger Sync
+                    val request = androidx.work.OneTimeWorkRequestBuilder<SyncWorker>()
+                        .setExpedited(androidx.work.OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                        .build()
+                    WorkManager.getInstance(this@SettingsActivity).enqueue(request)
+
+                    // Refresh UI
+                    recreate()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    Toast.makeText(this@SettingsActivity, "Restore failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
     private val saveLogLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
         uri?.let {
             CoroutineScope(Dispatchers.IO).launch {
@@ -169,6 +212,8 @@ class SettingsActivity : AppCompatActivity() {
         val btnRequestPerm = findViewById<Button>(R.id.btnRequestPerm)
         val btnExport = findViewById<Button>(R.id.btnExport)
         val btnImport = findViewById<Button>(R.id.btnImport)
+        val btnFullBackup = findViewById<Button>(R.id.btnFullBackup)
+        val btnFullRestore = findViewById<Button>(R.id.btnFullRestore)
 
         cbWifiOnly.isChecked = preferencesRepository.wifiOnly
         cbDetailedDebugging.isChecked = preferencesRepository.detailedDebuggingEnabled
@@ -236,6 +281,14 @@ class SettingsActivity : AppCompatActivity() {
 
         btnImport.setOnClickListener {
             openDocumentLauncher.launch(arrayOf("application/json"))
+        }
+
+        btnFullBackup.setOnClickListener {
+            createFullBackupLauncher.launch("offline_browser_full_backup.zip")
+        }
+
+        btnFullRestore.setOnClickListener {
+            openFullBackupLauncher.launch(arrayOf("application/zip"))
         }
     }
 }
