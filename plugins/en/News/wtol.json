@@ -5,5 +5,14 @@
   "contentPath": "div.article__body",
   "titlePath": "h1.article__headline",
   "injectRssImage": true,
-  "sourceName": "WTOL"
+  "sourceName": "WTOL",
+  "removeSelectors": [
+    "iframe",
+    "script",
+    ".video-container",
+    ".embed-container",
+    ".iframe-wrapper",
+    ".video-player",
+    ".jwplayer-container"
+  ]
 }
