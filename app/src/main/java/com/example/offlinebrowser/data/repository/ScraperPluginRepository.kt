@@ -50,14 +50,31 @@ class ScraperPluginRepository(private val context: Context) {
     }
 
     suspend fun ensureDefaultPlugins() = withContext(Dispatchers.IO) {
-        val toledoBladeFile = File(pluginsDir, "toledo_blade.json")
+        // Cleanup legacy file with incorrect configuration
+        val legacyFile = File(pluginsDir, "toledo_blade.json")
+        if (legacyFile.exists()) {
+            legacyFile.delete()
+        }
+
+        val toledoBladeFile = File(pluginsDir, "toledoblade.json")
         if (!toledoBladeFile.exists()) {
             val defaultRecipe = ScraperRecipe(
                 domainPattern = ".*toledoblade\\.com",
                 strategy = ExtractionStrategy.EXTRACT_FROM_JS_VAR,
                 targetIdentifier = "pgStoryZeroJSON",
                 contentPath = "articles[0].body",
-                titlePath = "articles[0].title"
+                titlePath = "articles[0].title",
+                injectRssImage = true,
+                removeSelectors = listOf(
+                    "iframe",
+                    "script",
+                    ".embed-container",
+                    ".video-container",
+                    ".iframe-wrapper",
+                    "figure:has(iframe)",
+                    "div.embed-youtube"
+                ),
+                sourceName = "The Toledo Blade"
             )
             try {
                 toledoBladeFile.writeText(gson.toJson(defaultRecipe))
