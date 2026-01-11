@@ -1,0 +1,16 @@
+{
+  "domainPattern": "hackaday\\.com",
+  "strategy": "CSS_SELECTOR",
+  "titlePath": "h1.entry-title",
+  "contentPath": "div.entry-content",
+  "removeSelectors": [
+    ".share-post",
+    ".sharedaddy",
+    ".jp-relatedposts",
+    "#jp-post-flair",
+    ".wpa",
+    "div.share-dialog-content"
+  ],
+  "injectRssImage": true,
+  "sourceName": "Hackaday"
+}
