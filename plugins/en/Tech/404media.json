@@ -1,0 +1,7 @@
+{
+  "domainPattern": ".*404media\\.co",
+  "strategy": "CSS_SELECTOR",
+  "targetIdentifier": "ignored",
+  "contentPath": "div.post-content__content",
+  "titlePath": "h1.post-hero__title"
+}
