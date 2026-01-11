@@ -72,14 +72,36 @@ class WeatherHomeAdapter(
                     71, 73, 75 -> "Snow"
                     else -> "Unknown"
                 }
+
+                // High/Low Temp
+                if (response.daily != null &&
+                    response.daily.temperature2mMax.isNotEmpty() &&
+                    response.daily.temperature2mMin.isNotEmpty()) {
+
+                    val max = response.daily.temperature2mMax[0]
+                    val min = response.daily.temperature2mMin[0]
+
+                    if (useImperial) {
+                        val maxF = (max * 9 / 5) + 32
+                        val minF = (min * 9 / 5) + 32
+                        holder.tvHighLow?.text = String.format("H: %.0f° L: %.0f°", maxF, minF)
+                    } else {
+                         holder.tvHighLow?.text = "H: $max° L: $min°"
+                    }
+                } else {
+                    holder.tvHighLow?.text = ""
+                }
+
             } else {
                 holder.tvTemp?.text = "--"
                 holder.tvCondition?.text = "N/A"
+                holder.tvHighLow?.text = ""
             }
         } catch (e: Throwable) {
             e.printStackTrace()
             holder.tvTemp?.text = "--"
             holder.tvCondition?.text = "Error"
+            holder.tvHighLow?.text = ""
         }
     }
 }

@@ -1,179 +1,185 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp">
-
-    <CheckBox
-        android:id="@+id/cbWifiOnly"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="WiFi Only (Never use cell data)" />
-
-    <CheckBox
-        android:id="@+id/cbDetailedDebugging"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Enable Detailed Debugging" />
-
-    <CheckBox
-        android:id="@+id/cbShowArticleThumbnails"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Show Article Thumbnails" />
-
-    <CheckBox
-        android:id="@+id/cbShowImagesInArticle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Show Images in Article" />
-
-    <Button
-        android:id="@+id/btnDownloadLogs"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Download Debug Logs"
-        android:visibility="gone"
-        android:layout_marginTop="8dp"/>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Allowed WiFi SSIDs (comma separated):"
-        android:layout_marginTop="16dp"/>
-
-    <EditText
-        android:id="@+id/etSsids"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="e.g. MyHomeWifi, WorkWifi" />
-
-    <Button
-        android:id="@+id/btnRequestPerm"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Grant Location Permission (Required for SSID)"
-        android:layout_marginTop="8dp"/>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Refresh Interval (minutes):"
-        android:layout_marginTop="16dp"/>
-
-    <EditText
-        android:id="@+id/etInterval"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:inputType="number"
-        android:hint="60" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Feed Limit (Item Count):"
-        android:layout_marginTop="16dp"/>
-
-    <EditText
-        android:id="@+id/etLimitCount"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:inputType="number"
-        android:hint="50" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Feed Limit (Days):"
-        android:layout_marginTop="16dp"/>
-
-    <EditText
-        android:id="@+id/etLimitDays"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:inputType="number"
-        android:hint="30" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Weather Units:"
-        android:layout_marginTop="16dp"/>
-
-    <RadioGroup
-        android:id="@+id/rgWeatherUnits"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
-
-        <RadioButton
-            android:id="@+id/rbMetric"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Metric (°C)" />
-
-        <RadioButton
-            android:id="@+id/rbImperial"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Imperial (°F)"
-            android:layout_marginStart="16dp"/>
-    </RadioGroup>
-
-    <Button
-        android:id="@+id/btnSave"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Save Settings"
-        android:layout_marginTop="24dp"/>
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="16dp"
-        android:gravity="center">
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <CheckBox
+            android:id="@+id/cbWifiOnly"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="WiFi Only (Never use cell data)" />
+
+        <CheckBox
+            android:id="@+id/cbDetailedDebugging"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Enable Detailed Debugging" />
+
+        <CheckBox
+            android:id="@+id/cbShowArticleThumbnails"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Show Article Thumbnails" />
+
+        <CheckBox
+            android:id="@+id/cbShowImagesInArticle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Show Images in Article" />
 
         <Button
-            android:id="@+id/btnExport"
-            android:layout_width="0dp"
+            android:id="@+id/btnDownloadLogs"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Backup Config"
-            android:layout_marginEnd="4dp"/>
+            android:text="Download Debug Logs"
+            android:visibility="gone"
+            android:layout_marginTop="8dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Allowed WiFi SSIDs (comma separated):"
+            android:layout_marginTop="16dp"/>
+
+        <EditText
+            android:id="@+id/etSsids"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="e.g. MyHomeWifi, WorkWifi" />
 
         <Button
-            android:id="@+id/btnImport"
-            android:layout_width="0dp"
+            android:id="@+id/btnRequestPerm"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Restore Config"
-            android:layout_marginStart="4dp"/>
+            android:text="Grant Location Permission (Required for SSID)"
+            android:layout_marginTop="8dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Refresh Interval (minutes):"
+            android:layout_marginTop="16dp"/>
+
+        <EditText
+            android:id="@+id/etInterval"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:hint="60" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Feed Limit (Item Count):"
+            android:layout_marginTop="16dp"/>
+
+        <EditText
+            android:id="@+id/etLimitCount"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:hint="50" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Feed Limit (Days):"
+            android:layout_marginTop="16dp"/>
+
+        <EditText
+            android:id="@+id/etLimitDays"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:hint="30" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Weather Units:"
+            android:layout_marginTop="16dp"/>
+
+        <RadioGroup
+            android:id="@+id/rgWeatherUnits"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <RadioButton
+                android:id="@+id/rbMetric"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Metric (°C)" />
+
+            <RadioButton
+                android:id="@+id/rbImperial"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Imperial (°F)"
+                android:layout_marginStart="16dp"/>
+        </RadioGroup>
+
+        <Button
+            android:id="@+id/btnSave"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Save Settings"
+            android:layout_marginTop="24dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="16dp"
+            android:gravity="center">
+
+            <Button
+                android:id="@+id/btnExport"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Backup Config"
+                android:layout_marginEnd="4dp"/>
+
+            <Button
+                android:id="@+id/btnImport"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Restore Config"
+                android:layout_marginStart="4dp"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp"
+            android:gravity="center">
+
+            <Button
+                android:id="@+id/btnFullBackup"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Full Backup"
+                android:layout_marginEnd="4dp"/>
+
+            <Button
+                android:id="@+id/btnFullRestore"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Full Restore"
+                android:layout_marginStart="4dp"/>
+        </LinearLayout>
+
     </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="8dp"
-        android:gravity="center">
-
-        <Button
-            android:id="@+id/btnFullBackup"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Full Backup"
-            android:layout_marginEnd="4dp"/>
-
-        <Button
-            android:id="@+id/btnFullRestore"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Full Restore"
-            android:layout_marginStart="4dp"/>
-    </LinearLayout>
-
-</LinearLayout>
+</ScrollView>
