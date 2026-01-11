@@ -78,17 +78,16 @@ class ConfigRepository(private val context: Context) {
                 var entry = zipIn.nextEntry
                 while (entry != null) {
                     if (entry.name == "config.json") {
-                        val json = zipIn.bufferedReader().readText() // Note: reading fully from ZipInputStream directly via Reader might close it? No, bufferedReader wraps it.
-                        // Wait, bufferedReader().readText() reads until end of stream. For ZipInputStream, that's until current entry ends?
-                        // Actually, ZipInputStream behaves like a stream for the current entry.
-                        // However, strictly speaking, we should be careful. `readText` closes the reader, which closes the underlying stream.
-                        // We must NOT close the ZipInputStream here.
-
                         // Safer approach: read bytes for this entry
+                        // We avoid using bufferedReader().readText() as it might buffer or close the stream in unexpected ways for ZipInputStream
                         val bytes = zipIn.readBytes() // This reads until current entry EOF.
                         val jsonContent = String(bytes)
-                        val config = gson.fromJson(jsonContent, AppConfig::class.java)
-                        restoreAppConfig(config)
+                        if (jsonContent.isNotEmpty()) {
+                            val config = gson.fromJson(jsonContent, AppConfig::class.java)
+                            if (config != null) {
+                                restoreAppConfig(config)
+                            }
+                        }
                     } else if (entry.name.startsWith("plugins/") && entry.name.endsWith(".json")) {
                         // Extract plugin
                         if (!pluginsDir.exists()) {
