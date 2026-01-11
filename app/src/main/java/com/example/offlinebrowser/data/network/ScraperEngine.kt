@@ -64,10 +64,15 @@ class ScraperEngine {
             "No Title"
         }
 
-        val bodyElement = doc.select(recipe.contentPath).first() ?: return null
-        val body = bodyElement.html()
+        val bodyElements = doc.select(recipe.contentPath)
+        if (bodyElements.isEmpty()) return null
 
-        return buildSimpleHtml(title, body, if (recipe.injectRssImage) rssImageUrl else null, recipe.sourceName)
+        val body = StringBuilder()
+        for (element in bodyElements) {
+            body.append(element.outerHtml())
+        }
+
+        return buildSimpleHtml(title, body.toString(), if (recipe.injectRssImage) rssImageUrl else null, recipe.sourceName)
     }
 
     fun extractImage(html: String): String? {
