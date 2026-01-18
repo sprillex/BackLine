@@ -1,25 +1,14 @@
-name: Manual and Scheduled Cleanup
-
-on:
-  schedule:
-    - cron: '0 0 * * 0' # Runs at 00:00 every Sunday
-  workflow_dispatch: # Allows you to run it manually via the UI
-
-jobs:
-  cleanup:
-    runs-on: ubuntu-latest
-    permissions:
-      actions: write # Required to delete artifacts/caches
-    steps:
-      - name: Cleanup Artifacts
+- name: Cleanup Artifacts
         run: |
-          gh api repos/${{ github.repository }}/actions/artifacts --paginate --jq '.artifacts[].id' | \
-          xargs -I {} gh api -X DELETE repos/${{ github.repository }}/actions/artifacts/{}
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      - name: Cleanup Caches
-        run: |
-          gh cache delete --all -R ${{ github.repository }}
+          # 1. Fetch IDs and store in a variable
+          IDS=$(gh api repos/${{ github.repository }}/actions/artifacts --paginate --jq '.artifacts[].id')
+          
+          # 2. Check if the variable has content
+          if [ -n "$IDS" ]; then
+            echo "Found artifacts. Deleting..."
+            echo "$IDS" | xargs -I {} gh api -X DELETE repos/${{ github.repository }}/actions/artifacts/{}
+          else
+            echo "Success: No artifacts found to delete."
+          fi
         env:
           GH_TOKEN: ${{ github.token }}
