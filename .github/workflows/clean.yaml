@@ -1,0 +1,25 @@
+name: Manual and Scheduled Cleanup
+
+on:
+  schedule:
+    - cron: '0 0 * * 0' # Runs at 00:00 every Sunday
+  workflow_dispatch: # Allows you to run it manually via the UI
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write # Required to delete artifacts/caches
+    steps:
+      - name: Cleanup Artifacts
+        run: |
+          gh api repos/${{ github.repository }}/actions/artifacts --paginate --jq '.artifacts[].id' | \
+          xargs -I {} gh api -X DELETE repos/${{ github.repository }}/actions/artifacts/{}
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Cleanup Caches
+        run: |
+          gh cache delete --all -R ${{ github.repository }}
+        env:
+          GH_TOKEN: ${{ github.token }}
