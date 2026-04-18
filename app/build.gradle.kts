@@ -75,6 +75,9 @@ dependencies {
     // Location
     implementation("com.google.android.gms:play-services-location:21.0.1")
 
+    // DocumentFile
+    implementation("androidx.documentfile:documentfile:1.0.1")
+
     // QR Code Scanner
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
 

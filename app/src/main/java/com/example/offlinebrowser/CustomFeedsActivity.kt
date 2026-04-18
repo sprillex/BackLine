@@ -9,12 +9,26 @@ import androidx.appcompat.app.AppCompatActivity
 import com.example.offlinebrowser.data.model.FeedType
 import com.example.offlinebrowser.ui.BinderyActivity
 import com.example.offlinebrowser.ui.KiwixSearchActivity
+import androidx.activity.result.contract.ActivityResultContracts
+import android.widget.Toast
 import com.example.offlinebrowser.ui.LibraryActivity
 import com.example.offlinebrowser.viewmodel.MainViewModel
 
 class CustomFeedsActivity : AppCompatActivity() {
 
     private val viewModel: MainViewModel by viewModels()
+    private var isImporting = false
+
+    private val importHtmlLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) {
+            isImporting = true
+            Toast.makeText(this, "Importing HTML folder...", Toast.LENGTH_SHORT).show()
+            viewModel.importHtmlFolder(uri) {
+                isImporting = false
+                Toast.makeText(this, "HTML folder import complete", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,6 +38,7 @@ class CustomFeedsActivity : AppCompatActivity() {
         val btnAddRss = findViewById<Button>(R.id.btnAddRss)
         val btnAddMastodon = findViewById<Button>(R.id.btnAddMastodon)
         val btnAddHtml = findViewById<Button>(R.id.btnAddHtml)
+        val btnImportHtmlFolder = findViewById<Button>(R.id.btnImportHtmlFolder)
         val btnBindery = findViewById<Button>(R.id.btnBindery)
         val btnKiwix = findViewById<Button>(R.id.btnKiwix)
         val btnLibrary = findViewById<Button>(R.id.btnLibrary)
@@ -49,6 +64,14 @@ class CustomFeedsActivity : AppCompatActivity() {
             if (url.isNotEmpty()) {
                 showAddFeedDialog(url, FeedType.HTML)
                 etUrl.text.clear()
+            }
+        }
+
+        btnImportHtmlFolder.setOnClickListener {
+            if (!isImporting) {
+                importHtmlLauncher.launch(null)
+            } else {
+                Toast.makeText(this, "Import already in progress", Toast.LENGTH_SHORT).show()
             }
         }
 
