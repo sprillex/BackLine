@@ -68,6 +68,7 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var dashboardScrollView: NestedScrollView
     private lateinit var swipeRefreshArticles: androidx.swiperefreshlayout.widget.SwipeRefreshLayout
     private lateinit var swipeRefreshDashboard: androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+    private lateinit var svArticles: androidx.appcompat.widget.SearchView
 
     // New Views for Embedded Layout
     private lateinit var homeStandardView: LinearLayout
@@ -184,6 +185,7 @@ class HomeActivity : AppCompatActivity() {
         dashboardScrollView = findViewById(R.id.dashboard_scroll_view)
         swipeRefreshArticles = findViewById(R.id.swipe_refresh_articles)
         swipeRefreshDashboard = findViewById(R.id.swipe_refresh_dashboard)
+        svArticles = findViewById(R.id.sv_articles)
 
         homeStandardView = findViewById(R.id.home_standard_view)
         weatherDetailView = findViewById(R.id.weather_detail_view)
@@ -256,6 +258,17 @@ class HomeActivity : AppCompatActivity() {
             }
         }
 
+        svArticles.setOnQueryTextListener(object : androidx.appcompat.widget.SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                return false
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                viewModel.searchArticles(newText ?: "")
+                return true
+            }
+        })
+
         swipeRefreshDashboard.setOnRefreshListener {
             lifecycleScope.launch {
                 // Refresh local data only (no network sync)
@@ -311,6 +324,21 @@ class HomeActivity : AppCompatActivity() {
     private fun showArticles(category: String? = null, feedId: Int = -1) {
         activeCategory = category
         activeFeedId = feedId
+
+        // Clear search view when switching categories/feeds, but don't trigger search again
+        svArticles.setOnQueryTextListener(null)
+        svArticles.setQuery("", false)
+        svArticles.clearFocus()
+        svArticles.setOnQueryTextListener(object : androidx.appcompat.widget.SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                return false
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                viewModel.searchArticles(newText ?: "")
+                return true
+            }
+        })
 
         if (category != null) {
             viewModel.filterArticlesByCategory(category)

@@ -16,6 +16,8 @@ class ArticleRepository(
 
     fun getAllArticles(): Flow<List<ArticleListItem>> = articleDao.getAllArticles()
 
+    fun searchArticles(query: String): Flow<List<ArticleListItem>> = articleDao.searchArticles(query)
+
     suspend fun downloadArticleContent(articleItem: ArticleListItem) {
         if (articleItem.isCached) return
 
