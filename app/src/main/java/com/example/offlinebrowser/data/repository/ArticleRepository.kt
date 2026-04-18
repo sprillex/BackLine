@@ -18,6 +18,10 @@ class ArticleRepository(
 
     fun searchArticles(query: String): Flow<List<ArticleListItem>> = articleDao.searchArticles(query)
 
+    suspend fun insertArticle(article: Article) {
+        articleDao.insertArticle(article)
+    }
+
     suspend fun downloadArticleContent(articleItem: ArticleListItem) {
         if (articleItem.isCached) return
 

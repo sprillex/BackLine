@@ -15,16 +15,22 @@ import com.example.offlinebrowser.data.repository.ArticleRepository
 import com.example.offlinebrowser.data.repository.FeedRepository
 import com.example.offlinebrowser.data.repository.PreferencesRepository
 import com.example.offlinebrowser.data.repository.ScraperPluginRepository
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.documentfile.provider.DocumentFile
 import com.example.offlinebrowser.data.repository.WeatherRepository
 import com.example.offlinebrowser.util.NetworkMonitor
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import org.jsoup.Jsoup
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -123,6 +129,91 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                  if (feed != null) {
                      syncFeed(feed)
                  }
+            }
+        }
+    }
+
+    fun importHtmlFolder(treeUri: Uri, onComplete: () -> Unit) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val context = getApplication<Application>()
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    treeUri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { onComplete() }
+                return@launch
+            }
+
+            val documentFile = DocumentFile.fromTreeUri(context, treeUri)
+            if (documentFile == null) {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { onComplete() }
+                return@launch
+            }
+
+            val allFeeds = feedRepository.allFeeds.first()
+            var importedFeed = allFeeds.find { it.url == "local://imported" }
+            if (importedFeed == null) {
+                val id = feedRepository.addFeed("local://imported", FeedType.HTML, 0, "Imported")
+                importedFeed = feedRepository.getFeedById(id.toInt())
+            }
+
+            if (importedFeed == null) {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { onComplete() }
+                return@launch
+            }
+
+            suspend fun processFolder(folder: DocumentFile) {
+                for (file in folder.listFiles()) {
+                    if (file.isDirectory) {
+                        processFolder(file)
+                    } else {
+                        val name = file.name ?: ""
+                        val mimeType = file.type ?: ""
+                        if (name.endsWith(".html", ignoreCase = true) ||
+                            name.endsWith(".htm", ignoreCase = true) ||
+                            mimeType == "text/html") {
+
+                            try {
+                                val inputStream = context.contentResolver.openInputStream(file.uri) ?: continue
+                                val content = inputStream.bufferedReader().use { it.readText() }
+
+                                var title = ""
+                                try {
+                                    val doc = Jsoup.parse(content)
+                                    title = doc.title()
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+
+                                if (title.isBlank()) {
+                                    title = name
+                                }
+
+                                val article = Article(
+                                    feedId = importedFeed.id,
+                                    title = title,
+                                    url = "imported://${System.currentTimeMillis()}/${name}",
+                                    content = content,
+                                    publishedDate = System.currentTimeMillis(),
+                                    isCached = true
+                                )
+
+                                articleRepository.insertArticle(article)
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
+                    }
+                }
+            }
+
+            processFolder(documentFile)
+
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                onComplete()
             }
         }
     }

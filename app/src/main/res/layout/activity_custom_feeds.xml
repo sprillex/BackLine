@@ -30,6 +30,12 @@
         android:text="Add HTML Page" />
 
     <Button
+        android:id="@+id/btnImportHtmlFolder"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Import HTML Folder" />
+
+    <Button
         android:id="@+id/btnBindery"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
