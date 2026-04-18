@@ -21,6 +21,9 @@ interface ArticleDao {
     @Query("SELECT id, feedId, title, url, publishedDate, isCached, localPath, isFavorite, isRead, imageUrl, localImagePath FROM articles ORDER BY isRead ASC, publishedDate DESC")
     fun getAllArticles(): Flow<List<ArticleListItem>>
 
+    @Query("SELECT id, feedId, title, url, publishedDate, isCached, localPath, isFavorite, isRead, imageUrl, localImagePath FROM articles WHERE title LIKE :query ORDER BY isRead ASC, publishedDate DESC")
+    fun searchArticles(query: String): Flow<List<ArticleListItem>>
+
     @Query("SELECT * FROM articles WHERE feedId = :feedId AND url = :url LIMIT 1")
     suspend fun getArticleByUrl(feedId: Int, url: String): Article?
 

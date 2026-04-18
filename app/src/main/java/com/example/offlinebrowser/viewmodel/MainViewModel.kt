@@ -73,6 +73,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // Article Filtering Logic
     private val _articleFilter = MutableStateFlow<ArticleFilter>(ArticleFilter.All)
+    private val _searchQuery = MutableStateFlow("")
 
     sealed class ArticleFilter {
         object All : ArticleFilter()
@@ -80,15 +81,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         data class ByFeed(val feedId: Int) : ArticleFilter()
     }
 
-    val currentArticles: StateFlow<List<ArticleListItem>> = _articleFilter
-        .flatMapLatest { filter ->
-            when (filter) {
-                is ArticleFilter.All -> articleRepository.getAllArticles()
-                is ArticleFilter.ByCategory -> articleRepository.getArticlesByCategory(filter.category)
-                is ArticleFilter.ByFeed -> articleRepository.getArticlesForFeed(filter.feedId)
+    val currentArticles: StateFlow<List<ArticleListItem>> = kotlinx.coroutines.flow.combine(_articleFilter, _searchQuery) { filter, query ->
+        Pair(filter, query)
+    }.flatMapLatest { (filter, query) ->
+        val sourceFlow = when (filter) {
+            is ArticleFilter.All -> articleRepository.getAllArticles()
+            is ArticleFilter.ByCategory -> articleRepository.getArticlesByCategory(filter.category)
+            is ArticleFilter.ByFeed -> articleRepository.getArticlesForFeed(filter.feedId)
+        }
+        if (query.isBlank()) {
+            sourceFlow
+        } else {
+            sourceFlow.map { articles ->
+                articles.filter { it.title.contains(query, ignoreCase = true) }
             }
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun filterArticlesByAll() {
         _articleFilter.value = ArticleFilter.All
@@ -100,6 +108,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun filterArticlesByFeed(feedId: Int) {
         _articleFilter.value = ArticleFilter.ByFeed(feedId)
+    }
+
+    fun searchArticles(query: String) {
+        _searchQuery.value = query
     }
 
     fun addFeed(url: String, type: FeedType, downloadLimit: Int = 0, category: String? = null, syncNow: Boolean = false, onFeedAdded: ((Long) -> Unit)? = null) {
