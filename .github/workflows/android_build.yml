@@ -1,10 +1,10 @@
 name: Android Build
 
 on:
-  push:
+  #push:
     # Triggers on push to every branch EXCEPT 'main'
-    branches-ignore: [ "main" ]
-  workflow_dispatch:
+    #branches-ignore: [ "main" ]
+  #workflow_dispatch:
 
 jobs:
   build:
