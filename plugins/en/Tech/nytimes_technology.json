@@ -1,0 +1,23 @@
+{
+  "domainPattern": ".*nytimes\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "section[name='articleBody']",
+    "article"
+  ],
+  "titlePath": [
+    "h1[data-testid='headline']",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "The New York Times"
+}

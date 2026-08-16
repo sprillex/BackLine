@@ -1,0 +1,23 @@
+{
+  "domainPattern": ".*thenextweb\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div.post-content",
+    "article"
+  ],
+  "titlePath": [
+    "h1.mb-none",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "The Next Web"
+}

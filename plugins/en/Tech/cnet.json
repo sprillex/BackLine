@@ -1,0 +1,23 @@
+{
+  "domainPattern": ".*cnet\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div.c-pageArticle_content",
+    "article"
+  ],
+  "titlePath": [
+    "h1.c-pageArticle_title",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "CNET"
+}
