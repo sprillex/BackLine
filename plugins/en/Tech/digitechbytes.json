@@ -1,0 +1,24 @@
+{
+  "domainPattern": ".*digitechbytes\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div.entry-content",
+    "div#page",
+    "article"
+  ],
+  "titlePath": [
+    "h1.entry-title",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "DigiTech Bytes"
+}
