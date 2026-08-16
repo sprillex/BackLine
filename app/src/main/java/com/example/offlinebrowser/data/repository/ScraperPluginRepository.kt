@@ -62,8 +62,8 @@ class ScraperPluginRepository(private val context: Context) {
                 domainPattern = ".*toledoblade\\.com",
                 strategy = ExtractionStrategy.EXTRACT_FROM_JS_VAR,
                 targetIdentifier = "pgStoryZeroJSON",
-                contentPath = "articles[0].body",
-                titlePath = "articles[0].title",
+                contentPath = listOf("articles[0].body"),
+                titlePath = listOf("articles[0].title"),
                 injectRssImage = true,
                 removeSelectors = listOf(
                     "iframe",

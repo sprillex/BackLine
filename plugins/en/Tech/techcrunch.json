@@ -1,8 +1,8 @@
 {
   "domainPattern": ".*techcrunch\\.com",
   "strategy": "CSS_SELECTOR",
-  "contentPath": "div.entry-content",
-  "titlePath": "h1.wp-block-post-title",
+  "contentPath": ["div.entry-content"],
+  "titlePath": ["h1.wp-block-post-title"],
   "injectRssImage": true,
   "removeSelectors": [
     ".wp-block-social-links",
