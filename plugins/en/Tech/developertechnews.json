@@ -1,0 +1,23 @@
+{
+  "domainPattern": ".*developer-tech\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div.content-post",
+    "article",
+    "main"
+  ],
+  "titlePath": [
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "Developer Tech News"
+}
