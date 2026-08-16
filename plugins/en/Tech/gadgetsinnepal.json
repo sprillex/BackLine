@@ -1,0 +1,24 @@
+{
+  "domainPattern": ".*gadgetsinnepal\\.com\\.np",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div.tdb-block-inner",
+    "div#td-outer-wrap",
+    "article"
+  ],
+  "titlePath": [
+    "h1.tdb-title-text",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "Gadgets In Nepal"
+}

@@ -1,0 +1,24 @@
+{
+  "domainPattern": ".*techpager\\.org",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div.content-inner",
+    "div.jeg_viewport",
+    "article"
+  ],
+  "titlePath": [
+    "h1.jeg_post_title",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "TechPager"
+}
