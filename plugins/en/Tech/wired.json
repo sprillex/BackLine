@@ -1,0 +1,18 @@
+{
+  "domainPattern": ".*wired\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": ["div.body__container"],
+  "titlePath": ["h1[data-testid='ContentHeaderHed']", "h1"],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.ad-container",
+    ".social-icons",
+    ".newsletter-signup",
+    ".paywall-bar",
+    ".ConsumerMarketingUnitThemedWrapper-kjbXjp"
+  ],
+  "sourceName": "WIRED"
+}
