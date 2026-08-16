@@ -38,4 +38,12 @@
         android:checked="true"
         android:layout_marginTop="10dp"/>
 
+    <CheckBox
+        android:id="@+id/cbSearchPlugin"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Search for plugin automatically"
+        android:checked="true"
+        android:layout_marginTop="10dp"/>
+
 </LinearLayout>
