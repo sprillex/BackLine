@@ -1,0 +1,23 @@
+{
+  "domainPattern": ".*technews\\.city",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div.post-body",
+    "main.container",
+    "article"
+  ],
+  "titlePath": [
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "TechNews City"
+}

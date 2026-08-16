@@ -1,0 +1,24 @@
+{
+  "domainPattern": ".*techbullion\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div.entry-content",
+    "div#site",
+    "article"
+  ],
+  "titlePath": [
+    "h1.post-title",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "Techbullion"
+}

@@ -1,0 +1,24 @@
+{
+  "domainPattern": ".*computerworld\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div#article-body",
+    "div#page",
+    "article"
+  ],
+  "titlePath": [
+    "h1.article-hero__title",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "Computerworld"
+}

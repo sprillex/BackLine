@@ -1,0 +1,24 @@
+{
+  "domainPattern": ".*futurefive\\.co\\.nz",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div.story-content",
+    "div.box-container",
+    "article"
+  ],
+  "titlePath": [
+    "h1.mb-2",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "FutureFive New Zealand"
+}
