@@ -1,0 +1,24 @@
+{
+  "domainPattern": ".*engadget\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div[data-article-body='true']",
+    "div#page_body",
+    "article"
+  ],
+  "titlePath": [
+    "h1[data-test-id='article-title']",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "Engadget"
+}

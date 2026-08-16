@@ -1,0 +1,23 @@
+{
+  "domainPattern": ".*digitaltrends\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div.b-content",
+    "article"
+  ],
+  "titlePath": [
+    "h1.b-headline__title",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "Digital Trends"
+}

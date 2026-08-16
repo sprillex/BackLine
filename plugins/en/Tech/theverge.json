@@ -1,0 +1,25 @@
+{
+  "domainPattern": ".*theverge\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div.duet--article--article-body-component",
+    "article",
+    "main"
+  ],
+  "titlePath": [
+    "h1.duet--article--headline",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup",
+    "div[data-test-id='ad-slot']"
+  ],
+  "sourceName": "The Verge"
+}
