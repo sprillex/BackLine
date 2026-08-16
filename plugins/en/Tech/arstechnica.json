@@ -1,0 +1,24 @@
+{
+  "domainPattern": ".*arstechnica\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div.article-content",
+    "div#app",
+    "article"
+  ],
+  "titlePath": [
+    "h1",
+    "h1.dusk\\:text-gray-100"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "Ars Technica"
+}

@@ -1,0 +1,24 @@
+{
+  "domainPattern": ".*vox\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div.c-entry-content",
+    "article",
+    "main"
+  ],
+  "titlePath": [
+    "h1.c-page-title",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "Vox"
+}
