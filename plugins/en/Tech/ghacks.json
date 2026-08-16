@@ -1,0 +1,24 @@
+{
+  "domainPattern": ".*ghacks\\.net",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div.container",
+    "article",
+    "main"
+  ],
+  "titlePath": [
+    "h1.heading--large",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "gHacks"
+}

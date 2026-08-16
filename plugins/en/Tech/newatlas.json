@@ -1,0 +1,24 @@
+{
+  "domainPattern": ".*newatlas\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div.ArticleContent",
+    "article",
+    "main"
+  ],
+  "titlePath": [
+    "h1.ArticleTitle",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "New Atlas"
+}

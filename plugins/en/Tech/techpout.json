@@ -1,0 +1,24 @@
+{
+  "domainPattern": ".*techpout\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div.entry-content",
+    "div#viewport",
+    "article"
+  ],
+  "titlePath": [
+    "h1.cl-post-header__title",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "TechPout"
+}
