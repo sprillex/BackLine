@@ -1,0 +1,24 @@
+{
+  "domainPattern": ".*slashgear\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div#wrapper",
+    "article",
+    "main"
+  ],
+  "titlePath": [
+    "h1.title-gallery",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "SlashGear"
+}

@@ -1,0 +1,24 @@
+{
+  "domainPattern": ".*computerweekly\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div#site-container",
+    "section.articleBody",
+    "article"
+  ],
+  "titlePath": [
+    "h1.main-article-title",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "Computer Weekly"
+}
