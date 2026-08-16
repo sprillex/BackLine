@@ -1,0 +1,25 @@
+{
+  "domainPattern": ".*blogspot\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div.post-body",
+    "article",
+    "main"
+  ],
+  "titlePath": [
+    "h1.post-title",
+    "h1",
+    "h3.post-title"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "Technology News"
+}
