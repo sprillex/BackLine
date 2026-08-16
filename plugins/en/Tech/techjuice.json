@@ -1,0 +1,24 @@
+{
+  "domainPattern": ".*techjuice\\.pk",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div.entry-content",
+    "div.site-wrapper",
+    "article"
+  ],
+  "titlePath": [
+    "h1.brxe-post-title",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "TechJuice"
+}

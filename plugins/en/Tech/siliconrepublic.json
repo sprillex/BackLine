@@ -1,0 +1,24 @@
+{
+  "domainPattern": ".*siliconrepublic\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div.post-content",
+    "div.site-wrap",
+    "article"
+  ],
+  "titlePath": [
+    "h1.entry-title",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "Silicon Republic"
+}
