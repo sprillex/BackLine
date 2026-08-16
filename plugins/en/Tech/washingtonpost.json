@@ -1,0 +1,24 @@
+{
+  "domainPattern": ".*washingtonpost\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "article",
+    "div.article-body",
+    "main"
+  ],
+  "titlePath": [
+    "h1[data-qa='headline']",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "The Washington Post"
+}

@@ -1,0 +1,24 @@
+{
+  "domainPattern": ".*techradar\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div#article-body",
+    "div#main",
+    "article"
+  ],
+  "titlePath": [
+    "h1",
+    "h1.article-hero__title"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "TechRadar"
+}
