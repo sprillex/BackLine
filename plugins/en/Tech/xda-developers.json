@@ -1,0 +1,19 @@
+{
+  "domainPattern": ".*xda-developers\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": ["section#article-body", "article"],
+  "titlePath": ["h1.article-header-title", "h1"],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.card",
+    "div.promotion-offer-box",
+    "div.ad",
+    "div.ad-container",
+    ".newsletter-signup",
+    ".display-card-affiliate-links",
+    ".social-icons"
+  ],
+  "sourceName": "XDA Developers"
+}
