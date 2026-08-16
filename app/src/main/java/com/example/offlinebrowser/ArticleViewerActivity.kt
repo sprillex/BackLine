@@ -161,7 +161,7 @@ class ArticleViewerActivity : AppCompatActivity() {
 
     private fun showPluginMenu() {
         val url = currentArticleUrl ?: return
-        val options = arrayOf("Create Plugin", "Import Plugin", "Apply Plugin", "Edit Plugin")
+        val options = arrayOf("Create Plugin", "Import Plugin", "Apply Plugin", "Edit Plugin", "Search for Plugin automatically")
 
         android.app.AlertDialog.Builder(this)
             .setTitle("Plugin Options")
@@ -193,6 +193,16 @@ class ArticleViewerActivity : AppCompatActivity() {
                                     startActivity(intent)
                                 } else {
                                     Toast.makeText(this@ArticleViewerActivity, "No plugin found for this domain", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    }
+                    4 -> {
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            val installed = com.example.offlinebrowser.util.PluginSearchUtil.searchAndInstallPlugin(this@ArticleViewerActivity, url)
+                            if (installed) {
+                                withContext(Dispatchers.Main) {
+                                    applyPlugin()
                                 }
                             }
                         }

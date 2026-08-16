@@ -16,6 +16,7 @@ import com.example.offlinebrowser.ui.SuggestedFeedAdapter
 import android.view.Menu
 import android.view.MenuItem
 import com.example.offlinebrowser.ui.RepositoryBrowserDialogFragment
+import com.example.offlinebrowser.util.PluginSearchUtil
 import com.example.offlinebrowser.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
 
@@ -41,19 +42,22 @@ class SuggestedFeedsActivity : AppCompatActivity() {
         }
 
         adapter = SuggestedFeedAdapter { suggestedFeed ->
-            viewModel.addFeed(
-                url = suggestedFeed.url,
-                type = FeedType.RSS, // Assuming RSS for now based on CSV
-                downloadLimit = 0,
-                category = suggestedFeed.category,
-                syncNow = true,
-                onFeedAdded = { feedId ->
-                    val intent = Intent(this, EditFeedActivity::class.java)
-                    intent.putExtra("FEED_ID", feedId.toInt())
-                    startActivity(intent)
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Search for Plugin")
+                .setMessage("Do you want to search for a plugin for this site automatically?")
+                .setPositiveButton("Yes") { _, _ ->
+                    lifecycleScope.launch {
+                        val installed = PluginSearchUtil.searchAndInstallPlugin(this@SuggestedFeedsActivity, suggestedFeed.url)
+                        if (installed) {
+                            viewModel.refreshPlugins()
+                        }
+                        addSuggestedFeed(suggestedFeed)
+                    }
                 }
-            )
-            Toast.makeText(this, "Added ${suggestedFeed.name}", Toast.LENGTH_SHORT).show()
+                .setNegativeButton("No") { _, _ ->
+                    addSuggestedFeed(suggestedFeed)
+                }
+                .show()
         }
 
         rvSuggestedFeeds.layoutManager = LinearLayoutManager(this)
@@ -70,6 +74,22 @@ class SuggestedFeedsActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun addSuggestedFeed(suggestedFeed: SuggestedFeed) {
+        viewModel.addFeed(
+            url = suggestedFeed.url,
+            type = FeedType.RSS, // Assuming RSS for now based on CSV
+            downloadLimit = 0,
+            category = suggestedFeed.category,
+            syncNow = true,
+            onFeedAdded = { feedId ->
+                val intent = Intent(this, EditFeedActivity::class.java)
+                intent.putExtra("FEED_ID", feedId.toInt())
+                startActivity(intent)
+            }
+        )
+        Toast.makeText(this, "Added ${suggestedFeed.name}", Toast.LENGTH_SHORT).show()
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {

@@ -9,8 +9,11 @@ import androidx.appcompat.app.AppCompatActivity
 import com.example.offlinebrowser.data.model.FeedType
 import com.example.offlinebrowser.ui.BinderyActivity
 import com.example.offlinebrowser.ui.KiwixSearchActivity
+import androidx.lifecycle.lifecycleScope
 import com.example.offlinebrowser.ui.LibraryActivity
+import com.example.offlinebrowser.util.PluginSearchUtil
 import com.example.offlinebrowser.viewmodel.MainViewModel
+import kotlinx.coroutines.launch
 
 class CustomFeedsActivity : AppCompatActivity() {
 
@@ -73,6 +76,7 @@ class CustomFeedsActivity : AppCompatActivity() {
         val etDownloadLimit = dialogView.findViewById<EditText>(R.id.etDownloadLimit)
         val etCategory = dialogView.findViewById<EditText>(R.id.etCategory)
         val cbSyncNow = dialogView.findViewById<android.widget.CheckBox>(R.id.cbSyncNow)
+        val cbSearchPlugin = dialogView.findViewById<android.widget.CheckBox>(R.id.cbSearchPlugin)
 
         androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle("Add Feed Settings")
@@ -81,7 +85,19 @@ class CustomFeedsActivity : AppCompatActivity() {
                 val limit = etDownloadLimit.text.toString().toIntOrNull() ?: 5
                 val category = etCategory.text.toString().takeIf { it.isNotEmpty() }
                 val syncNow = cbSyncNow.isChecked
-                viewModel.addFeed(url, type, limit, category, syncNow)
+                val searchPlugin = cbSearchPlugin.isChecked
+
+                if (searchPlugin) {
+                    lifecycleScope.launch {
+                        val installed = PluginSearchUtil.searchAndInstallPlugin(this@CustomFeedsActivity, url)
+                        if (installed) {
+                            viewModel.refreshPlugins()
+                        }
+                        viewModel.addFeed(url, type, limit, category, syncNow)
+                    }
+                } else {
+                    viewModel.addFeed(url, type, limit, category, syncNow)
+                }
             }
             .setNegativeButton("Cancel", null)
             .show()
