@@ -44,11 +44,42 @@ class ScraperEngine {
             when (recipe.strategy) {
                 ExtractionStrategy.EXTRACT_FROM_JS_VAR -> extractFromJsVar(html, recipe, rssImageUrl)
                 ExtractionStrategy.CSS_SELECTOR -> extractFromCssSelector(html, recipe, rssImageUrl)
+                ExtractionStrategy.XPATH -> extractFromXPath(html, recipe, rssImageUrl)
             }
         } catch (e: Exception) {
             e.printStackTrace()
             null
         }
+    }
+
+    private fun extractFromXPath(html: String, recipe: ScraperRecipe, rssImageUrl: String? = null): String? {
+        val doc = Jsoup.parse(html)
+
+        if (!recipe.removeSelectors.isNullOrEmpty()) {
+            removeElementsAndEmptyParentsXPath(doc, recipe.removeSelectors)
+        }
+
+        var title = "No Title"
+        if (!recipe.titlePath.isNullOrEmpty()) {
+            for (path in recipe.titlePath) {
+                val found = doc.selectXpath(path).first()
+                if (found != null) {
+                    title = found.text()
+                    break
+                }
+            }
+        }
+
+        var bodyElement: Element? = null
+        for (path in recipe.contentPath) {
+            bodyElement = doc.selectXpath(path).first()
+            if (bodyElement != null) break
+        }
+
+        if (bodyElement == null) return null
+        val body = bodyElement.html()
+
+        return buildSimpleHtml(title, body, if (recipe.injectRssImage) rssImageUrl else null, recipe.sourceName)
     }
 
     private fun extractFromCssSelector(html: String, recipe: ScraperRecipe, rssImageUrl: String? = null): String? {
@@ -58,13 +89,24 @@ class ScraperEngine {
             removeElementsAndEmptyParents(doc, recipe.removeSelectors)
         }
 
-        val title = if (recipe.titlePath != null) {
-            doc.select(recipe.titlePath).first()?.text() ?: "No Title"
-        } else {
-            "No Title"
+        var title = "No Title"
+        if (!recipe.titlePath.isNullOrEmpty()) {
+            for (path in recipe.titlePath) {
+                val found = doc.select(path).first()
+                if (found != null) {
+                    title = found.text()
+                    break
+                }
+            }
         }
 
-        val bodyElement = doc.select(recipe.contentPath).first() ?: return null
+        var bodyElement: Element? = null
+        for (path in recipe.contentPath) {
+            bodyElement = doc.select(path).first()
+            if (bodyElement != null) break
+        }
+
+        if (bodyElement == null) return null
         val body = bodyElement.html()
 
         return buildSimpleHtml(title, body, if (recipe.injectRssImage) rssImageUrl else null, recipe.sourceName)
@@ -148,16 +190,33 @@ class ScraperEngine {
         val jsonString = html.substring(jsonStartIndex, jsonEndIndex)
 
         val jsonElement = JsonParser.parseString(jsonString)
-        val title = traversePath(jsonElement, recipe.titlePath) ?: "No Title"
-        var body = traversePath(jsonElement, recipe.contentPath) ?: return null
-
-        if (!recipe.removeSelectors.isNullOrEmpty()) {
-            val bodyDoc = Jsoup.parseBodyFragment(body)
-            removeElementsAndEmptyParents(bodyDoc, recipe.removeSelectors)
-            body = bodyDoc.body().html()
+        var title = "No Title"
+        if (!recipe.titlePath.isNullOrEmpty()) {
+            for (path in recipe.titlePath) {
+                val found = traversePath(jsonElement, path)
+                if (found != null) {
+                    title = found
+                    break
+                }
+            }
         }
 
-        return buildSimpleHtml(title, body, if (recipe.injectRssImage) rssImageUrl else null, recipe.sourceName)
+        var body: String? = null
+        for (path in recipe.contentPath) {
+            body = traversePath(jsonElement, path)
+            if (body != null) break
+        }
+
+        if (body == null) return null
+
+        var finalBody = body
+        if (!recipe.removeSelectors.isNullOrEmpty()) {
+            val bodyDoc = Jsoup.parseBodyFragment(finalBody)
+            removeElementsAndEmptyParents(bodyDoc, recipe.removeSelectors)
+            finalBody = bodyDoc.body().html()
+        }
+
+        return buildSimpleHtml(title, finalBody ?: "", if (recipe.injectRssImage) rssImageUrl else null, recipe.sourceName)
     }
 
     private fun removeElementsAndEmptyParents(root: Element, selectors: List<String>) {
@@ -169,6 +228,23 @@ class ScraperEngine {
 
                 // Recursively remove empty parents
                 // We check if the parent has no text (whitespace is ignored) and no significant children elements.
+                while (parent != null && parent != root && isEffectivelyEmpty(parent)) {
+                    val nextParent = parent.parent()
+                    parent.remove()
+                    parent = nextParent
+                }
+            }
+        }
+    }
+
+    private fun removeElementsAndEmptyParentsXPath(root: Element, selectors: List<String>) {
+        selectors.forEach { selector ->
+            val elements = root.selectXpath(selector)
+            for (element in elements) {
+                var parent = element.parent()
+                element.remove()
+
+                // Recursively remove empty parents
                 while (parent != null && parent != root && isEffectivelyEmpty(parent)) {
                     val nextParent = parent.parent()
                     parent.remove()

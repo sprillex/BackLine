@@ -97,8 +97,8 @@ class PluginCreatorActivity : AppCompatActivity() {
                 val recipe = gson.fromJson(existingJson, ScraperRecipe::class.java)
                 etDomainPattern.setText(recipe.domainPattern)
                 etSourceName.setText(recipe.sourceName ?: "")
-                etTitleSelector.setText(recipe.titlePath ?: "")
-                etContentSelector.setText(recipe.contentPath)
+                etTitleSelector.setText(recipe.titlePath?.joinToString("\n") ?: "")
+                etContentSelector.setText(recipe.contentPath.joinToString("\n"))
                 etRemoveSelectors.setText(recipe.removeSelectors?.joinToString(", ") ?: "")
                 cbInjectRssImage.isChecked = recipe.injectRssImage
             } catch (e: Exception) {
@@ -212,6 +212,9 @@ class PluginCreatorActivity : AppCompatActivity() {
         }
 
         val titleSelector = etTitleSelector.text.toString().trim().takeIf { it.isNotEmpty() }
+        val titlePaths = titleSelector?.split("\n")?.map { it.trim() }?.filter { it.isNotEmpty() }
+        val contentPaths = contentSelector.split("\n").map { it.trim() }.filter { it.isNotEmpty() }
+
         val sourceName = etSourceName.text.toString().trim().takeIf { it.isNotEmpty() }
         val removeSelectorsStr = etRemoveSelectors.text.toString().trim()
         val removeSelectors = if (removeSelectorsStr.isNotEmpty()) removeSelectorsStr.split(",").map { it.trim() } else null
@@ -220,8 +223,8 @@ class PluginCreatorActivity : AppCompatActivity() {
             domainPattern = domain,
             strategy = ExtractionStrategy.CSS_SELECTOR,
             targetIdentifier = "", // Not used for CSS_SELECTOR but required by data class
-            contentPath = contentSelector,
-            titlePath = titleSelector,
+            contentPath = contentPaths,
+            titlePath = titlePaths,
             injectRssImage = cbInjectRssImage.isChecked,
             removeSelectors = removeSelectors,
             sourceName = sourceName

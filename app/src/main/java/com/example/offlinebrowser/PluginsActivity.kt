@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.offlinebrowser.data.model.ScraperRecipe
 import com.example.offlinebrowser.data.repository.ScraperPluginRepository
 import com.example.offlinebrowser.ui.PluginAdapter
+import com.example.offlinebrowser.ui.FiveFiltersBrowserDialogFragment
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -62,6 +63,7 @@ class PluginsActivity : AppCompatActivity() {
         scraperPluginRepository = ScraperPluginRepository(this)
 
         val btnImport = findViewById<Button>(R.id.btnImportPlugin)
+        val btnImportFiveFilters = findViewById<Button>(R.id.btnImportFiveFilters)
         val rvPlugins = findViewById<RecyclerView>(R.id.rvPlugins)
 
         pluginAdapter = PluginAdapter(emptyList()) { recipe ->
@@ -76,6 +78,14 @@ class PluginsActivity : AppCompatActivity() {
 
         btnImport.setOnClickListener {
             importPluginLauncher.launch("application/json")
+        }
+
+        btnImportFiveFilters.setOnClickListener {
+            FiveFiltersBrowserDialogFragment().show(supportFragmentManager, "FiveFiltersBrowser")
+        }
+
+        supportFragmentManager.setFragmentResultListener("PLUGIN_IMPORTED", this) { _, _ ->
+            loadPlugins()
         }
     }
 

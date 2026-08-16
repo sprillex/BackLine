@@ -1,8 +1,8 @@
 {
   "domainPattern": "hackaday\\.com",
   "strategy": "CSS_SELECTOR",
-  "titlePath": "h1.entry-title",
-  "contentPath": "div.entry-content",
+  "titlePath": ["h1.entry-title"],
+  "contentPath": ["div.entry-content"],
   "removeSelectors": [
     ".share-post",
     ".sharedaddy",
