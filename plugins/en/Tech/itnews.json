@@ -1,0 +1,24 @@
+{
+  "domainPattern": ".*itnews\\.com\\.au",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div#article-body",
+    "div#wrapper",
+    "article"
+  ],
+  "titlePath": [
+    "h1#article-headline",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "iTnews"
+}
