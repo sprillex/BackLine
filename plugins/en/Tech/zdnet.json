@@ -1,0 +1,24 @@
+{
+  "domainPattern": ".*zdnet\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div.c-articleContent",
+    "div#__nuxt",
+    "article"
+  ],
+  "titlePath": [
+    "h1.c-contentHeader_headline",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "ZDNet"
+}

@@ -1,0 +1,24 @@
+{
+  "domainPattern": ".*gadgets360\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div.content_text",
+    "article",
+    "main"
+  ],
+  "titlePath": [
+    "h1",
+    "h1.entry-title"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "Gadgets 360"
+}

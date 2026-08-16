@@ -1,0 +1,24 @@
+{
+  "domainPattern": ".*digit\\.in",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div.rh-post-wrapper",
+    "div.rh-outer-wrap",
+    "article"
+  ],
+  "titlePath": [
+    "h1.post-title",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "Digit"
+}
