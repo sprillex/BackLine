@@ -5,7 +5,8 @@ interface LocalGemmaRunner {
         prompt: String,
         maxTokens: Int,
         temperature: Float,
-        repeatPenalty: Float = 1.0f
+        repeatPenalty: Float = 1.0f,
+        stopSequences: List<String> = listOf("<end_of_turn>")
     ): String
 }
 
@@ -14,7 +15,8 @@ class DefaultLocalGemmaRunner : LocalGemmaRunner {
         prompt: String,
         maxTokens: Int,
         temperature: Float,
-        repeatPenalty: Float
+        repeatPenalty: Float,
+        stopSequences: List<String>
     ): String {
         return when {
             prompt.contains("Identify the main subject") -> {

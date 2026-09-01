@@ -11,10 +11,12 @@ import java.io.File
 
 class GemmaManager(
     private val context: Context,
-    private val modelRunner: LocalGemmaRunner = DefaultLocalGemmaRunner()
+    private val modelRunner: LocalGemmaRunner = DefaultLocalGemmaRunner(),
+    customSkillManager: AiSkillManager? = null
 ) {
 
     private val preferencesRepository = PreferencesRepository(context)
+    private val aiSkillManager = customSkillManager ?: AiSkillManager(context, modelRunner)
     private val summarizationPipeline = ArticleSummarizationPipeline(modelRunner)
 
     fun getModelFile(): File? {
@@ -107,7 +109,12 @@ class GemmaManager(
     }
 
     suspend fun generateSummary(htmlOrTextContent: String): Pair<String, String> = withContext(Dispatchers.IO) {
-        val summary = summarizationPipeline.summarize(htmlOrTextContent)
+        val skill = aiSkillManager.getSkillById("article_summarizer")
+        val summary = if (skill != null) {
+            aiSkillManager.executeSkill(skill, htmlOrTextContent)
+        } else {
+            summarizationPipeline.summarize(htmlOrTextContent)
+        }
         val modelName = getModelName()
 
         return@withContext Pair(summary, modelName)

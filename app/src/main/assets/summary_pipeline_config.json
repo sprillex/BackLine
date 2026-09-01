@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "steps": [
+    {
+      "stepId": "step_1_anchor",
+      "promptTemplate": "<start_of_turn>user\nIdentify the main subject and core message of this text in one sentence. Ignore cast lists, navigation items, and ratings.\n\nText:\n\"\"\"\n{{CLEANED_ARTICLE_TEXT}}\n\"\"\"<end_of_turn>\n<start_of_turn>model\n",
+      "temperature": 0.1,
+      "maxTokens": 60,
+      "repeatPenalty": 1.0,
+      "stopSequences": [
+        "<end_of_turn>"
+      ]
+    },
+    {
+      "stepId": "step_2_claims",
+      "promptTemplate": "<start_of_turn>user\nIdentify the main subject and core message of this text in one sentence. Ignore cast lists, navigation items, and ratings.\n\nText:\n\"\"\"\n{{CLEANED_ARTICLE_TEXT}}\n\"\"\"<end_of_turn>\n<start_of_turn>model\n{{STEP_1_OUTPUT}}<end_of_turn>\n<start_of_turn>user\nBased on that subject, extract 3 factual claims made by the author. Do not include credits, ratings, or cast names.<end_of_turn>\n<start_of_turn>model\n",
+      "temperature": 0.1,
+      "maxTokens": 150,
+      "repeatPenalty": 1.15,
+      "stopSequences": [
+        "<end_of_turn>"
+      ]
+    },
+    {
+      "stepId": "step_3_synthesis",
+      "promptTemplate": "<start_of_turn>user\nConvert these raw points into a clean, concise 2-to-3 bullet point summary for an executive reader:\n\n{{INPUT}}<end_of_turn>\n<start_of_turn>model\n",
+      "temperature": 0.3,
+      "maxTokens": 120,
+      "repeatPenalty": 1.0,
+      "stopSequences": [
+        "<end_of_turn>"
+      ]
+    }
+  ]
+}

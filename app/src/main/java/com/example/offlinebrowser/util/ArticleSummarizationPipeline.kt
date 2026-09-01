@@ -1,11 +1,13 @@
 package com.example.offlinebrowser.util
 
+import com.example.offlinebrowser.data.model.PipelineConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 
 class ArticleSummarizationPipeline(
-    private val modelRunner: LocalGemmaRunner = DefaultLocalGemmaRunner()
+    private val modelRunner: LocalGemmaRunner = DefaultLocalGemmaRunner(),
+    private val pipelineConfig: PipelineConfig = PipelineConfigLoader.getDefaultFallbackConfig()
 ) {
     suspend fun summarize(rawArticleText: String): String = withContext(Dispatchers.Default) {
         val sanitizedText = sanitizeInput(rawArticleText)
@@ -13,47 +15,38 @@ class ArticleSummarizationPipeline(
             return@withContext "No article text available to summarize."
         }
 
-        // Step 1: Anchor & Topic Identification
-        val step1Prompt = buildString {
-            append("<start_of_turn>user\n")
-            append("Identify the main subject and core message of this text in one sentence. Ignore cast lists, navigation items, and ratings.\n\n")
-            append("Text:\n\"\"\"\n$sanitizedText\n\"\"\"<end_of_turn>\n")
-            append("<start_of_turn>model\n")
-        }
-        val subjectAnchor = modelRunner.generate(
-            prompt = step1Prompt,
-            maxTokens = 60,
-            temperature = 0.1f
-        )
-
-        // Step 2: Key Claim Extraction
-        val step2Prompt = buildString {
-            append(step1Prompt)
-            append(subjectAnchor)
-            append("<end_of_turn>\n<start_of_turn>user\n")
-            append("Based on that subject, extract 3 factual claims made by the author. Do not include credits, ratings, or cast names.<end_of_turn>\n")
-            append("<start_of_turn>model\n")
-        }
-        val extractedFacts = modelRunner.generate(
-            prompt = step2Prompt,
-            maxTokens = 150,
-            temperature = 0.1f,
-            repeatPenalty = 1.15f
-        )
-
-        // Step 3: Synthesis & Context Reset (CRITICAL)
-        val step3Prompt = buildString {
-            append("<start_of_turn>user\n")
-            append("Convert these raw points into a clean, concise 2-to-3 bullet point summary for an executive reader:\n\n")
-            append(extractedFacts)
-            append("<end_of_turn>\n<start_of_turn>model\n")
+        if (pipelineConfig.steps.isEmpty()) {
+            return@withContext "No pipeline steps configured."
         }
 
-        return@withContext modelRunner.generate(
-            prompt = step3Prompt,
-            maxTokens = 120,
-            temperature = 0.3f
-        )
+        val contextMap = mutableMapOf<String, String>()
+        contextMap["CLEANED_ARTICLE_TEXT"] = sanitizedText
+        contextMap["INPUT"] = sanitizedText
+
+        var lastStepOutput = ""
+
+        for ((index, stepConfig) in pipelineConfig.steps.withIndex()) {
+            val stepNumber = index + 1
+            contextMap["INPUT"] = if (index == 0) sanitizedText else lastStepOutput
+
+            var renderedPrompt = stepConfig.promptTemplate
+            for ((key, value) in contextMap) {
+                renderedPrompt = renderedPrompt.replace("{{$key}}", value)
+            }
+
+            lastStepOutput = modelRunner.generate(
+                prompt = renderedPrompt,
+                maxTokens = stepConfig.maxTokens,
+                temperature = stepConfig.temperature,
+                repeatPenalty = stepConfig.repeatPenalty,
+                stopSequences = stepConfig.stopSequences
+            )
+
+            contextMap["STEP_${stepNumber}_OUTPUT"] = lastStepOutput
+            contextMap[stepConfig.stepId.uppercase()] = lastStepOutput
+        }
+
+        return@withContext lastStepOutput
     }
 
     fun sanitizeInput(rawText: String): String {

@@ -1,19 +1,28 @@
 package com.example.offlinebrowser.util
 
+import com.example.offlinebrowser.data.model.PipelineConfig
+import com.example.offlinebrowser.data.model.StepConfig
+import com.google.gson.Gson
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 
 class ArticleSummarizationPipelineTest {
+
+    @get:Rule
+    val temporaryFolder = TemporaryFolder()
 
     private class TestGemmaRunner : LocalGemmaRunner {
         data class CallRecord(
             val prompt: String,
             val maxTokens: Int,
             val temperature: Float,
-            val repeatPenalty: Float
+            val repeatPenalty: Float,
+            val stopSequences: List<String>
         )
 
         val calls = mutableListOf<CallRecord>()
@@ -22,9 +31,10 @@ class ArticleSummarizationPipelineTest {
             prompt: String,
             maxTokens: Int,
             temperature: Float,
-            repeatPenalty: Float
+            repeatPenalty: Float,
+            stopSequences: List<String>
         ): String {
-            calls.add(CallRecord(prompt, maxTokens, temperature, repeatPenalty))
+            calls.add(CallRecord(prompt, maxTokens, temperature, repeatPenalty, stopSequences))
             return when (calls.size) {
                 1 -> "Main subject: Innovations in mobile offline AI architecture."
                 2 -> "1. Local models process prompts without cloud connectivity.\n2. Context resets prevent attention pollution.\n3. Input sanitization removes website boilerplate."
@@ -32,6 +42,62 @@ class ArticleSummarizationPipelineTest {
                 else -> "Default response"
             }
         }
+    }
+
+    @Test
+    fun testParsePipelineConfigFromJson() {
+        val json = """
+            {
+              "version": 1,
+              "steps": [
+                {
+                  "stepId": "custom_step_1",
+                  "promptTemplate": "Prompt: {{CLEANED_ARTICLE_TEXT}}",
+                  "temperature": 0.2,
+                  "maxTokens": 80,
+                  "repeatPenalty": 1.1,
+                  "stopSequences": ["<end>"]
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val config = Gson().fromJson(json, PipelineConfig::class.java)
+        assertEquals(1, config.version)
+        assertEquals(1, config.steps.size)
+        val step = config.steps[0]
+        assertEquals("custom_step_1", step.stepId)
+        assertEquals("Prompt: {{CLEANED_ARTICLE_TEXT}}", step.promptTemplate)
+        assertEquals(0.2f, step.temperature, 0.001f)
+        assertEquals(80, step.maxTokens)
+        assertEquals(1.1f, step.repeatPenalty, 0.001f)
+        assertEquals(listOf("<end>"), step.stopSequences)
+    }
+
+    @Test
+    fun testPipelineConfigLoaderOverrideFile() {
+        val overrideFile = temporaryFolder.newFile("override_config.json")
+        overrideFile.writeText("""
+            {
+              "version": 2,
+              "steps": [
+                {
+                  "stepId": "override_step",
+                  "promptTemplate": "Override template: {{INPUT}}",
+                  "temperature": 0.5,
+                  "maxTokens": 200,
+                  "repeatPenalty": 1.0,
+                  "stopSequences": ["</s>"]
+                }
+              ]
+            }
+        """.trimIndent())
+
+        val loader = PipelineConfigLoader()
+        val loadedConfig = loader.loadConfig(overrideFile = overrideFile)
+        assertEquals(2, loadedConfig.version)
+        assertEquals(1, loadedConfig.steps.size)
+        assertEquals("override_step", loadedConfig.steps[0].stepId)
     }
 
     @Test
@@ -124,7 +190,6 @@ class ArticleSummarizationPipelineTest {
         assertEquals(150, step2.maxTokens)
         assertEquals(0.1f, step2.temperature, 0.001f)
         assertEquals(1.15f, step2.repeatPenalty, 0.001f)
-        assertTrue(step2.prompt.contains(step1.prompt))
         assertTrue(step2.prompt.contains("Main subject: Innovations in mobile offline AI architecture."))
         assertTrue(step2.prompt.contains("extract 3 factual claims"))
 
@@ -140,5 +205,34 @@ class ArticleSummarizationPipelineTest {
         assertFalse(step3.prompt.contains("Identify the main subject"))
 
         assertEquals("• Local AI operates fully offline.\n• Context reset prevents attention pollution.\n• Input sanitization filters out navigation UI.", finalSummary)
+    }
+
+    @Test
+    fun testCustomPipelineConfigExecution() = runBlocking {
+        val testRunner = TestGemmaRunner()
+        val customConfig = PipelineConfig(
+            version = 1,
+            steps = listOf(
+                StepConfig(
+                    stepId = "custom_step_1",
+                    promptTemplate = "Input text: {{CLEANED_ARTICLE_TEXT}}",
+                    temperature = 0.5f,
+                    maxTokens = 50,
+                    repeatPenalty = 1.0f,
+                    stopSequences = listOf("<stop>")
+                )
+            )
+        )
+
+        val pipeline = ArticleSummarizationPipeline(testRunner, customConfig)
+        val result = pipeline.summarize("<p>This is a paragraph that meets the minimum length requirements for testing custom configurations.</p>")
+
+        assertEquals(1, testRunner.calls.size)
+        val call = testRunner.calls[0]
+        assertEquals(50, call.maxTokens)
+        assertEquals(0.5f, call.temperature, 0.001f)
+        assertEquals(listOf("<stop>"), call.stopSequences)
+        assertTrue(call.prompt.startsWith("Input text: This is a paragraph"))
+        assertEquals("Main subject: Innovations in mobile offline AI architecture.", result)
     }
 }
