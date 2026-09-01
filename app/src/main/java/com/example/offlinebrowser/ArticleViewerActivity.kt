@@ -151,6 +151,28 @@ class ArticleViewerActivity : AppCompatActivity() {
     private fun triggerGemmaSummarization() {
         if (currentArticleId == -1) return
 
+        val gemmaManager = com.example.offlinebrowser.util.GemmaManager(this)
+
+        if (!gemmaManager.isModelAvailable()) {
+            android.app.AlertDialog.Builder(this)
+                .setTitle("Gemma Model Option")
+                .setMessage("No external Gemma model file is currently loaded. Would you like to download one now, or generate a summary using the built-in summary engine?")
+                .setPositiveButton("Download Model") { _, _ ->
+                    gemmaManager.downloadModel()
+                    Toast.makeText(this, "Model download started in background. Proceeding with summary...", Toast.LENGTH_SHORT).show()
+                    generateAndDisplaySummary()
+                }
+                .setNegativeButton("Use Internal Engine") { _, _ ->
+                    generateAndDisplaySummary()
+                }
+                .setNeutralButton("Cancel", null)
+                .show()
+        } else {
+            generateAndDisplaySummary()
+        }
+    }
+
+    private fun generateAndDisplaySummary() {
         Toast.makeText(this, "Generating summary with Gemma...", Toast.LENGTH_SHORT).show()
 
         lifecycleScope.launch(Dispatchers.IO) {

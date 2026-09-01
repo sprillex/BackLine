@@ -53,4 +53,8 @@ class PreferencesRepository(context: Context) {
     var gemmaModelPath: String?
         get() = prefs.getString("gemma_model_path", null)
         set(value) = prefs.edit().putString("gemma_model_path", value).apply()
+
+    var gemmaModelUrl: String
+        get() = prefs.getString("gemma_model_url", "https://huggingface.co/google/gemma-2b-it-gguf/resolve/main/gemma-2b-it.gguf") ?: "https://huggingface.co/google/gemma-2b-it-gguf/resolve/main/gemma-2b-it.gguf"
+        set(value) = prefs.edit().putString("gemma_model_url", value).apply()
 }

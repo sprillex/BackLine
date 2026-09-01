@@ -1,6 +1,9 @@
 package com.example.offlinebrowser.util
 
+import android.app.DownloadManager
 import android.content.Context
+import android.net.Uri
+import android.os.Environment
 import com.example.offlinebrowser.data.repository.PreferencesRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -28,6 +31,21 @@ class GemmaManager(private val context: Context) {
 
     fun isModelAvailable(): Boolean {
         return getModelFile() != null
+    }
+
+    fun downloadModel(url: String? = null): Long {
+        val downloadUrl = url ?: preferencesRepository.gemmaModelUrl
+        val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+        val request = DownloadManager.Request(Uri.parse(downloadUrl))
+            .setTitle("Gemma Model Download")
+            .setDescription("Downloading Gemma LLM model file...")
+            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            .setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, "gemma.bin")
+
+        val downloadId = downloadManager.enqueue(request)
+        val downloadedFile = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "gemma.bin")
+        preferencesRepository.gemmaModelPath = downloadedFile.absolutePath
+        return downloadId
     }
 
     suspend fun generateSummary(htmlOrTextContent: String): String = withContext(Dispatchers.IO) {
