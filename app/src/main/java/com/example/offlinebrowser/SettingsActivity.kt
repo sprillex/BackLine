@@ -259,10 +259,18 @@ class SettingsActivity : AppCompatActivity() {
             val url = etGemmaModelUrl.text.toString().trim()
             if (url.isNotEmpty()) {
                 preferencesRepository.gemmaModelUrl = url
+                Toast.makeText(this, "Downloading model...", Toast.LENGTH_SHORT).show()
                 val gemmaManager = com.example.offlinebrowser.util.GemmaManager(this)
                 gemmaManager.downloadModel(url)
-                Toast.makeText(this, "Model download started", Toast.LENGTH_SHORT).show()
-                etGemmaModelPath.setText(preferencesRepository.gemmaModelPath ?: "")
+
+                CoroutineScope(Dispatchers.Main).launch {
+                    val success = gemmaManager.downloadModelDirect(url) { status ->
+                        Toast.makeText(this@SettingsActivity, status, Toast.LENGTH_SHORT).show()
+                    }
+                    if (success) {
+                        etGemmaModelPath.setText(preferencesRepository.gemmaModelPath ?: "")
+                    }
+                }
             } else {
                 Toast.makeText(this, "Please enter a download URL", Toast.LENGTH_SHORT).show()
             }
