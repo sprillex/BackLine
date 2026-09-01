@@ -93,6 +93,15 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
+    private val selectGemmaModelLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let {
+            val path = it.toString()
+            findViewById<EditText>(R.id.etGemmaModelPath).setText(path)
+            preferencesRepository.gemmaModelPath = path
+            Toast.makeText(this, "Gemma model path updated", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private val openFullBackupLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let {
             CoroutineScope(Dispatchers.Main).launch {
@@ -204,6 +213,9 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 .show()
         }
+        val etGemmaModelPath = findViewById<EditText>(R.id.etGemmaModelPath)
+        val btnSelectGemmaModel = findViewById<Button>(R.id.btnSelectGemmaModel)
+        val btnCheckGemmaStatus = findViewById<Button>(R.id.btnCheckGemmaStatus)
         val etInterval = findViewById<EditText>(R.id.etInterval)
         val etLimitCount = findViewById<EditText>(R.id.etLimitCount)
         val etLimitDays = findViewById<EditText>(R.id.etLimitDays)
@@ -223,6 +235,7 @@ class SettingsActivity : AppCompatActivity() {
         cbShowImagesInArticle.isChecked = preferencesRepository.showImagesInArticleView
         btnDownloadLogs.visibility = if (preferencesRepository.detailedDebuggingEnabled) android.view.View.VISIBLE else android.view.View.GONE
 
+        etGemmaModelPath.setText(preferencesRepository.gemmaModelPath ?: "")
         etSsids.setText(preferencesRepository.allowedWifiSsids.joinToString(","))
         etInterval.setText(preferencesRepository.refreshIntervalMinutes.toString())
         etLimitCount.setText(preferencesRepository.feedLimitCount.toString())
@@ -235,7 +248,23 @@ class SettingsActivity : AppCompatActivity() {
             rbMetric.isChecked = true
         }
 
+        btnSelectGemmaModel.setOnClickListener {
+            selectGemmaModelLauncher.launch(arrayOf("*/*"))
+        }
+
+        btnCheckGemmaStatus.setOnClickListener {
+            val gemmaManager = com.example.offlinebrowser.util.GemmaManager(this)
+            val isAvailable = gemmaManager.isModelAvailable()
+            val statusMsg = if (isAvailable) {
+                "Gemma Model Ready: ${gemmaManager.getModelFile()?.name}"
+            } else {
+                "No Gemma model file found. Using internal summary engine."
+            }
+            Toast.makeText(this, statusMsg, Toast.LENGTH_LONG).show()
+        }
+
         btnSave.setOnClickListener {
+            preferencesRepository.gemmaModelPath = etGemmaModelPath.text.toString().ifBlank { null }
             preferencesRepository.wifiOnly = cbWifiOnly.isChecked
             preferencesRepository.detailedDebuggingEnabled = cbDetailedDebugging.isChecked
             preferencesRepository.showArticleThumbnails = cbShowArticleThumbnails.isChecked

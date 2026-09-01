@@ -45,6 +45,9 @@ interface ArticleDao {
     @Query("UPDATE articles SET isRead = :isRead WHERE id = :id")
     suspend fun updateArticleReadStatus(id: Int, isRead: Boolean)
 
+    @Query("UPDATE articles SET summary = :summary WHERE id = :id")
+    suspend fun updateArticleSummary(id: Int, summary: String)
+
     @Query("DELETE FROM articles WHERE feedId = :feedId AND publishedDate < :timestamp AND isFavorite = 0")
     suspend fun deleteOldArticles(feedId: Int, timestamp: Long)
 

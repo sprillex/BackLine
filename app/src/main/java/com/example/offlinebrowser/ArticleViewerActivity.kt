@@ -61,63 +61,8 @@ class ArticleViewerActivity : AppCompatActivity() {
 
         val articleId = intent.getIntExtra("ARTICLE_ID", -1)
         if (articleId != -1) {
-            // Fetch content from DB
-            val database = OfflineDatabase.getDatabase(this)
-
-            lifecycleScope.launch {
-                val feed = withContext(Dispatchers.IO) {
-                    currentArticleId = articleId
-
-                    // We need a method to get article by ID
-                     database.articleDao().getArticleById(articleId)
-                }
-
-                if (feed != null) {
-                    currentArticleUrl = feed.url
-                    var content = feed.content
-                    // If we have a local cached image, replace the remote URL in the content with the local path
-                    if (feed.localImagePath != null) {
-                        try {
-                            val doc = Jsoup.parse(content)
-                            var changed = false
-
-                            // Strategy 1: Find by exact src match (handling HTML entities via Jsoup)
-                            if (feed.imageUrl != null) {
-                                val images = doc.select("img[src]")
-                                for (img in images) {
-                                    // Jsoup's attr("src") returns the decoded URL
-                                    if (img.attr("src") == feed.imageUrl) {
-                                        img.attr("src", "file://${feed.localImagePath}")
-                                        changed = true
-                                    }
-                                }
-                            }
-
-                            // Strategy 2: Fallback to "Article Image" alt text if specific replacement failed
-                            // This catches cases where the URL might differ slightly or Strategy 1 missed it
-                            if (!changed) {
-                                val injectedImage = doc.select("img[alt='Article Image']").first()
-                                if (injectedImage != null) {
-                                    injectedImage.attr("src", "file://${feed.localImagePath}")
-                                    changed = true
-                                }
-                            }
-
-                            if (changed) {
-                                content = doc.outerHtml()
-                            }
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                            // Fallback to simple replacement if Jsoup fails for some reason
-                            if (feed.imageUrl != null) {
-                                content = content.replace(feed.imageUrl, "file://${feed.localImagePath}")
-                            }
-                        }
-                    }
-                    // Use file:/// base URL to allow loading local images
-                    webView.loadDataWithBaseURL("file:///", content, "text/html", "UTF-8", null)
-                }
-            }
+            currentArticleId = articleId
+            loadArticleContent(webView, articleId)
         }
 
         fabDarkMode.setOnClickListener {
@@ -125,6 +70,107 @@ class ArticleViewerActivity : AppCompatActivity() {
         }
 
         setupBottomNav()
+    }
+
+    private fun loadArticleContent(webView: WebView, articleId: Int) {
+        val database = OfflineDatabase.getDatabase(this)
+        lifecycleScope.launch {
+            val feed = withContext(Dispatchers.IO) {
+                database.articleDao().getArticleById(articleId)
+            }
+
+            if (feed != null) {
+                currentArticleUrl = feed.url
+                var content = feed.content
+
+                if (!feed.summary.isNullOrEmpty()) {
+                    content = injectSummaryHtml(content, feed.summary)
+                }
+
+                if (feed.localImagePath != null) {
+                    try {
+                        val doc = Jsoup.parse(content)
+                        var changed = false
+
+                        if (feed.imageUrl != null) {
+                            val images = doc.select("img[src]")
+                            for (img in images) {
+                                if (img.attr("src") == feed.imageUrl) {
+                                    img.attr("src", "file://${feed.localImagePath}")
+                                    changed = true
+                                }
+                            }
+                        }
+
+                        if (!changed) {
+                            val injectedImage = doc.select("img[alt='Article Image']").first()
+                            if (injectedImage != null) {
+                                injectedImage.attr("src", "file://${feed.localImagePath}")
+                                changed = true
+                            }
+                        }
+
+                        if (changed) {
+                            content = doc.outerHtml()
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        if (feed.imageUrl != null) {
+                            content = content.replace(feed.imageUrl, "file://${feed.localImagePath}")
+                        }
+                    }
+                }
+                webView.loadDataWithBaseURL("file:///", content, "text/html", "UTF-8", null)
+            }
+        }
+    }
+
+    private fun injectSummaryHtml(html: String, summary: String): String {
+        val summaryCardHtml = """
+            <div style="background-color: #262626; color: #E0E0E0; border-left: 4px solid #00E5FF; padding: 14px; margin: 15px 0; border-radius: 6px; font-family: sans-serif;">
+                <div style="font-weight: bold; font-size: 16px; margin-bottom: 8px; color: #00E5FF;">✨ Gemma Summary</div>
+                <div style="font-size: 14px; line-height: 1.5;">${Jsoup.clean(summary, org.jsoup.safety.Safelist.basic())}</div>
+            </div>
+        """.trimIndent()
+
+        return try {
+            val doc = Jsoup.parse(html)
+            val body = doc.body()
+            val firstH1 = body.select("h1").first()
+            if (firstH1 != null) {
+                firstH1.after(summaryCardHtml)
+            } else {
+                body.prepend(summaryCardHtml)
+            }
+            doc.outerHtml()
+        } catch (e: Exception) {
+            summaryCardHtml + html
+        }
+    }
+
+    private fun triggerGemmaSummarization() {
+        if (currentArticleId == -1) return
+
+        Toast.makeText(this, "Generating summary with Gemma...", Toast.LENGTH_SHORT).show()
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            val database = OfflineDatabase.getDatabase(this@ArticleViewerActivity)
+            val article = database.articleDao().getArticleById(currentArticleId)
+
+            if (article != null) {
+                if (article.summary.isNullOrEmpty()) {
+                    val gemmaManager = com.example.offlinebrowser.util.GemmaManager(this@ArticleViewerActivity)
+                    val generated = gemmaManager.generateSummary(article.content)
+                    database.articleDao().updateArticleSummary(article.id, generated)
+                }
+
+                withContext(Dispatchers.Main) {
+                    val webView = findViewById<WebView>(R.id.webView)
+                    loadArticleContent(webView, article.id)
+                    Toast.makeText(this@ArticleViewerActivity, "Summary updated", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
 
@@ -266,13 +312,8 @@ class ArticleViewerActivity : AppCompatActivity() {
             startActivity(intent)
             finish()
         }
-        findViewById<View>(R.id.nav_content).setOnClickListener {
-             // Navigate to HomeActivity in Content mode
-             val intent = Intent(this, HomeActivity::class.java)
-             intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-             intent.putExtra("OPEN_CONTENT", true)
-             startActivity(intent)
-             finish()
+        findViewById<View>(R.id.nav_gemma).setOnClickListener {
+             triggerGemmaSummarization()
         }
         findViewById<View>(R.id.nav_settings).setOnClickListener {
              startActivity(Intent(this, FeedSettingsActivity::class.java))

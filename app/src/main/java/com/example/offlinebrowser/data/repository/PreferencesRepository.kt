@@ -49,4 +49,8 @@ class PreferencesRepository(context: Context) {
     var showImagesInArticleView: Boolean
         get() = prefs.getBoolean("show_images_in_article_view", true)
         set(value) = prefs.edit().putBoolean("show_images_in_article_view", value).apply()
+
+    var gemmaModelPath: String?
+        get() = prefs.getString("gemma_model_path", null)
+        set(value) = prefs.edit().putString("gemma_model_path", value).apply()
 }
