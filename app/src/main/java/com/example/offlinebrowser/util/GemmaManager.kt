@@ -7,12 +7,15 @@ import android.os.Environment
 import com.example.offlinebrowser.data.repository.PreferencesRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.jsoup.Jsoup
 import java.io.File
 
-class GemmaManager(private val context: Context) {
+class GemmaManager(
+    private val context: Context,
+    private val modelRunner: LocalGemmaRunner = DefaultLocalGemmaRunner()
+) {
 
     private val preferencesRepository = PreferencesRepository(context)
+    private val summarizationPipeline = ArticleSummarizationPipeline(modelRunner)
 
     fun getModelFile(): File? {
         val customPath = preferencesRepository.gemmaModelPath
@@ -104,34 +107,9 @@ class GemmaManager(private val context: Context) {
     }
 
     suspend fun generateSummary(htmlOrTextContent: String): Pair<String, String> = withContext(Dispatchers.IO) {
-        val cleanText = Jsoup.parse(htmlOrTextContent).text()
-        if (cleanText.isBlank()) {
-            return@withContext Pair("No article text available to summarize.", getModelName())
-        }
-
-        val summary = performOfflineSummarization(cleanText)
+        val summary = summarizationPipeline.summarize(htmlOrTextContent)
         val modelName = getModelName()
 
         return@withContext Pair(summary, modelName)
-    }
-
-    private fun performOfflineSummarization(text: String): String {
-        val sentences = text.split(Regex("(?<=[.!?])\\s+")).filter { it.isNotBlank() }
-        if (sentences.isEmpty()) {
-            return "Unable to extract summary points from content."
-        }
-
-        val summarySentences = if (sentences.size <= 3) {
-            sentences
-        } else {
-            // Pick key sentences from beginning, middle, and end
-            listOf(
-                sentences.first(),
-                sentences[sentences.size / 2],
-                sentences.last()
-            ).distinct()
-        }
-
-        return summarySentences.joinToString(" ")
     }
 }
