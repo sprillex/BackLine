@@ -27,5 +27,6 @@ data class Article(
     val isFavorite: Boolean = false,
     val isRead: Boolean = false,
     val imageUrl: String? = null,
-    val localImagePath: String? = null
+    val localImagePath: String? = null,
+    val summary: String? = null
 )

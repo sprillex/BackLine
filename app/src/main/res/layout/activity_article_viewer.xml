@@ -55,7 +55,7 @@
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/nav_content"
+            android:id="@+id/nav_gemma"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -64,13 +64,13 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="📂"
+                android:text="✨"
                 android:textColor="@color/accent_color"
                 android:textSize="20sp"/>
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Content"
+                android:text="Gemma"
                 android:textColor="@color/accent_color"
                 android:textSize="10sp"/>
         </LinearLayout>

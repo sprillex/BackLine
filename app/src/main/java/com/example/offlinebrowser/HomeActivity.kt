@@ -227,8 +227,10 @@ class HomeActivity : AppCompatActivity() {
         findViewById<View>(R.id.nav_home).setOnClickListener {
             showArticles(null)
         }
-        findViewById<View>(R.id.nav_content).setOnClickListener {
-            showArticles(null)
+        val navGemma = findViewById<View>(R.id.nav_gemma)
+        navGemma.alpha = 0.5f
+        navGemma.setOnClickListener {
+            Toast.makeText(this, "Gemma not available in HomeActivity", Toast.LENGTH_SHORT).show()
         }
         findViewById<View>(R.id.nav_settings).setOnClickListener {
              startActivity(Intent(this, FeedSettingsActivity::class.java))

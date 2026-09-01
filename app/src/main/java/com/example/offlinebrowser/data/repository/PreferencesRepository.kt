@@ -49,4 +49,12 @@ class PreferencesRepository(context: Context) {
     var showImagesInArticleView: Boolean
         get() = prefs.getBoolean("show_images_in_article_view", true)
         set(value) = prefs.edit().putBoolean("show_images_in_article_view", value).apply()
+
+    var gemmaModelPath: String?
+        get() = prefs.getString("gemma_model_path", null)
+        set(value) = prefs.edit().putString("gemma_model_path", value).apply()
+
+    var gemmaModelUrl: String
+        get() = prefs.getString("gemma_model_url", "https://huggingface.co/bartowski/google_gemma-3-1b-it-GGUF/resolve/main/google_gemma-3-1b-it-Q4_K_M.gguf") ?: "https://huggingface.co/bartowski/google_gemma-3-1b-it-GGUF/resolve/main/google_gemma-3-1b-it-Q4_K_M.gguf"
+        set(value) = prefs.edit().putString("gemma_model_url", value).apply()
 }
