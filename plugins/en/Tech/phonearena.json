@@ -1,0 +1,25 @@
+{
+  "domainPattern": ".*phonearena\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div.p-article-body",
+    "div.article-body",
+    "article",
+    "main"
+  ],
+  "titlePath": [
+    "h1.p-article-header__title",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "PhoneArena"
+}

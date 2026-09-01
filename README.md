@@ -1,24 +1,6 @@
 # Offline Browser App
-Feeds to add
 
-Android police 
-xda
-Tom's hardware
-mlive
-scienceblog.com
-reuters
-phonearena
-screenrant
-gizmodo
-cbr
-howtogeek
-android central
-science daily 
-cyber security news
-
-
-
- This Android application allows users to browse HTML pages, RSS feeds, and Mastodon feeds offline. It also features an offline weather viewer and integration with "The Bindery" for downloading ZIM archives.
+This Android application allows users to browse HTML pages, RSS feeds, and Mastodon feeds offline. It also features an offline weather viewer and integration with "The Bindery" for downloading ZIM archives.
 
  ## Features
 

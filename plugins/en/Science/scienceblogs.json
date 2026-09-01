@@ -1,0 +1,25 @@
+{
+  "domainPattern": ".*scienceblogs\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div.field-name-body",
+    "div.entry-content",
+    "article",
+    "main"
+  ],
+  "titlePath": [
+    "h1.page-header",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "ScienceBlogs"
+}

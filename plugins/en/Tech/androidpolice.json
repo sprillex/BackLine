@@ -1,0 +1,26 @@
+{
+  "domainPattern": ".*androidpolice\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "section#article-body",
+    "article.w-content",
+    "article",
+    "main"
+  ],
+  "titlePath": [
+    "h1.article-header-title",
+    "h1.heading__title",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "Android Police"
+}

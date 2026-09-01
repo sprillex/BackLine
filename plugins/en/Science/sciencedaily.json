@@ -1,0 +1,25 @@
+{
+  "domainPattern": ".*sciencedaily\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div#story_text",
+    "div#text",
+    "article",
+    "main"
+  ],
+  "titlePath": [
+    "h1#headline",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "ScienceDaily"
+}

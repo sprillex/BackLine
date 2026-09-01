@@ -1,0 +1,25 @@
+{
+  "domainPattern": ".*reuters\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div.article-body__content",
+    "div[class*='article-body']",
+    "article",
+    "main"
+  ],
+  "titlePath": [
+    "h1[data-testid='Heading']",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "Reuters"
+}
