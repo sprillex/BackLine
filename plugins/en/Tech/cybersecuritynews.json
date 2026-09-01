@@ -1,0 +1,24 @@
+{
+  "domainPattern": ".*cybersecuritynews\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div.td-post-content",
+    "article",
+    "main"
+  ],
+  "titlePath": [
+    "h1.entry-title",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "sourceName": "Cyber Security News"
+}
