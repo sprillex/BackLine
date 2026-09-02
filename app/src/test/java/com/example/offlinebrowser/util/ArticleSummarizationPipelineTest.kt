@@ -142,6 +142,39 @@ class ArticleSummarizationPipelineTest {
     }
 
     @Test
+    fun testSanitizeInputStripsPollsAndInteractiveClutter() {
+        val pipeline = ArticleSummarizationPipeline()
+        val htmlInput = """
+            <html>
+            <body>
+                <p>Five of the greatest new shows to binge-watch on Paramount+ this week include acclaimed spy thrillers and dark crime dramas.</p>
+                <p>The Agency recently returned for its second season on Paramount+ following its strong season 1 debut in 2024 with Michael Fassbender.</p>
+                <p>Dutton Ranch remains one of the biggest new streaming hits on Paramount+ this week, currently ranking top on global charts.</p>
+                <div class="poll">
+                    <p>POLL Which kind of Jon Bernthal role interests you most right now?</p>
+                    <p>Intense crime drama leads like in We Own This City 0%</p>
+                    <p>Select all that apply When you choose a new crime series, what are the biggest reasons you hit play?</p>
+                    <p>See Results</p>
+                    <p>Previous Submit</p>
+                </div>
+            </body>
+            </html>
+        """.trimIndent()
+
+        val sanitized = pipeline.sanitizeInput(htmlInput)
+
+        assertFalse("Should strip poll container header", sanitized.contains("POLL Which kind"))
+        assertFalse("Should strip option text", sanitized.contains("We Own This City 0%"))
+        assertFalse("Should strip prompt text", sanitized.contains("Select all that apply"))
+        assertFalse("Should strip button text", sanitized.contains("See Results"))
+        assertFalse("Should strip submit text", sanitized.contains("Previous Submit"))
+
+        assertTrue(sanitized.contains("Five of the greatest new shows"))
+        assertTrue(sanitized.contains("The Agency recently returned"))
+        assertTrue(sanitized.contains("Dutton Ranch remains"))
+    }
+
+    @Test
     fun testSanitizeInputFallbackToShortLinesWhenFewerThanThreeLongLines() {
         val pipeline = ArticleSummarizationPipeline()
         val htmlInput = """

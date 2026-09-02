@@ -168,13 +168,15 @@ class AiSkillManager(
                 renderedPrompt = renderedPrompt.replace("{{$key}}", value)
             }
 
-            lastStepOutput = modelRunner.generate(
+            val rawOutput = modelRunner.generate(
                 prompt = renderedPrompt,
                 maxTokens = stepConfig.maxTokens,
                 temperature = stepConfig.temperature,
                 repeatPenalty = stepConfig.repeatPenalty,
                 stopSequences = stepConfig.stopSequences
             )
+
+            lastStepOutput = cleanModelOutput(rawOutput)
 
             contextMap["STEP_${stepNumber}_OUTPUT"] = lastStepOutput
             contextMap[stepConfig.stepId.uppercase()] = lastStepOutput
@@ -184,6 +186,27 @@ class AiSkillManager(
     }
 
     companion object {
+        fun cleanModelOutput(output: String): String {
+            var cleaned = output
+            val turnTags = listOf("<start_of_turn>user", "<start_of_turn>model", "<end_of_turn>", "<eos>", "<bos>")
+            for (tag in turnTags) {
+                cleaned = cleaned.replace(tag, "", ignoreCase = true)
+            }
+
+            val prefixRegex = Regex("^(Summary response:|Summary:|Notes:|Response:)\\s*", RegexOption.IGNORE_CASE)
+            cleaned = prefixRegex.replace(cleaned.trim(), "")
+
+            val lines = cleaned.lines().map { it.trim() }
+            val filteredLines = lines.filterNot { line ->
+                line.startsWith("Rewrite these notes", ignoreCase = true) ||
+                line.startsWith("List 2 or 3 specific actions", ignoreCase = true) ||
+                line.startsWith("Extract 3 factual claims", ignoreCase = true) ||
+                line.startsWith("Convert these raw points", ignoreCase = true)
+            }
+
+            return filteredLines.joinToString("\n").trim()
+        }
+
         fun getDefaultFallbackRegistry(): AiSkillRegistry {
             return AiSkillRegistry(
                 version = 1,

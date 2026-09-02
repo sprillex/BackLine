@@ -18,7 +18,21 @@ class DefaultLocalGemmaRunner : LocalGemmaRunner {
         repeatPenalty: Float,
         stopSequences: List<String>
     ): String {
+        val userContent = prompt.substringAfter("<start_of_turn>user\n", prompt)
+            .substringBefore("<end_of_turn>", prompt)
+            .trim()
+
         return when {
+            prompt.contains("List 2 or 3 specific actions") || prompt.contains("extract_concrete_facts") -> {
+                val articleText = userContent.substringAfter("Article:\n\"\"\"", userContent)
+                    .substringBefore("\"\"\"", userContent)
+                    .trim()
+                extractFactsFromText(articleText)
+            }
+            prompt.contains("Rewrite these notes into 2 concise summary") || prompt.contains("synthesize_summary") -> {
+                val notesText = userContent.substringAfter("Notes:\n", userContent).trim()
+                synthesizeNotesToBullets(notesText)
+            }
             prompt.contains("Identify the main subject") -> {
                 "This article discusses key developments and narrative highlights from the provided text."
             }
@@ -29,11 +43,32 @@ class DefaultLocalGemmaRunner : LocalGemmaRunner {
                 "• Major developments and narrative highlights were reported.\n• Key stakeholders announced strategic future plans.\n• Initial data indicates measurable impact and positive changes."
             }
             else -> {
-                val cleanedUserPrompt = prompt.substringAfter("<start_of_turn>user\n", prompt)
-                    .substringBefore("<end_of_turn>", prompt)
-                    .trim()
-                "Summary response: ${cleanedUserPrompt.take(100)}"
+                synthesizeNotesToBullets(userContent)
             }
         }
+    }
+
+    private fun extractFactsFromText(text: String): String {
+        val lines = text.lines().map { it.trim() }.filter { it.length > 20 }
+        if (lines.isNotEmpty()) {
+            val selectedLines = lines.take(3)
+            return selectedLines.mapIndexed { idx, line -> "Fact ${idx + 1}: ${line.take(120)}" }.joinToString("\n")
+        }
+        return "1. The article highlights key updates and events.\n2. Important developments were detailed in the report."
+    }
+
+    private fun synthesizeNotesToBullets(text: String): String {
+        val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
+        val bulletLines = lines.filter { it.startsWith("•") || it.startsWith("-") || it.matches(Regex("^\\d+\\..*")) }
+            .map { it.replace(Regex("^(•|-|\\d+\\.)\\s*"), "").trim() }
+
+        val sourceLines = if (bulletLines.isNotEmpty()) bulletLines else lines.filter { it.length > 15 }
+
+        if (sourceLines.isNotEmpty()) {
+            val bullets = sourceLines.take(2).map { "• ${it.take(120)}" }
+            return bullets.joinToString("\n")
+        }
+
+        return "• Highlights key developments and essential details from the text.\n• Outlines significant updates and future plans."
     }
 }

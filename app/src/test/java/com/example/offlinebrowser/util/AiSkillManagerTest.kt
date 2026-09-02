@@ -6,6 +6,7 @@ import com.example.offlinebrowser.data.model.SkillStepConfig
 import com.google.gson.Gson
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -177,6 +178,49 @@ class AiSkillManagerTest {
         assertTrue(step2.prompt.contains("Clean text retained: This is a paragraph about local AI capabilities"))
 
         assertEquals("• Google released Gemma 3 models.\n• Offline Browser handles local AI summaries.", result)
+    }
+
+    @Test
+    fun testCleanModelOutputStripsTagsPrefixesAndPromptEchoes() {
+        val rawOutput = """
+            <start_of_turn>model
+            Summary response: Rewrite these notes into 2 concise summary bullet points. Retain specific names, places, and tools mentioned.
+            • Paramount+ features five major series to binge-watch this week including The Agency and Lioness.
+            • Dexter: Resurrection returned to critical acclaim with high viewership scores.
+            <end_of_turn>
+        """.trimIndent()
+
+        val cleaned = AiSkillManager.cleanModelOutput(rawOutput)
+
+        assertFalse("Should not contain turn tags", cleaned.contains("<start_of_turn>"))
+        assertFalse("Should not contain end turn tags", cleaned.contains("<end_of_turn>"))
+        assertFalse("Should not contain Summary response prefix", cleaned.contains("Summary response:"))
+        assertFalse("Should not leak prompt instruction line", cleaned.contains("Rewrite these notes into 2 concise summary"))
+
+        assertTrue("Should contain bullet 1", cleaned.contains("• Paramount+ features five major series"))
+        assertTrue("Should contain bullet 2", cleaned.contains("• Dexter: Resurrection returned"))
+    }
+
+    @Test
+    fun testDefaultLocalGemmaRunnerWithArticleSummarizerSkill() = runBlocking {
+        val runner = DefaultLocalGemmaRunner()
+        val manager = AiSkillManager(modelRunner = runner)
+        val defaultSkill = manager.getSkillById("article_summarizer")!!
+
+        val rawArticle = """
+            <html>
+            <body>
+                <p>The Agency recently returned for its second season on Paramount+ starring Michael Fassbender as a CIA operative named Martian.</p>
+                <p>Dutton Ranch remains one of the biggest streaming hits on Paramount+ following Beth Dutton and Rip Wheeler in Texas.</p>
+            </body>
+            </html>
+        """.trimIndent()
+
+        val summary = manager.executeSkill(defaultSkill, rawArticle)
+
+        assertFalse("Should not contain prompt instruction leak", summary.contains("Rewrite these notes"))
+        assertFalse("Should not contain Summary response prefix", summary.contains("Summary response:"))
+        assertTrue("Should contain bullet points", summary.startsWith("• "))
     }
 
     @Test

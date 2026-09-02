@@ -34,13 +34,15 @@ class ArticleSummarizationPipeline(
                 renderedPrompt = renderedPrompt.replace("{{$key}}", value)
             }
 
-            lastStepOutput = modelRunner.generate(
+            val rawOutput = modelRunner.generate(
                 prompt = renderedPrompt,
                 maxTokens = stepConfig.maxTokens,
                 temperature = stepConfig.temperature,
                 repeatPenalty = stepConfig.repeatPenalty,
                 stopSequences = stepConfig.stopSequences
             )
+
+            lastStepOutput = AiSkillManager.cleanModelOutput(rawOutput)
 
             contextMap["STEP_${stepNumber}_OUTPUT"] = lastStepOutput
             contextMap[stepConfig.stepId.uppercase()] = lastStepOutput
@@ -53,7 +55,7 @@ class ArticleSummarizationPipeline(
         if (rawText.isBlank()) return ""
 
         val doc = Jsoup.parse(rawText)
-        doc.select("nav, header, footer, aside, script, style").remove()
+        doc.select("nav, header, footer, aside, script, style, .poll, .poll-container, form, [class*='poll'], [id*='poll'], [class*='quiz']").remove()
 
         doc.select("p, h1, h2, h3, h4, h5, h6, div, li, tr, dt, dd, section, article").append("\n")
         doc.select("br").append("\n")
@@ -61,11 +63,23 @@ class ArticleSummarizationPipeline(
         val extractedText = doc.body()?.wholeText() ?: doc.wholeText()
         val rawLines = extractedText.lines().map { it.trim() }.filter { it.isNotEmpty() }
 
-        val strictLines = rawLines.filter { it.length >= 40 }
+        val filteredLines = rawLines.filterNot { line ->
+            val upper = line.uppercase()
+            upper.startsWith("POLL") ||
+            upper.startsWith("VOTE") ||
+            upper.startsWith("WHICH KIND OF") ||
+            upper.contains("SELECT ALL THAT APPLY") ||
+            upper.contains("WHEN YOU CHOOSE A NEW") ||
+            upper.contains("AFTER READING ABOUT") ||
+            upper.contains("SEE RESULTS") ||
+            upper.contains("PREVIOUS SUBMIT")
+        }
+
+        val strictLines = filteredLines.filter { it.length >= 40 }
         val finalLines = if (strictLines.size >= 3) {
             strictLines
         } else {
-            rawLines.filter { it.length >= 20 }
+            filteredLines.filter { it.length >= 20 }
         }
 
         return finalLines.joinToString("\n\n")
