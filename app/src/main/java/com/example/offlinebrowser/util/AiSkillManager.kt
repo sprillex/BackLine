@@ -169,6 +169,20 @@ class AiSkillManager(
         }
     }
 
+    fun saveSkillOverride(updatedSkill: AiSkill) {
+        addOrUpdateSkill(updatedSkill)
+    }
+
+    fun resetOverrides() {
+        if (context != null) {
+            val userFile = File(context.filesDir, "ai_skills.json")
+            if (userFile.exists()) {
+                userFile.delete()
+            }
+        }
+        registry = loadRegistry()
+    }
+
     fun addOrUpdateSkill(skill: AiSkill): Boolean {
         val currentSkills = registry.skills.toMutableList()
         val index = currentSkills.indexOfFirst { it.id.equals(skill.id, ignoreCase = true) }
