@@ -205,6 +205,86 @@ class AiSkillManagerTest {
     }
 
     @Test
+    fun testCleanModelOutputWithCustomUserSkillPromptContext() {
+        val promptContext = """
+            <start_of_turn>user
+            List 2 or 3 distinct plot details, announcements, or statements from the article below. Do not repeat the article title or copy the opening sentence verbatim. Name the specific people, actors, or projects involved.
+
+            Article:
+            \"\"\"
+            This Gary Larson Fascination Shaped The Far Side From the Beginning...
+            \"\"\"<end_of_turn>
+            <start_of_turn>model
+        """.trimIndent()
+
+        val leakedRawOutput = """
+            • List 2 or 3 distinct plot details, announcements, or statements from the article below. Do not repeat the article title
+            • This Gary Larson Fascination Shaped The Far Side From the Beginning
+        """.trimIndent()
+
+        val cleaned = AiSkillManager.cleanModelOutput(leakedRawOutput, promptContext)
+
+        assertFalse("Should strip prompt instruction line", cleaned.contains("List 2 or 3 distinct plot details"))
+        assertFalse("Should strip prompt instruction fragment", cleaned.contains("Do not repeat the article title"))
+        assertTrue("Should keep valid article fact bullet", cleaned.contains("This Gary Larson Fascination Shaped The Far Side From the Beginning"))
+    }
+
+    @Test
+    fun testExecuteUserCustomSkillSummary12WithDefaultRunner() = runBlocking {
+        val json = """
+            {
+              "version": 1,
+              "skills": [
+                {
+                  "id": "summary_1_2",
+                  "displayName": "Executive Summary",
+                  "summary": "Extracts core entity actions and produces an executive 2-bullet summary.",
+                  "targetScreens": ["ArticleViewerActivity"],
+                  "version": 1,
+                  "steps": [
+                    {
+                      "stepId": "extract_concrete_facts",
+                      "promptTemplate": "<start_of_turn>user\nList 2 or 3 distinct plot details, announcements, or statements from the article below. Do not repeat the article title or copy the opening sentence verbatim. Name the specific people, actors, or projects involved.\n\nArticle:\n\"\"\"\n{{INPUT}}\n\"\"\"<end_of_turn>\n<start_of_turn>model\n",
+                      "temperature": 0.15,
+                      "maxTokens": 200,
+                      "repeatPenalty": 1.18,
+                      "stopSequences": ["<end_of_turn>"]
+                    },
+                    {
+                      "stepId": "synthesize_summary",
+                      "promptTemplate": "<start_of_turn>user\nRewrite these notes into 2 concise, complete summary bullet points. Keep all specific names and titles. Do not label bullets as 'Fact 1' or use generic filler phrases.\n\nNotes:\n{{INPUT}}<end_of_turn>\n<start_of_turn>model\n",
+                      "temperature": 0.2,
+                      "maxTokens": 220,
+                      "repeatPenalty": 1.15,
+                      "stopSequences": ["<end_of_turn>"]
+                    }
+                  ]
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val registry = Gson().fromJson(json, AiSkillRegistry::class.java)
+        val manager = AiSkillManager(customRegistry = registry)
+        val skill = manager.getSkillById("summary_1_2")!!
+
+        val articleContent = """
+            <html>
+            <body>
+                <p>Gary Larson's fascination with nature and science heavily shaped The Far Side comic strip throughout its syndicated run.</p>
+                <p>The Far Side often featured entomology, biology, and prehistoric themes as central comedic setups.</p>
+            </body>
+            </html>
+        """.trimIndent()
+
+        val summary = manager.executeSkill(skill, articleContent)
+
+        assertFalse("Should not leak prompt instructions", summary.contains("List 2 or 3 distinct plot details"))
+        assertFalse("Should not leak sentence verbatim instruction", summary.contains("Do not repeat"))
+        assertTrue("Should generate valid bullet summary", summary.contains("Gary Larson"))
+    }
+
+    @Test
     fun testDefaultLocalGemmaRunnerWithArticleSummarizerSkill() = runBlocking {
         val runner = DefaultLocalGemmaRunner()
         val manager = AiSkillManager(modelRunner = runner)

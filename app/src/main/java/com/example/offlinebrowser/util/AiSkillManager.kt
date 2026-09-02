@@ -237,7 +237,7 @@ class AiSkillManager(
                 stopSequences = stepConfig.stopSequences
             )
 
-            lastStepOutput = cleanModelOutput(rawOutput)
+            lastStepOutput = cleanModelOutput(rawOutput, renderedPrompt)
 
             contextMap["STEP_${stepNumber}_OUTPUT"] = lastStepOutput
             contextMap[stepConfig.stepId.uppercase()] = lastStepOutput
@@ -247,22 +247,64 @@ class AiSkillManager(
     }
 
     companion object {
-        fun cleanModelOutput(output: String): String {
+        fun cleanModelOutput(output: String, promptContext: String? = null): String {
             var cleaned = output
-            val turnTags = listOf("<start_of_turn>user", "<start_of_turn>model", "<end_of_turn>", "<eos>", "<bos>")
+            val turnTags = listOf(
+                "<start_of_turn>user", "<start_of_turn>model", "<start_of_turn>",
+                "<end_of_turn>", "<eos>", "<bos>", "</start_of_turn>", "</end_of_turn>"
+            )
             for (tag in turnTags) {
                 cleaned = cleaned.replace(tag, "", ignoreCase = true)
             }
 
-            val prefixRegex = Regex("^(Summary response:|Summary:|Notes:|Response:)\\s*", RegexOption.IGNORE_CASE)
+            val prefixRegex = Regex("^(Summary response:|Summary:|Notes:|Response:|Output:)\\s*", RegexOption.IGNORE_CASE)
             cleaned = prefixRegex.replace(cleaned.trim(), "")
+
+            val instructionLines = mutableSetOf<String>()
+            if (!promptContext.isNullOrBlank()) {
+                var instructionsOnly = promptContext
+                instructionsOnly = instructionsOnly.replace(
+                    Regex("(Article:|Notes:|Raw:|Input:|Clean:)[\\s\\S]*?(?=<end_of_turn>|$)", RegexOption.IGNORE_CASE),
+                    ""
+                )
+
+                val pLines = instructionsOnly.lines().map { it.trim() }
+                for (pLine in pLines) {
+                    var lineClean = pLine
+                    for (tag in turnTags) {
+                        lineClean = lineClean.replace(tag, "", ignoreCase = true)
+                    }
+                    lineClean = lineClean.replace("\"\"\"", "").trim()
+                    lineClean = lineClean.replace(Regex("^(•|-|\\*|\\d+\\.)\\s*"), "").trim()
+                    if (lineClean.length >= 8) {
+                        instructionLines.add(lineClean.lowercase())
+                    }
+                }
+            }
 
             val lines = cleaned.lines().map { it.trim() }
             val filteredLines = lines.filterNot { line ->
-                line.startsWith("Rewrite these notes", ignoreCase = true) ||
-                line.startsWith("List 2 or 3 specific actions", ignoreCase = true) ||
-                line.startsWith("Extract 3 factual claims", ignoreCase = true) ||
-                line.startsWith("Convert these raw points", ignoreCase = true)
+                if (line.isEmpty()) return@filterNot true
+
+                val normalizedLine = line.replace(Regex("^(•|-|\\*|\\d+\\.)\\s*"), "").trim().lowercase()
+                if (normalizedLine.isEmpty()) return@filterNot true
+
+                val matchesPromptInstruction = instructionLines.any { instr ->
+                    instr.contains(normalizedLine) || normalizedLine.contains(instr)
+                }
+                if (matchesPromptInstruction) return@filterNot true
+
+                normalizedLine.startsWith("rewrite these notes", ignoreCase = true) ||
+                normalizedLine.startsWith("list 2 or 3", ignoreCase = true) ||
+                normalizedLine.startsWith("extract 3 factual", ignoreCase = true) ||
+                normalizedLine.startsWith("convert these raw", ignoreCase = true) ||
+                normalizedLine.startsWith("do not repeat", ignoreCase = true) ||
+                normalizedLine.startsWith("do not use generic", ignoreCase = true) ||
+                normalizedLine.startsWith("do not label", ignoreCase = true) ||
+                normalizedLine.startsWith("keep all specific", ignoreCase = true) ||
+                normalizedLine.startsWith("name the specific", ignoreCase = true) ||
+                normalizedLine.startsWith("include the actual", ignoreCase = true) ||
+                normalizedLine.startsWith("retain specific names", ignoreCase = true)
             }
 
             return filteredLines.joinToString("\n").trim()
