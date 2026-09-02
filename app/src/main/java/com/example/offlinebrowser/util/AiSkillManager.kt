@@ -7,6 +7,8 @@ import com.example.offlinebrowser.data.model.SkillStepConfig
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import java.io.File
 
 class AiSkillManager(
@@ -14,7 +16,9 @@ class AiSkillManager(
     private val modelRunner: LocalGemmaRunner = DefaultLocalGemmaRunner(),
     customRegistry: AiSkillRegistry? = null
 ) {
-    private val registry: AiSkillRegistry = customRegistry ?: loadRegistry()
+    var registry: AiSkillRegistry = customRegistry ?: loadRegistry()
+        private set
+
     private val summarizationPipeline = ArticleSummarizationPipeline(modelRunner)
 
     fun loadRegistry(overrideFile: File? = null): AiSkillRegistry {
@@ -50,6 +54,75 @@ class AiSkillManager(
         }
 
         return getDefaultFallbackRegistry()
+    }
+
+    suspend fun updateSkillsFromGitHub(
+        customUrl: String? = null
+    ): Result<Int> = withContext(Dispatchers.IO) {
+        val urlsToTry = if (customUrl != null) {
+            listOf(customUrl)
+        } else {
+            listOf(
+                "https://raw.githubusercontent.com/sprillex/BackLine/main/aiskills/ai_skills.json",
+                "https://raw.githubusercontent.com/sprillex/BackLine/master/aiskills/ai_skills.json",
+                "https://api.github.com/repos/sprillex/BackLine/contents/aiskills/ai_skills.json"
+            )
+        }
+
+        val client = OkHttpClient()
+        var lastError: Exception? = null
+
+        for (targetUrl in urlsToTry) {
+            try {
+                val request = Request.Builder()
+                    .url(targetUrl)
+                    .header("User-Agent", "OfflineBrowserApp/1.0")
+                    .header("Accept", "application/json, text/plain, */*")
+                    .build()
+
+                val response = client.newCall(request).execute()
+                if (!response.isSuccessful || response.body == null) {
+                    lastError = Exception("HTTP ${response.code} from $targetUrl")
+                    continue
+                }
+
+                var json = response.body!!.string()
+
+                if (targetUrl.contains("api.github.com/repos")) {
+                    val apiResponse = Gson().fromJson(json, Map::class.java)
+                    val downloadUrl = apiResponse?.get("download_url") as? String
+                    if (downloadUrl != null) {
+                        val subRequest = Request.Builder()
+                            .url(downloadUrl)
+                            .header("User-Agent", "OfflineBrowserApp/1.0")
+                            .build()
+                        val subResponse = client.newCall(subRequest).execute()
+                        if (subResponse.isSuccessful && subResponse.body != null) {
+                            json = subResponse.body!!.string()
+                        }
+                    }
+                }
+
+                val parsedRegistry = Gson().fromJson(json, AiSkillRegistry::class.java)
+                if (parsedRegistry == null || parsedRegistry.skills.isEmpty()) {
+                    lastError = Exception("Invalid or empty AI Skills registry received from $targetUrl")
+                    continue
+                }
+
+                if (context != null) {
+                    val userFile = File(context.filesDir, "ai_skills.json")
+                    userFile.writeText(json)
+                }
+
+                this@AiSkillManager.registry = parsedRegistry
+                return@withContext Result.success(parsedRegistry.skills.size)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                lastError = e
+            }
+        }
+
+        return@withContext Result.failure(lastError ?: Exception("Failed to fetch AI skills from GitHub"))
     }
 
     fun getAllSkills(): List<AiSkill> {
