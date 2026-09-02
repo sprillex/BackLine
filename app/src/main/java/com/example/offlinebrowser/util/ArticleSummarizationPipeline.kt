@@ -42,7 +42,7 @@ class ArticleSummarizationPipeline(
                 stopSequences = stepConfig.stopSequences
             )
 
-            lastStepOutput = AiSkillManager.cleanModelOutput(rawOutput)
+            lastStepOutput = AiSkillManager.cleanModelOutput(rawOutput, renderedPrompt)
 
             contextMap["STEP_${stepNumber}_OUTPUT"] = lastStepOutput
             contextMap[stepConfig.stepId.uppercase()] = lastStepOutput

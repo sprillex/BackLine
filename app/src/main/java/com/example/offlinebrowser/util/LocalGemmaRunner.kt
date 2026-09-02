@@ -22,24 +22,35 @@ class DefaultLocalGemmaRunner : LocalGemmaRunner {
             .substringBefore("<end_of_turn>", prompt)
             .trim()
 
+        val lowerPrompt = prompt.lowercase()
         return when {
-            prompt.contains("List 2 or 3 specific actions") || prompt.contains("extract_concrete_facts") -> {
-                val articleText = userContent.substringAfter("Article:\n\"\"\"", userContent)
-                    .substringBefore("\"\"\"", userContent)
-                    .trim()
+            lowerPrompt.contains("article:\n\"\"\"") || lowerPrompt.contains("extract_concrete_facts") || lowerPrompt.contains("plot details") || lowerPrompt.contains("specific actions") -> {
+                val articleText = if (userContent.contains("Article:\n\"\"\"")) {
+                    userContent.substringAfter("Article:\n\"\"\"", userContent)
+                        .substringBefore("\"\"\"", userContent)
+                        .trim()
+                } else if (userContent.contains("Article:\n")) {
+                    userContent.substringAfter("Article:\n", userContent).trim()
+                } else {
+                    userContent
+                }
                 extractFactsFromText(articleText)
             }
-            prompt.contains("Rewrite these notes into 2 concise summary") || prompt.contains("synthesize_summary") -> {
-                val notesText = userContent.substringAfter("Notes:\n", userContent).trim()
+            lowerPrompt.contains("notes:\n") || lowerPrompt.contains("synthesize_summary") || lowerPrompt.contains("rewrite these notes") -> {
+                val notesText = if (userContent.contains("Notes:\n")) {
+                    userContent.substringAfter("Notes:\n", userContent).trim()
+                } else {
+                    userContent
+                }
                 synthesizeNotesToBullets(notesText)
             }
-            prompt.contains("Identify the main subject") -> {
+            lowerPrompt.contains("identify the main subject") -> {
                 "This article discusses key developments and narrative highlights from the provided text."
             }
-            prompt.contains("extract 3 factual claims") -> {
+            lowerPrompt.contains("extract 3 factual claims") -> {
                 "1. The primary event occurred as detailed in the report.\n2. Key stakeholders made significant announcements regarding future plans.\n3. Data indicates measurable changes following recent developments."
             }
-            prompt.contains("Convert these raw points") -> {
+            lowerPrompt.contains("convert these raw points") -> {
                 "• Major developments and narrative highlights were reported.\n• Key stakeholders announced strategic future plans.\n• Initial data indicates measurable impact and positive changes."
             }
             else -> {
