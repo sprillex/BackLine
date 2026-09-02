@@ -244,17 +244,21 @@ class AiSkillSandboxBottomSheetDialogFragment : BottomSheetDialogFragment() {
             val oldStep = oldSkill.steps.getOrNull(i)
             val newStep = newSkill.steps.getOrNull(i)
 
+            val stepTitleView = TextView(requireContext()).apply {
+                text = "Step ${i + 1}: ${newStep?.stepId ?: oldStep?.stepId}"
+                textSize = 14f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setPadding(0, 8, 0, 4)
+            }
+            containerStepDiffs.addView(stepTitleView)
+
+            val oldPrompt = oldStep?.promptTemplate ?: "(None)"
+            val newPrompt = newStep?.promptTemplate ?: "(None)"
+            val oldParams = oldStep?.let { "temp: ${it.temperature}, maxTokens: ${it.maxTokens}, penalty: ${it.repeatPenalty}" } ?: ""
+            val newParams = newStep?.let { "temp: ${it.temperature}, maxTokens: ${it.maxTokens}, penalty: ${it.repeatPenalty}" } ?: ""
+
             val stepView = TextView(requireContext()).apply {
-                val stepTitle = "--- Step ${i + 1} [${newStep?.stepId ?: oldStep?.stepId}] ---"
-                val oldPrompt = oldStep?.promptTemplate ?: "(None)"
-                val newPrompt = newStep?.promptTemplate ?: "(None)"
-
-                val oldParams = oldStep?.let { "temp: ${it.temperature}, maxTokens: ${it.maxTokens}, penalty: ${it.repeatPenalty}" } ?: ""
-                val newParams = newStep?.let { "temp: ${it.temperature}, maxTokens: ${it.maxTokens}, penalty: ${it.repeatPenalty}" } ?: ""
-
                 text = """
-                    $stepTitle
-
                     BEFORE Prompt:
                     $oldPrompt
 
@@ -264,9 +268,10 @@ class AiSkillSandboxBottomSheetDialogFragment : BottomSheetDialogFragment() {
                     BEFORE Params: $oldParams
                     AFTER Params:  $newParams
                 """.trimIndent()
-                setPadding(0, 8, 0, 16)
+                setPadding(8, 8, 8, 8)
                 textSize = 12f
-                setTextColor(android.graphics.Color.DKGRAY)
+                setBackgroundColor(android.graphics.Color.parseColor("#262626"))
+                setTextColor(android.graphics.Color.parseColor("#E0E0E0"))
             }
             containerStepDiffs.addView(stepView)
         }
