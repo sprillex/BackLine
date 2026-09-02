@@ -57,4 +57,23 @@ class PreferencesRepository(context: Context) {
     var gemmaModelUrl: String
         get() = prefs.getString("gemma_model_url", "https://huggingface.co/bartowski/google_gemma-3-1b-it-GGUF/resolve/main/google_gemma-3-1b-it-Q4_K_M.gguf") ?: "https://huggingface.co/bartowski/google_gemma-3-1b-it-GGUF/resolve/main/google_gemma-3-1b-it-Q4_K_M.gguf"
         set(value) = prefs.edit().putString("gemma_model_url", value).apply()
+
+    var enabledSkillIds: Set<String>?
+        get() = prefs.getStringSet("enabled_skill_ids", null)
+        set(value) = prefs.edit().putStringSet("enabled_skill_ids", value).apply()
+
+    fun isSkillEnabled(skillId: String): Boolean {
+        val enabledSet = enabledSkillIds
+        return enabledSet == null || enabledSet.contains(skillId)
+    }
+
+    fun setSkillEnabled(skillId: String, enabled: Boolean, allSkillIds: List<String> = emptyList()) {
+        val currentSet = (enabledSkillIds ?: allSkillIds.toSet()).toMutableSet()
+        if (enabled) {
+            currentSet.add(skillId)
+        } else {
+            currentSet.remove(skillId)
+        }
+        enabledSkillIds = currentSet
+    }
 }

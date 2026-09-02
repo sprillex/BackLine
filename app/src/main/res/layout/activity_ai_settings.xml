@@ -80,12 +80,91 @@
             android:text="Update AI Skills from GitHub"
             android:layout_marginTop="16dp"/>
 
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp"
+            android:background="#CCCCCC" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Available AI Skills"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Toggle switch to enable/disable skills. Long press a skill to edit, rename, or delete."
+            android:textSize="12sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="8dp" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvAiSkills"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:nestedScrollingEnabled="false" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp"
+            android:background="#CCCCCC" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Add New AI Skill"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Display Name:"
+            android:layout_marginTop="8dp"/>
+
+        <EditText
+            android:id="@+id/etNewSkillName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="e.g. summary 1.2"
+            android:inputType="text" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Skill JSON:"
+            android:layout_marginTop="8dp"/>
+
+        <EditText
+            android:id="@+id/etNewSkillJson"
+            android:layout_width="match_parent"
+            android:layout_height="150dp"
+            android:hint="Paste skill JSON here..."
+            android:gravity="top|start"
+            android:inputType="textMultiLine"
+            android:scrollbars="vertical"
+            android:fontFamily="monospace"
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/btnAddSkill"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Add Skill"
+            android:layout_marginTop="8dp"/>
+
         <Button
             android:id="@+id/btnSaveAiSettings"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Save AI Settings"
-            android:layout_marginTop="16dp"/>
+            android:layout_marginTop="24dp"/>
 
     </LinearLayout>
 </ScrollView>

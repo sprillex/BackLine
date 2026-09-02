@@ -7,10 +7,13 @@ import com.google.gson.Gson
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.io.File
 import java.net.ServerSocket
 
 class AiSkillManagerTest {
@@ -290,5 +293,49 @@ class AiSkillManagerTest {
         assertTrue(result.isSuccess)
         assertEquals(1, result.getOrNull())
         assertEquals("remote_skill", manager.getSkillsForScreen("ArticleViewerActivity")[0].id)
+    }
+
+    @Test
+    fun testAddEditRenameDeleteSkillsInRegistry() {
+        val initialRegistry = AiSkillRegistry(
+            version = 1,
+            skills = listOf(
+                AiSkill(
+                    id = "skill_a",
+                    displayName = "Skill A",
+                    summary = "Summary A",
+                    targetScreens = listOf("ArticleViewerActivity"),
+                    version = 1,
+                    steps = emptyList()
+                )
+            )
+        )
+
+        val manager = AiSkillManager(customRegistry = initialRegistry)
+        assertEquals(1, manager.getAllSkills().size)
+
+        // Add new skill
+        val newSkill = AiSkill(
+            id = "summary_1_2",
+            displayName = "summary 1.2",
+            summary = "Executive 2-bullet summary",
+            targetScreens = listOf("ArticleViewerActivity"),
+            version = 1,
+            steps = emptyList()
+        )
+        manager.addOrUpdateSkill(newSkill)
+        assertEquals(2, manager.getAllSkills().size)
+        assertNotNull(manager.getSkillById("summary_1_2"))
+
+        // Rename skill
+        val renamed = manager.renameSkillDisplayName("summary_1_2", "summary 1.2 Updated")
+        assertTrue(renamed)
+        assertEquals("summary 1.2 Updated", manager.getSkillById("summary_1_2")?.displayName)
+
+        // Delete skill
+        val deleted = manager.deleteSkill("skill_a")
+        assertTrue(deleted)
+        assertEquals(1, manager.getAllSkills().size)
+        assertNull(manager.getSkillById("skill_a"))
     }
 }

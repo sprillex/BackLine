@@ -33,6 +33,39 @@
           ]
         }
       ]
+    },
+    {
+      "id": "summary_1_2",
+      "displayName": "summary 1.2",
+      "summary": "Extracts core entity actions and produces an executive 2-bullet summary.",
+      "targetScreens": [
+        "ArticleViewActivity",
+        "ArticleViewerActivity",
+        "WebReaderFragment"
+      ],
+      "version": 1,
+      "steps": [
+        {
+          "stepId": "extract_concrete_facts",
+          "promptTemplate": "<start_of_turn>user\nList 2 or 3 distinct plot details, announcements, or statements from the article below. Do not repeat the article title or copy the opening sentence verbatim. Name the specific people, actors, or projects involved.\n\nArticle:\n\"\"\"\n{{INPUT}}\n\"\"\"<end_of_turn>\n<start_of_turn>model\n",
+          "temperature": 0.15,
+          "maxTokens": 200,
+          "repeatPenalty": 1.18,
+          "stopSequences": [
+            "<end_of_turn>"
+          ]
+        },
+        {
+          "stepId": "synthesize_summary",
+          "promptTemplate": "<start_of_turn>user\nRewrite these notes into 2 concise, complete summary bullet points. Keep all specific names and titles. Do not label bullets as 'Fact 1' or use generic filler phrases.\n\nNotes:\n{{INPUT}}<end_of_turn>\n<start_of_turn>model\n",
+          "temperature": 0.2,
+          "maxTokens": 220,
+          "repeatPenalty": 1.15,
+          "stopSequences": [
+            "<end_of_turn>"
+          ]
+        }
+      ]
     }
   ]
 }

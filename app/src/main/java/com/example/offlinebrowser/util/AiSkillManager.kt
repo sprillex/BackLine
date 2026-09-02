@@ -11,6 +11,8 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 
+import com.example.offlinebrowser.data.repository.PreferencesRepository
+
 class AiSkillManager(
     private val context: Context? = null,
     private val modelRunner: LocalGemmaRunner = DefaultLocalGemmaRunner(),
@@ -18,6 +20,8 @@ class AiSkillManager(
 ) {
     var registry: AiSkillRegistry = customRegistry ?: loadRegistry()
         private set
+
+    private val preferencesRepository: PreferencesRepository? = context?.let { PreferencesRepository(it) }
 
     private val summarizationPipeline = ArticleSummarizationPipeline(modelRunner)
 
@@ -125,19 +129,76 @@ class AiSkillManager(
         return@withContext Result.failure(lastError ?: Exception("Failed to fetch AI skills from GitHub"))
     }
 
+    fun isSkillEnabled(skillId: String): Boolean {
+        return preferencesRepository?.isSkillEnabled(skillId) ?: true
+    }
+
+    fun setSkillEnabled(skillId: String, enabled: Boolean) {
+        preferencesRepository?.setSkillEnabled(skillId, enabled, registry.skills.map { it.id })
+    }
+
     fun getAllSkills(): List<AiSkill> {
         return registry.skills
     }
 
-    fun getSkillsForScreen(screenIdentifier: String): List<AiSkill> {
+    fun getSkillsForScreen(screenIdentifier: String, onlyEnabled: Boolean = true): List<AiSkill> {
         val trimmedScreen = screenIdentifier.trim()
         return registry.skills.filter { skill ->
-            skill.targetScreens.any { it.trim().equals(trimmedScreen, ignoreCase = true) }
+            (!onlyEnabled || isSkillEnabled(skill.id)) &&
+                    skill.targetScreens.any { it.trim().equals(trimmedScreen, ignoreCase = true) }
         }
     }
 
     fun getSkillById(skillId: String): AiSkill? {
-        return registry.skills.find { it.id.equals(skillId.trim(), ignoreCase = true) }
+        val skill = registry.skills.find { it.id.equals(skillId.trim(), ignoreCase = true) }
+        if (skill != null && !isSkillEnabled(skill.id)) {
+            return null
+        }
+        return skill
+    }
+
+    fun saveRegistry() {
+        if (context != null) {
+            try {
+                val userFile = File(context.filesDir, "ai_skills.json")
+                val json = Gson().toJson(registry)
+                userFile.writeText(json)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun addOrUpdateSkill(skill: AiSkill): Boolean {
+        val currentSkills = registry.skills.toMutableList()
+        val index = currentSkills.indexOfFirst { it.id.equals(skill.id, ignoreCase = true) }
+        if (index >= 0) {
+            currentSkills[index] = skill
+        } else {
+            currentSkills.add(skill)
+        }
+        registry = registry.copy(skills = currentSkills)
+        saveRegistry()
+        if (preferencesRepository != null && !preferencesRepository.isSkillEnabled(skill.id)) {
+            setSkillEnabled(skill.id, true)
+        }
+        return true
+    }
+
+    fun deleteSkill(skillId: String): Boolean {
+        val currentSkills = registry.skills.toMutableList()
+        val removed = currentSkills.removeAll { it.id.equals(skillId.trim(), ignoreCase = true) }
+        if (removed) {
+            registry = registry.copy(skills = currentSkills)
+            saveRegistry()
+        }
+        return removed
+    }
+
+    fun renameSkillDisplayName(skillId: String, newDisplayName: String): Boolean {
+        val skill = registry.skills.find { it.id.equals(skillId.trim(), ignoreCase = true) } ?: return false
+        val updatedSkill = skill.copy(displayName = newDisplayName)
+        return addOrUpdateSkill(updatedSkill)
     }
 
     suspend fun executeSkill(
