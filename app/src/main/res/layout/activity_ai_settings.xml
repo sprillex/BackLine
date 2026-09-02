@@ -74,11 +74,18 @@
         </LinearLayout>
 
         <Button
+            android:id="@+id/btnUpdateAiSkills"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Update AI Skills from GitHub"
+            android:layout_marginTop="16dp"/>
+
+        <Button
             android:id="@+id/btnSaveAiSettings"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Save AI Settings"
-            android:layout_marginTop="24dp"/>
+            android:layout_marginTop="16dp"/>
 
     </LinearLayout>
 </ScrollView>

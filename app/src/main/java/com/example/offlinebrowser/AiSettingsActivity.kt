@@ -7,10 +7,12 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.example.offlinebrowser.data.repository.PreferencesRepository
+import com.example.offlinebrowser.util.AiSkillManager
 import com.example.offlinebrowser.util.GemmaManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class AiSettingsActivity : AppCompatActivity() {
 
@@ -36,6 +38,7 @@ class AiSettingsActivity : AppCompatActivity() {
         val btnSelectGemmaModel = findViewById<Button>(R.id.btnSelectGemmaModel)
         val btnDownloadGemmaModel = findViewById<Button>(R.id.btnDownloadGemmaModel)
         val btnCheckGemmaStatus = findViewById<Button>(R.id.btnCheckGemmaStatus)
+        val btnUpdateAiSkills = findViewById<Button>(R.id.btnUpdateAiSkills)
         val btnSaveAiSettings = findViewById<Button>(R.id.btnSaveAiSettings)
 
         etGemmaModelPath.setText(preferencesRepository.gemmaModelPath ?: "")
@@ -75,6 +78,24 @@ class AiSettingsActivity : AppCompatActivity() {
                 "No Gemma model file found. Using internal summary engine."
             }
             Toast.makeText(this, statusMsg, Toast.LENGTH_LONG).show()
+        }
+
+        btnUpdateAiSkills.setOnClickListener {
+            Toast.makeText(this, "Updating AI Skills from GitHub...", Toast.LENGTH_SHORT).show()
+            val skillManager = AiSkillManager(this)
+            CoroutineScope(Dispatchers.IO).launch {
+                val result = skillManager.updateSkillsFromGitHub()
+                withContext(Dispatchers.Main) {
+                    result.fold(
+                        onSuccess = { count ->
+                            Toast.makeText(this@AiSettingsActivity, "Successfully updated $count AI Skills from GitHub!", Toast.LENGTH_LONG).show()
+                        },
+                        onFailure = { error ->
+                            Toast.makeText(this@AiSettingsActivity, "Failed to update AI Skills: ${error.message}", Toast.LENGTH_LONG).show()
+                        }
+                    )
+                }
+            }
         }
 
         btnSaveAiSettings.setOnClickListener {

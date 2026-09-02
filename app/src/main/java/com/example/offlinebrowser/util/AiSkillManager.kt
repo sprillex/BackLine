@@ -7,6 +7,8 @@ import com.example.offlinebrowser.data.model.SkillStepConfig
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import java.io.File
 
 class AiSkillManager(
@@ -14,7 +16,9 @@ class AiSkillManager(
     private val modelRunner: LocalGemmaRunner = DefaultLocalGemmaRunner(),
     customRegistry: AiSkillRegistry? = null
 ) {
-    private val registry: AiSkillRegistry = customRegistry ?: loadRegistry()
+    var registry: AiSkillRegistry = customRegistry ?: loadRegistry()
+        private set
+
     private val summarizationPipeline = ArticleSummarizationPipeline(modelRunner)
 
     fun loadRegistry(overrideFile: File? = null): AiSkillRegistry {
@@ -50,6 +54,39 @@ class AiSkillManager(
         }
 
         return getDefaultFallbackRegistry()
+    }
+
+    suspend fun updateSkillsFromGitHub(
+        customUrl: String? = null
+    ): Result<Int> = withContext(Dispatchers.IO) {
+        val targetUrl = customUrl ?: "https://raw.githubusercontent.com/sprillex/BackLine/main/aiskills/ai_skills.json"
+        try {
+            val client = OkHttpClient()
+            val request = Request.Builder().url(targetUrl).build()
+            val response = client.newCall(request).execute()
+
+            if (!response.isSuccessful || response.body == null) {
+                return@withContext Result.failure(Exception("HTTP error ${response.code}"))
+            }
+
+            val json = response.body!!.string()
+            val parsedRegistry = Gson().fromJson(json, AiSkillRegistry::class.java)
+
+            if (parsedRegistry == null || parsedRegistry.skills.isEmpty()) {
+                return@withContext Result.failure(Exception("Invalid or empty AI Skills registry received."))
+            }
+
+            if (context != null) {
+                val userFile = File(context.filesDir, "ai_skills.json")
+                userFile.writeText(json)
+            }
+
+            this@AiSkillManager.registry = parsedRegistry
+            return@withContext Result.success(parsedRegistry.skills.size)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return@withContext Result.failure(e)
+        }
     }
 
     fun getAllSkills(): List<AiSkill> {

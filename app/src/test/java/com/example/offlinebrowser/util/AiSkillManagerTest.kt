@@ -6,12 +6,11 @@ import com.example.offlinebrowser.data.model.SkillStepConfig
 import com.google.gson.Gson
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.net.ServerSocket
 
 class AiSkillManagerTest {
 
@@ -204,5 +203,48 @@ class AiSkillManagerTest {
         assertEquals(2, loadedRegistry.version)
         assertEquals(1, loadedRegistry.skills.size)
         assertEquals("override_skill", loadedRegistry.skills[0].id)
+    }
+
+    @Test
+    fun testUpdateSkillsFromGitHubSuccess() = runBlocking {
+        val serverSocket = ServerSocket(0)
+        val port = serverSocket.localPort
+
+        val jsonPayload = """
+            {
+              "version": 3,
+              "skills": [
+                {
+                  "id": "remote_skill",
+                  "displayName": "Remote Skill",
+                  "summary": "Remote summary",
+                  "targetScreens": ["ArticleViewerActivity"],
+                  "version": 1,
+                  "steps": []
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val serverThread = Thread {
+            try {
+                val socket = serverSocket.accept()
+                val response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: ${jsonPayload.toByteArray().size}\r\n\r\n$jsonPayload"
+                socket.getOutputStream().write(response.toByteArray())
+                socket.getOutputStream().flush()
+                socket.close()
+            } catch (e: Exception) {
+                // ignore socket closure
+            }
+        }
+        serverThread.start()
+
+        val manager = AiSkillManager()
+        val result = manager.updateSkillsFromGitHub("http://127.0.0.1:$port/ai_skills.json")
+        serverSocket.close()
+
+        assertTrue(result.isSuccess)
+        assertEquals(1, result.getOrNull())
+        assertEquals("remote_skill", manager.getSkillsForScreen("ArticleViewerActivity")[0].id)
     }
 }
