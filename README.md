@@ -1,57 +1,177 @@
 # Offline Browser App
 
-This Android application allows users to browse HTML pages, RSS feeds, and Mastodon feeds offline. It also features an offline weather viewer and integration with "The Bindery" for downloading ZIM archives.
+An Android application designed for offline content consumption, featuring full offline web browsing, RSS and Mastodon feed aggregation, multi-location weather forecasting, Kiwix and "The Bindery" ZIM archive integration, custom DOM scraper plugin extraction, local HTML importing, and screen-aware on-device AI article summarization.
 
- ## Features
+## Features
 
- *   **Offline Browsing**: Download and view HTML pages, RSS feeds, and Mastodon feeds.
- *   **Offline Weather**: View weather forecasts for multiple locations, cached for up to 10 days.
- *   **The Bindery Integration**: Browse and download ZIM files from a local or remote "The Bindery" instance.
- *   **Settings**: Configure WiFi-only downloads, allowed SSIDs, and sync intervals.
+- **Offline Web & Feed Browsing**: Download and view offline HTML web pages, RSS feeds, and Mastodon user feeds (`https://mastodon.social/@user.rss`) with offline asset caching.
+- **Offline Weather Viewer**: Multi-location weather forecasts powered by Open-Meteo, with current conditions, hourly trends, 7-day predictions, and 10-day local Room database caching.
+- **Offline Knowledge Archives (ZIM Files)**:
+  - **The Bindery Integration**: Discover and download `.zim` archive modules from local or remote "The Bindery" instances using QR code scanning and SHA-256 certificate fingerprint verification.
+  - **Kiwix OPDS Catalog Search**: Search and acquire offline Wikipedia and knowledge archives directly via the Kiwix OPDS catalog interface.
+  - **ZIM Reader**: Built-in viewer for offline `.zim` archive files.
+- **On-Device AI & Screen-Aware AI Skills**:
+  - **Gemma SLM Integration**: Local execution of Gemma GGUF quantized models via `LocalGemmaRunner` for zero-connectivity article summarization.
+  - **AI Skill Management**: Configurable multi-step AI execution routines defined in `ai_skills.json`, editable via `AiSettingsActivity` or updated remotely from GitHub.
+  - **Gemini Skill Optimizer**: Interactive developer sandbox and remote prompt optimization powered by `gemini-2.5-flash`.
+- **Scraper Plugins & In-App Plugin Creator**:
+  - **Domain Scraping**: Custom DOM extraction plugins (`.json`) and FiveFilters site configs (`.txt`) to clean articles and eliminate ads, paywalls, and scripts.
+  - **Automatic Discovery**: Matches website domains against the `sprillex/BackLine` and `fivefilters/ftr-site-config` GitHub repositories.
+  - **Plugin Creator Activity**: Visual DOM inspector and interactive selector generator for crafting custom scraping recipes.
+- **Local Document Import**: Import local HTML folders and offline documents recursively into the local database using Android's Document Access Framework.
+- **Customizable Sync & Network Management**: Configure background sync intervals, WiFi-only restriction filters, specific network SSID whitelist enforcement, and per-feed auto-download limits.
 
- ## Usage Instructions
+---
 
- ### 1. Adding Feeds
+## Tech Stack & Architecture
 
- *   **RSS Feed**: Enter the RSS feed URL in the main input field and click "Add RSS Feed".
- *   **Mastodon Feed**: Enter the Mastodon RSS URL (e.g., `https://mastodon.social/@user.rss`) and click "Add Mastodon Feed".
- *   **HTML Page**: Enter a website URL and click "Add HTML Page". This will download the page for offline viewing.
+- **Platform & Language**: Android SDK 34 (min SDK 24), Java 17, Kotlin 1.9+, Coroutines & Flow.
+- **UI & Layouts**: Android XML Layouts, Material Design Components, Data Binding, ViewBinding, Bottom Navigation, RecyclerView, Support WebViews.
+- **Local Persistence & Storage**:
+  - **Room Database (`OfflineDatabase`)**: Schema version 10 storing `articles`, `feeds`, `weather`, `trusted_servers`, and `suggested_feeds`.
+  - **Preferences Repository**: SharedPreference storage managing model URLs, WiFi SSIDs, sync frequencies, and AI skill overrides.
+- **Networking & API**:
+  - **Retrofit 2 & OkHttp 4**: Type-safe HTTP clients with custom certificate validation and `User-Agent` headers.
+  - **Jsoup**: HTML parsing, DOM selection, and article extraction.
+  - **Gson**: JSON serialization and deserialization.
+- **Background Execution**:
+  - **WorkManager**: Periodic feed synchronization (`SyncWorker`), ZIM module downloading (`ZimDownloadWorker`), and batch file imports (`FileImportWorker`).
+- **AI Infrastructure**:
+  - **Local Gemma Runner**: Local SLM execution pipeline for GGUF model structures.
+  - **Gemini REST API**: Remote prompt optimizer (`gemini-2.5-flash`).
 
- ### 2. Weather Module
+### Architectural Overview
 
- *   Click the "Weather" button on the main screen.
- *   **Add Location**:
-     *   **Manual**: Enter the Location Name, Latitude, and Longitude, then click "Add Location".
-     *   **Automatic**: Click "Use Current Location" to automatically detect and add your current location (requires location permissions).
- *   The weather data is cached for 10 days, allowing you to view the forecast even when offline.
+```
+┌──────────────────────────────────────────────────────────┐
+│                   UI Layer (Activities)                  │
+│ HomeActivity | ArticleViewerActivity | PluginsActivity    │
+│ WeatherActivity | BinderyActivity | AiSettingsActivity   │
+└────────────────────────────┬─────────────────────────────┘
+                             │
+                             ▼
+┌──────────────────────────────────────────────────────────┐
+│              ViewModel & Utility Managers                │
+│  MainViewModel | AiSkillManager | PluginSearchUtil        │
+│  GemmaManager   | ArticleSummarizationPipeline           │
+└────────────────────────────┬─────────────────────────────┘
+                             │
+                             ▼
+┌────────────────────────────┴─────────────────────────────┐
+│                    Repository Layer                      │
+│ ArticleRepository | FeedRepository | WeatherRepository   │
+│ KiwixRepository   | ScraperPluginRepository              │
+└────────────────────────────┬─────────────────────────────┘
+                             │
+               ┌─────────────┴─────────────┐
+               ▼                           ▼
+┌───────────────────────────┐ ┌───────────────────────────┐
+│     Local Data Layer      │ │    Remote Network Layer   │
+│ Room DB (OfflineDatabase) │ │ Open-Meteo | Kiwix OPDS   │
+│ PreferencesRepository     │ │ GitHub API | Gemini REST  │
+└───────────────────────────┘ └───────────────────────────┘
+```
 
- ### 3. The Bindery (ZIM Files)
+---
 
- *   Click the "The Bindery (ZIM)" button on the main screen.
- *   **Secure Connection**:
-     *   If your Bindery instance uses a self-signed certificate, click "Scan QR Code".
-     *   Scan the QR code provided by the server (containing IP, Port, and Certificate Fingerprint).
-     *   The app will verify the server's identity and add it to the trusted list.
- *   Enter the URL (e.g., `https://192.168.1.5:8080/`) or it will be auto-filled after scanning.
- *   Click "Connect" to load the list of available modules.
- *   Browse the list and click "Download ZIM" on any module to download the corresponding `.zim` file to your device's app-specific storage (`Android/data/com.example.offlinebrowser/files/`).
+## Repository Layout
 
- ### 4. Settings
+```
+├── aiskills/                  # Default AI Skill definitions and registries (ai_skills.json)
+├── app/
+│   ├── src/
+│   │   ├── main/
+│   │   │   ├── java/com/example/offlinebrowser/
+│   │   │   │   ├── data/
+│   │   │   │   │   ├── local/        # Room Database, DAOs, and Converters
+│   │   │   │   │   ├── model/        # Kotlin Data Models & Enums
+│   │   │   │   │   ├── network/      # Retrofit Services, Parsers & ScraperEngine
+│   │   │   │   │   └── repository/   # Repository classes abstraction
+│   │   │   │   ├── ui/               # Adapters, Dialogs & UI components
+│   │   │   │   ├── util/             # Gemma, AiSkillManager, Pipelines & Logger
+│   │   │   │   ├── viewmodel/        # MainViewModel architecture
+│   │   │   │   └── workers/          # WorkManager background workers
+│   │   │   ├── res/                  # Layouts, Menus, Drawables, Values & XMLs
+│   │   │   └── assets/               # Pipeline configs and default AI skills
+│   │   └── test/                     # Unit test suites
+├── gradle/                    # Gradle wrapper files and configuration
+├── plugins/                   # Bundled scraper JSON plugins organized by lang/Category
+├── rss_feeds/                 # Curated top RSS feed CSV lists organized by lang/Category
+├── build.gradle.kts           # Root Gradle build configuration
+├── settings.gradle.kts          # Project settings and module configurations
+└── README.md                  # Project overview and developer instructions
+```
 
- *   Click the "Settings" button on the main screen.
- *   **WiFi Only**: Toggle to restrict downloads to WiFi connections only.
- *   **Allowed SSIDs**: Enter a comma-separated list of WiFi SSIDs to restrict downloads to specific networks.
- *   **Sync Interval**: Set how often the app should check for feed updates in the background.
+---
 
- ## Permissions
+## Prerequisites & Setup
 
- *   **Internet**: Required to download feeds and weather data.
- *   **Location**: Required to detect your current location for the weather module.
- *   **Notifications**: Required to show download progress and background sync status.
+### Prerequisites
 
- ## Development
+1. **Java Development Kit**: OpenJDK 17 required.
+   ```bash
+   sudo apt-get update && sudo apt-get install -y openjdk-17-jdk
+   export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+   ```
+2. **Android SDK**: Android SDK 34 platform tools and build-tools installed.
 
- *   Built with Android SDK 34 (min SDK 24).
- *   Uses Room for local database storage.
- *   Uses Retrofit for network requests.
- *   Uses WorkManager for background tasks.
+### Initial Setup
+
+Clone the repository and verify project setup:
+
+```bash
+git clone https://github.com/sprillex/BackLine.git
+cd BackLine
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+./gradlew tasks
+```
+
+---
+
+## Configuration
+
+- **AI Model Download URL**: Configurable in `PreferencesRepository` or via `AiSettingsActivity`. Defaults to `https://huggingface.co/bartowski/google_gemma-3-1b-it-GGUF/resolve/main/google_gemma-3-1b-it-Q4_K_M.gguf`.
+- **Gemini API Key**: Used for the AI Skill Sandbox prompt optimizer. Configurable in `AiSettingsActivity` or via environment/preferences.
+- **WiFi Enforcement**: Configure restricted WiFi SSIDs and enable WiFi-only downloads in `SettingsActivity`.
+- **Sync Schedule**: Background sync frequency (e.g., every 1 hour, 6 hours, 24 hours) configured in `SettingsActivity` via `WorkManager`.
+
+---
+
+## Running the Application
+
+### Compile & Build APKs
+
+To compile the project and assemble a Debug APK:
+
+```bash
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+./gradlew assembleDebug
+```
+
+The output APK will be generated at `app/build/outputs/apk/debug/app-debug.apk`.
+
+### Deploy to Connected Device / Emulator
+
+Ensure an Android emulator or hardware device is attached via `adb`:
+
+```bash
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+./gradlew installDebug
+```
+
+---
+
+## Testing
+
+Run unit tests across test suites:
+
+```bash
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+./gradlew test
+```
+
+---
+
+## API Reference
+
+The Offline Browser application interacts with external REST endpoints, local Bindery services, Kiwix catalog APIs, and remote AI optimization services. Detailed specifications for all endpoints, parameters, JSON schemas, and standard request/response envelopes are documented in [API.md](./API.md).
