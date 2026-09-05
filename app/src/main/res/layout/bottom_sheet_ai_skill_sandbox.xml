@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Title & Close Header -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:id="@+id/tvSandboxTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:text="🛠️ AI Skill Sandbox &amp; Auto-Tuner"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/btnResetOverrides"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:text="Reset Overrides"
+                android:textSize="12sp"
+                android:textColor="#D32F2F" />
+        </RelativeLayout>
+
+        <!-- Skill Selector & Run -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Select Active AI Skill:"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="12dp">
+
+            <Spinner
+                android:id="@+id/spinnerSkills"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:spinnerMode="dropdown" />
+
+            <Button
+                android:id="@+id/btnRunSkill"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="Run Skill" />
+        </LinearLayout>
+
+        <!-- Progress Indicator -->
+        <ProgressBar
+            android:id="@+id/progressBarSandbox"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:indeterminate="true"
+            android:visibility="gone"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Output Display Card -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Execution Output:"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp"
+            app:cardBackgroundColor="#F5F5F5">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <TextView
+                    android:id="@+id/tvSkillOutput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Tap 'Run Skill' to execute the selected skill on this article."
+                    android:textSize="13sp"
+                    android:textColor="#212121"
+                    android:fontFamily="sans-serif"
+                    android:textIsSelectable="true" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Gemini Optimizer Section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Auto-Tuning Feedback / Critique:"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/chipCutOff"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Cut off mid-sentence"
+                    android:textSize="11sp"
+                    android:layout_marginEnd="6dp"/>
+
+                <Button
+                    android:id="@+id/chipGeneric"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Too generic corporate text"
+                    android:textSize="11sp"
+                    android:layout_marginEnd="6dp"/>
+
+                <Button
+                    android:id="@+id/chipRepeats"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Repeats article verbatim"
+                    android:textSize="11sp"/>
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <EditText
+            android:id="@+id/etUserCritique"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Custom critique (e.g. hallucinated facts, missed key entities)"
+            android:textSize="13sp"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="12dp" />
+
+        <Button
+            android:id="@+id/btnOptimizeWithGemini"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="✨ Optimize with Gemini"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

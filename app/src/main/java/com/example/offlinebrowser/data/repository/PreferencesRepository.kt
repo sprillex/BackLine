@@ -58,6 +58,10 @@ class PreferencesRepository(context: Context) {
         get() = prefs.getString("gemma_model_url", "https://huggingface.co/bartowski/google_gemma-3-1b-it-GGUF/resolve/main/google_gemma-3-1b-it-Q4_K_M.gguf") ?: "https://huggingface.co/bartowski/google_gemma-3-1b-it-GGUF/resolve/main/google_gemma-3-1b-it-Q4_K_M.gguf"
         set(value) = prefs.edit().putString("gemma_model_url", value).apply()
 
+    var geminiApiKey: String?
+        get() = prefs.getString("gemini_api_key", null)
+        set(value) = prefs.edit().putString("gemini_api_key", value).apply()
+
     var enabledSkillIds: Set<String>?
         get() = prefs.getStringSet("enabled_skill_ids", null)
         set(value) = prefs.edit().putStringSet("enabled_skill_ids", value).apply()

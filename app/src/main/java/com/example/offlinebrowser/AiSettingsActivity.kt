@@ -45,6 +45,7 @@ class AiSettingsActivity : AppCompatActivity() {
         preferencesRepository = PreferencesRepository(this)
         skillManager = AiSkillManager(this)
 
+        val etGeminiApiKey = findViewById<EditText>(R.id.etGeminiApiKey)
         val etGemmaModelPath = findViewById<EditText>(R.id.etGemmaModelPath)
         val etGemmaModelUrl = findViewById<EditText>(R.id.etGemmaModelUrl)
         val btnSelectGemmaModel = findViewById<Button>(R.id.btnSelectGemmaModel)
@@ -58,6 +59,7 @@ class AiSettingsActivity : AppCompatActivity() {
         val etNewSkillJson = findViewById<EditText>(R.id.etNewSkillJson)
         val btnAddSkill = findViewById<Button>(R.id.btnAddSkill)
 
+        etGeminiApiKey.setText(preferencesRepository.geminiApiKey ?: "")
         etGemmaModelPath.setText(preferencesRepository.gemmaModelPath ?: "")
         etGemmaModelUrl.setText(preferencesRepository.gemmaModelUrl)
 
@@ -178,6 +180,7 @@ class AiSettingsActivity : AppCompatActivity() {
         }
 
         btnSaveAiSettings.setOnClickListener {
+            preferencesRepository.geminiApiKey = etGeminiApiKey.text.toString().trim().ifBlank { null }
             preferencesRepository.gemmaModelPath = etGemmaModelPath.text.toString().ifBlank { null }
             preferencesRepository.gemmaModelUrl = etGemmaModelUrl.text.toString().ifBlank { preferencesRepository.gemmaModelUrl }
             Toast.makeText(this, "AI Settings saved", Toast.LENGTH_SHORT).show()

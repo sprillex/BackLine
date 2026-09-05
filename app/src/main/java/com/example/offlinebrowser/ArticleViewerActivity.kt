@@ -35,6 +35,11 @@ class ArticleViewerActivity : AppCompatActivity() {
 
         val webView = findViewById<WebView>(R.id.webView)
         val fabDarkMode = findViewById<FloatingActionButton>(R.id.fab_dark_mode)
+        val btnOpenSandbox = findViewById<android.widget.Button>(R.id.btnOpenSandbox)
+
+        btnOpenSandbox?.setOnClickListener {
+            openAiSkillSandbox()
+        }
 
         // Do not block network images globally; we will filter them in WebViewClient to allow local/cached content
         webView.settings.blockNetworkImage = false
@@ -224,6 +229,31 @@ class ArticleViewerActivity : AppCompatActivity() {
                     withContext(Dispatchers.Main) {
                         Toast.makeText(this@ArticleViewerActivity, "Failed to import plugin: ${e.message}", Toast.LENGTH_LONG).show()
                     }
+                }
+            }
+        }
+    }
+
+    private fun openAiSkillSandbox() {
+        if (currentArticleId == -1) {
+            Toast.makeText(this, "No article loaded", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            val database = OfflineDatabase.getDatabase(this@ArticleViewerActivity)
+            val article = database.articleDao().getArticleById(currentArticleId)
+
+            withContext(Dispatchers.Main) {
+                if (article != null) {
+                    val rawText = Jsoup.parse(article.content).text()
+                    val sandboxFragment = com.example.offlinebrowser.ui.AiSkillSandboxBottomSheetDialogFragment.newInstance(
+                        articleText = rawText,
+                        articleId = currentArticleId
+                    )
+                    sandboxFragment.show(supportFragmentManager, "AiSkillSandbox")
+                } else {
+                    Toast.makeText(this@ArticleViewerActivity, "Article content unavailable", Toast.LENGTH_SHORT).show()
                 }
             }
         }
