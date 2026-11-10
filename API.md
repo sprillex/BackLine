@@ -1,6 +1,6 @@
 # Offline Browser API & Interface Reference
 
-This document provides a comprehensive reference for all external REST APIs, service interfaces, network protocols, and data exchange schemas utilized by the Offline Browser Android Application.
+This document provides a comprehensive reference for all external REST APIs, service interfaces, network protocols, and data exchange schemas utilized by the Offline Browser Android Application. For high-level operational documentation, architecture diagrams, prerequisites, and build guides, see [README.md](./README.md).
 
 ---
 
