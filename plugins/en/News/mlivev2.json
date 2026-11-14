@@ -1,0 +1,59 @@
+{
+  "domainPattern": ".*mlive\\.com",
+  "sourceName": "MLive",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "article.entry-content",
+    "div.article__body",
+    "article",
+    "main"
+  ],
+  "titlePath": [
+    "h1.entry-title",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    "div.ad",
+    "div.widget",
+    "div.social-share",
+    ".share",
+    ".newsletter-signup"
+  ],
+  "classification": {
+    "defaultCategory": "news",
+    "extractors": [
+      {
+        "type": "URL_REGEX",
+        "pattern": "^https?://[^/]+/([^/]+)(?:/([^/]+))?/\\d{4}/\\d{2}/",
+        "groups": ["section", "subsection"]
+      },
+      {
+        "type": "RSS_FIELD_REGEX",
+        "field": "content_html",
+        "pattern": "(pc_aff_link=|skimresources\\.com|irmp=)",
+        "assignTag": "affiliate"
+      },
+      {
+        "type": "RSS_FIELD_EQUALS",
+        "field": "author",
+        "value": "MLive Express Desk",
+        "assignTag": "wire_or_desk"
+      }
+    ],
+    "categoryMap": {
+      "highschoolsports": "sports",
+      "sports": "sports",
+      "tv": "entertainment_affiliate",
+      "shopping": "shopping_affiliate",
+      "life": "lifestyle",
+      "news": "news"
+    },
+    "dropRules": [
+      { "categoryIn": ["sports", "entertainment_affiliate", "shopping_affiliate"] },
+      { "hasTag": "affiliate" }
+    ]
+  }
+}
