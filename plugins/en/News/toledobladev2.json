@@ -1,0 +1,65 @@
+{
+  "domainPattern": ".*toledoblade\\.com",
+  "strategy": "EXTRACT_FROM_JS_VAR",
+  "targetIdentifier": "pgStoryZeroJSON",
+  "contentPath": ["articles[0].body"],
+  "titlePath": ["articles[0].title"],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "iframe",
+    "script",
+    ".embed-container",
+    ".video-container",
+    ".iframe-wrapper",
+    "figure:has(iframe)",
+    "div.embed-youtube"
+  ],
+  "sourceName": "The Toledo Blade",
+  "classification": {
+    "defaultCategory": "news",
+    "rssRules": {
+      "extractors": [
+        {
+          "type": "URL_REGEX",
+          "pattern": "^https?://[^/]+/([^/]+)(?:/([^/]+))?/\\d{4}/",
+          "groups": ["section", "subsection"]
+        },
+        {
+          "type": "RSS_MEDIA_COUNT",
+          "minCount": 6,
+          "assignTag": "photo_gallery"
+        },
+        {
+          "type": "RSS_FIELD_REGEX",
+          "field": "title",
+          "pattern": "^photo gallery:",
+          "flags": "i",
+          "assignTag": "photo_gallery"
+        }
+      ],
+      "dropIf": [
+        { "sectionIn": ["sports", "opinion"] },
+        { "hasTag": "photo_gallery" }
+      ]
+    },
+    "pageRules": {
+      "extractors": [
+        {
+          "type": "JSON_PATH",
+          "paths": {
+            "section": "articles[0].section",
+            "subsection": "articles[0].subsection",
+            "keywords": "articles[0].keywords"
+          }
+        }
+      ]
+    },
+    "categoryMap": {
+      "local": "local_news",
+      "news": "national_world",
+      "business": "business",
+      "sports": "sports",
+      "opinion": "opinion"
+    }
+  }
+}
