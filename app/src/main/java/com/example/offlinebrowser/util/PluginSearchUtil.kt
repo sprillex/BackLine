@@ -125,9 +125,21 @@ object PluginSearchUtil {
             // Validate JSON
             val recipe = gson.fromJson(json, ScraperRecipe::class.java) ?: return false
 
-            val fileName = "plugin_${System.currentTimeMillis()}.json"
-            val file = File(context.filesDir, "plugins/$fileName")
-            file.parentFile?.mkdirs()
+            val pluginsDir = File(context.filesDir, "plugins").apply { mkdirs() }
+            // Remove older/stale recipes for the same domainPattern so ScraperEngine picks the updated one
+            pluginsDir.listFiles { _, name -> name.endsWith(".json") }?.forEach { existingFile ->
+                try {
+                    val existing = gson.fromJson(existingFile.readText(), ScraperRecipe::class.java)
+                    if (existing != null && existing.domainPattern == recipe.domainPattern && existing.version <= recipe.version) {
+                        existingFile.delete()
+                    }
+                } catch (_: Exception) {
+                }
+            }
+
+            val repoFileName = downloadUrl.substringAfterLast("/").takeIf { it.endsWith(".json") }
+                ?: "plugin_${System.currentTimeMillis()}.json"
+            val file = File(pluginsDir, repoFileName)
             file.writeText(json)
 
             return true

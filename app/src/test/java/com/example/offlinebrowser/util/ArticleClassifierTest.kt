@@ -431,4 +431,115 @@ class ArticleClassifierTest {
         )
         assertEquals("Tech", p3NoClassification.category)
     }
+
+    @Test
+    fun testOscodaHeraldStage2HtmlRegexPaywallDetectionBeforeStripping() {
+        val oscoda = loadPluginRecipe("plugins/en/News/oscodaherald.json")
+        assertEquals(2, oscoda.version)
+        assertTrue(oscoda.classification?.dropIfTagIn?.contains("paywalled") == true)
+
+        val engine = ScraperEngine().apply { loadRecipes(listOf(oscoda)) }
+
+        // 1. Paywall modal removed by removeSelectors (#checkout_form_wrapper / .jquery-modal),
+        //    but HTML_REGEX runs against raw downloaded HTML BEFORE modal/script stripping!
+        val paywallModalHtml = """
+            <html><body>
+                <h1 class="entry-title">County Budget Vote</h1>
+                <div class="entry-content">
+                    <p>Commissioners met on Tuesday to discuss next year's budget.</p>
+                </div>
+                <div id="checkout_form_wrapper" class="jquery-modal">
+                    <div class="cherryroad-media-paywall">
+                        <p>Subscribe to continue reading this article.</p>
+                    </div>
+                </div>
+            </body></html>
+        """.trimIndent()
+
+        val modalScrape = engine.processWithMetadata(
+            url = "https://www.oscodaherald.com/county-budget-vote",
+            html = paywallModalHtml,
+            enforceFilters = true
+        )
+        assertNotNull(modalScrape)
+        assertTrue(modalScrape!!.tags.contains("paywalled"))
+        assertTrue(modalScrape.shouldHide)
+
+        // 2. Case-insensitive "login to continue reading" text in raw HTML
+        val loginPromptHtml = """
+            <html><body>
+                <h1 class="entry-title">School Board Update</h1>
+                <div class="entry-content">
+                    <p>Opening paragraph teaser.</p>
+                    <p>LOGIN TO CONTINUE READING this story.</p>
+                </div>
+            </body></html>
+        """.trimIndent()
+
+        val loginScrape = engine.processWithMetadata(
+            url = "https://www.oscodaherald.com/school-board-update",
+            html = loginPromptHtml,
+            enforceFilters = true
+        )
+        assertNotNull(loginScrape)
+        assertTrue(loginScrape!!.tags.contains("paywalled"))
+        assertTrue(loginScrape.shouldHide)
+
+        // 3. Clean full article -> NOT tagged paywalled and NOT hidden
+        val cleanHtml = """
+            <html><body>
+                <h1 class="entry-title">Library Reopens</h1>
+                <div class="entry-content">
+                    <p>The county library reopened Monday morning after renovations.</p>
+                </div>
+            </body></html>
+        """.trimIndent()
+        val cleanScrape = engine.processWithMetadata(
+            url = "https://www.oscodaherald.com/library-reopens",
+            html = cleanHtml,
+            enforceFilters = true
+        )
+        assertNotNull(cleanScrape)
+        assertFalse(cleanScrape!!.tags.contains("paywalled"))
+        assertFalse(cleanScrape.shouldHide)
+
+        // 4. enforceFilters = false assigns tag but does not hide
+        val unfilteredScrape = engine.processWithMetadata(
+            url = "https://www.oscodaherald.com/county-budget-vote",
+            html = paywallModalHtml,
+            enforceFilters = false
+        )
+        assertTrue(unfilteredScrape!!.tags.contains("paywalled"))
+        assertFalse(unfilteredScrape.shouldHide)
+    }
+
+    @Test
+    fun testStage2TextRegexPageRule() {
+        val recipe = ScraperRecipe(
+            domainPattern = ".*example\\.com",
+            strategy = ExtractionStrategy.CSS_SELECTOR,
+            contentPath = listOf("article"),
+            classification = ClassificationConfig(
+                defaultCategory = "News",
+                pageRules = listOf(
+                    ClassificationRule(
+                        source = ClassificationSource.TEXT_REGEX,
+                        pattern = "members-only content",
+                        flags = "i",
+                        assignTag = "paywalled"
+                    )
+                ),
+                dropIfTagIn = listOf("paywalled")
+            )
+        )
+
+        val html = "<html><body><article><p>This is <strong>Members-Only Content</strong>.</p></article></body></html>"
+        val res = ArticleClassifier.evaluatePageHtml(
+            rawHtml = html,
+            recipe = recipe,
+            enforceFilters = true
+        )
+        assertTrue(res.tags.contains("paywalled"))
+        assertTrue(res.shouldHide)
+    }
 }

@@ -93,13 +93,39 @@ class CustomFeedsActivity : AppCompatActivity() {
                         if (installed) {
                             viewModel.refreshPlugins()
                         }
-                        viewModel.addFeed(url, type, limit, category, syncNow)
+                        addFeedWithDuplicateCheck(url, type, limit, category, syncNow)
                     }
                 } else {
-                    viewModel.addFeed(url, type, limit, category, syncNow)
+                    addFeedWithDuplicateCheck(url, type, limit, category, syncNow)
                 }
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    private fun addFeedWithDuplicateCheck(
+        url: String,
+        type: FeedType,
+        limit: Int,
+        category: String?,
+        syncNow: Boolean,
+        allowDuplicate: Boolean = false
+    ) {
+        viewModel.addFeed(
+            url = url,
+            type = type,
+            downloadLimit = limit,
+            category = category,
+            syncNow = syncNow,
+            allowDuplicate = allowDuplicate,
+            onFeedAdded = {
+                android.widget.Toast.makeText(this, "Feed added", android.widget.Toast.LENGTH_SHORT).show()
+            },
+            onDuplicate = { existingFeed ->
+                FeedSettingsActivity.showDuplicateFeedDialog(this, existingFeed) {
+                    addFeedWithDuplicateCheck(url, type, limit, category, syncNow, allowDuplicate = true)
+                }
+            }
+        )
     }
 }

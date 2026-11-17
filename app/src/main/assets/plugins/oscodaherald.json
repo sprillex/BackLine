@@ -1,0 +1,72 @@
+{
+  "domainPattern": ".*oscodaherald\\.com",
+  "strategy": "CSS_SELECTOR",
+  "contentPath": [
+    "div.entry-content",
+    "article .td-post-content",
+    "article"
+  ],
+  "titlePath": [
+    "h1.entry-title",
+    "h1"
+  ],
+  "injectRssImage": true,
+  "removeSelectors": [
+    "script",
+    "style",
+    "link",
+    "iframe",
+    "#checkout_form_wrapper",
+    ".jquery-modal",
+    ".wp-block-pdfemb-pdf-embedder-viewer"
+  ],
+  "sourceName": "The Oscoda County Herald",
+  "version": 2,
+  "summaryTruncateAfter": "Login to continue reading",
+  "summaryStripRegexes": [
+    "By\\s+[A-Za-z .'-]+?\\S+@\\S+\\.\\S+\\s*",
+    "^By\\s+[A-Z][a-z]+\\s+[A-Z][a-z]+\\s+"
+  ],
+  "classification": {
+    "defaultCategory": "Local",
+    "rssRules": [
+      {
+        "source": "RSS_CATEGORIES"
+      },
+      {
+        "source": "RSS_FIELD_EQUALS",
+        "field": "author",
+        "value": "posteditor",
+        "assignTag": "pdf_embed"
+      },
+      {
+        "source": "RSS_FIELD_REGEX",
+        "field": "title",
+        "pattern": "^Cartoon\\b",
+        "assignTag": "cartoon"
+      }
+    ],
+    "pageRules": [
+      {
+        "source": "HTML_REGEX",
+        "pattern": "Login to continue reading|cherryroad-media-paywall",
+        "flags": "i",
+        "assignTag": "paywalled"
+      }
+    ],
+    "categoryMap": {
+      "news": "Local",
+      "classifieds": "Classifieds"
+    },
+    "dropIfCategoryIn": [
+      "Classifieds",
+      "Sports",
+      "Opinion"
+    ],
+    "dropIfTagIn": [
+      "pdf_embed",
+      "cartoon",
+      "paywalled"
+    ]
+  }
+}

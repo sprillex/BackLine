@@ -19,6 +19,7 @@
     "div.embed-youtube"
   ],
   "sourceName": "The Toledo Blade",
+  "version": 2,
   "classification": {
     "defaultCategory": "News",
     "rssRules": [

@@ -16,20 +16,29 @@ import com.example.offlinebrowser.util.ArticleClassifier
 import com.example.offlinebrowser.util.FileLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
+import org.jsoup.Jsoup
+import java.net.URI
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
+sealed class AddFeedResult {
+    data class Success(val feedId: Long) : AddFeedResult()
+    data class Duplicate(val existingFeed: Feed) : AddFeedResult()
+}
+
 class FeedRepository(
-    private val context: Context,
+    private val context: Context?,
     private val feedDao: FeedDao,
     private val articleDao: ArticleDao,
     private val rssParser: RssParser? = null,
     private val htmlDownloader: HtmlDownloader? = null
 ) {
-    private val preferencesRepository = PreferencesRepository(context)
-    private val fileLogger = FileLogger(context)
-    private val scraperPluginRepository = ScraperPluginRepository(context)
-    private val imageDownloader = ImageDownloader(context)
+    private val preferencesRepository by lazy { PreferencesRepository(requireNotNull(context)) }
+    private val fileLogger by lazy { FileLogger(requireNotNull(context)) }
+    private val scraperPluginRepository by lazy { ScraperPluginRepository(requireNotNull(context)) }
+    private val imageDownloader by lazy { ImageDownloader(requireNotNull(context)) }
 
     private val logCallback: (String) -> Unit = { message ->
         if (preferencesRepository.detailedDebuggingEnabled) {
@@ -48,9 +57,32 @@ class FeedRepository(
 
     val allFeeds: Flow<List<Feed>> = feedDao.getAllFeeds()
 
-    suspend fun addFeed(url: String, type: FeedType, downloadLimit: Int = 0, category: String? = null): Long {
-        val feed = Feed(url = url, title = url, type = type, downloadLimit = downloadLimit, category = category)
-        return feedDao.insertFeed(feed)
+    suspend fun addFeed(
+        url: String,
+        type: FeedType,
+        downloadLimit: Int = 0,
+        category: String? = null,
+        allowDuplicate: Boolean = false
+    ): AddFeedResult {
+        val normalizedUrl = normalizeFeedUrl(url)
+        if (!allowDuplicate) {
+            val existing = feedDao.getFeedByUrl(normalizedUrl)
+                ?: feedDao.getAllFeeds().firstOrNull()?.firstOrNull {
+                    normalizeFeedUrl(it.url) == normalizedUrl
+                }
+            if (existing != null) {
+                return AddFeedResult.Duplicate(existing)
+            }
+        }
+        val feed = Feed(
+            url = normalizedUrl,
+            title = normalizedUrl,
+            type = type,
+            downloadLimit = downloadLimit,
+            category = category
+        )
+        val id = feedDao.insertFeed(feed)
+        return AddFeedResult.Success(id)
     }
 
     suspend fun updateFeed(feed: Feed) {
@@ -111,18 +143,16 @@ class FeedRepository(
                         enforceFilters = enforceFilters
                     )
 
-                    if (downloadResult != null) {
-                        applyAutoDownloadResult(
-                            article = article,
-                            downloadResult = downloadResult,
-                            initialImageUrl = imageUrl,
-                            initialLocalImagePath = localImagePath,
-                            articleDao = articleDao,
-                            scraperEngine = downloader.scraperEngine,
-                            enforceFilters = enforceFilters,
-                            downloadThumbnail = { url -> imageDownloader.downloadImage(url) }
-                        )
-                    }
+                    applyAutoDownloadResult(
+                        article = article,
+                        downloadResult = downloadResult,
+                        initialImageUrl = imageUrl,
+                        initialLocalImagePath = localImagePath,
+                        articleDao = articleDao,
+                        scraperEngine = downloader.scraperEngine,
+                        enforceFilters = enforceFilters,
+                        downloadThumbnail = { url -> imageDownloader.downloadImage(url) }
+                    )
                 }
             }
         } else if (feed.type == FeedType.HTML) {
@@ -216,6 +246,51 @@ class FeedRepository(
     }
 
     companion object {
+        const val SUBSTANTIVE_CONTENT_MIN_CHARS = 500
+
+        /**
+         * Normalizes feed URLs by trimming whitespace, lowercasing scheme/host,
+         * and stripping trailing path slashes while preserving query parameters.
+         */
+        fun normalizeFeedUrl(rawUrl: String): String {
+            val trimmed = rawUrl.trim()
+            if (trimmed.isEmpty()) return ""
+            return try {
+                val uri = URI(trimmed)
+                val scheme = uri.scheme?.lowercase(Locale.ROOT)
+                val host = uri.host?.lowercase(Locale.ROOT)
+                if (scheme != null && host != null) {
+                    val userInfo = uri.rawUserInfo?.let { "$it@" } ?: ""
+                    val port = if (uri.port != -1) ":${uri.port}" else ""
+                    val normalizedPath = (uri.rawPath ?: "").trimEnd('/')
+                    val query = uri.rawQuery?.let { "?$it" } ?: ""
+                    val fragment = uri.rawFragment?.let { "#$it" } ?: ""
+                    "$scheme://$userInfo$host$port$normalizedPath$query$fragment"
+                } else {
+                    trimmed.trimEnd('/')
+                }
+            } catch (e: Exception) {
+                trimmed.trimEnd('/')
+            }
+        }
+
+        fun isSubstantiveContent(html: String): Boolean {
+            if (html.isBlank()) return false
+            return Jsoup.parse(html).text().trim().length >= SUBSTANTIVE_CONTENT_MIN_CHARS
+        }
+
+        private fun parseTagsCsv(tagsCsv: String?): List<String> {
+            return tagsCsv
+                ?.split(",")
+                ?.map { it.trim() }
+                ?.filter { it.isNotEmpty() }
+                ?: emptyList()
+        }
+
+        private fun mergeTags(existingTagsCsv: String?, newTags: List<String>): List<String> {
+            return (parseTagsCsv(existingTagsCsv) + newTags.map { it.trim() }.filter { it.isNotEmpty() }).distinct()
+        }
+
         internal suspend fun ingestParsedItem(
             feed: Feed,
             item: ParsedFeedItem,
@@ -240,7 +315,8 @@ class FeedRepository(
             )
 
             val cleanedSnippet = ArticleClassifier.applySummaryRules(article.content, recipe)
-            val tagsCsv = stage1.tags.takeIf { it.isNotEmpty() }?.joinToString(",")
+            val hasSubstantiveEncodedContent =
+                item.encodedContentHtml.isNotBlank() && isSubstantiveContent(cleanedSnippet)
 
             val existing = articleDao.getArticleByUrl(feed.id, article.url)
             var localImagePath: String? = null
@@ -249,9 +325,13 @@ class FeedRepository(
                 localImagePath = existing.localImagePath
                 val effectiveImageUrl = existing.imageUrl ?: article.imageUrl
 
+                val hasStage2Rules = !recipe?.classification?.pageRules.isNullOrEmpty()
                 val keepStage2Category = existing.isCached &&
-                    !recipe?.classification?.pageRules.isNullOrEmpty() &&
+                    hasStage2Rules &&
                     !existing.category.isNullOrBlank()
+
+                val mergedTagsList = mergeTags(existing.tags, stage1.tags)
+                val mergedTagsCsv = mergedTagsList.takeIf { it.isNotEmpty() }?.joinToString(",")
 
                 val effectiveCategory = when {
                     existing.isManuallyOverridden -> existing.category
@@ -263,9 +343,18 @@ class FeedRepository(
                     keepStage2Category -> existing.subcategory
                     else -> stage1.subcategory
                 }
+                val keepStage2Hidden = existing.isHidden &&
+                    hasStage2Rules &&
+                    enforceFilters &&
+                    ArticleClassifier.shouldDrop(
+                        category = effectiveCategory,
+                        tags = mergedTagsList,
+                        config = recipe?.classification
+                    )
                 val effectiveIsHidden = when {
                     existing.isManuallyOverridden -> existing.isHidden
                     keepStage2Category -> existing.isHidden
+                    keepStage2Hidden -> true
                     else -> stage1.shouldHide
                 }
 
@@ -273,10 +362,19 @@ class FeedRepository(
                     localImagePath = downloadThumbnail(effectiveImageUrl)
                 }
 
+                val shouldUpgradeCacheFromRss = !existing.isCached &&
+                    hasSubstantiveEncodedContent &&
+                    !effectiveIsHidden
+                val updatedContent = when {
+                    existing.isCached -> existing.content
+                    else -> cleanedSnippet
+                }
+                val updatedIsCached = existing.isCached || shouldUpgradeCacheFromRss
+
                 val updated = article.copy(
                     id = existing.id,
-                    content = if (existing.isCached) existing.content else cleanedSnippet,
-                    isCached = existing.isCached,
+                    content = updatedContent,
+                    isCached = updatedIsCached,
                     localPath = existing.localPath,
                     isFavorite = existing.isFavorite,
                     isRead = existing.isRead,
@@ -285,18 +383,21 @@ class FeedRepository(
                     summary = existing.summary,
                     category = effectiveCategory,
                     subcategory = effectiveSubcategory,
-                    tags = tagsCsv ?: existing.tags,
+                    tags = mergedTagsCsv,
                     isHidden = effectiveIsHidden,
                     isManuallyOverridden = existing.isManuallyOverridden
                 )
                 articleDao.insertArticle(updated)
             } else {
+                val tagsCsv = stage1.tags.takeIf { it.isNotEmpty() }?.joinToString(",")
                 if (!stage1.shouldHide && article.imageUrl != null) {
                     localImagePath = downloadThumbnail(article.imageUrl)
                 }
+                val shouldCacheFromRss = hasSubstantiveEncodedContent && !stage1.shouldHide
                 articleDao.insertArticle(
                     article.copy(
                         content = cleanedSnippet,
+                        isCached = shouldCacheFromRss,
                         localImagePath = localImagePath,
                         category = stage1.category,
                         subcategory = stage1.subcategory,
@@ -310,7 +411,7 @@ class FeedRepository(
 
         internal suspend fun applyAutoDownloadResult(
             article: Article,
-            downloadResult: HtmlDownloadResult,
+            downloadResult: HtmlDownloadResult?,
             initialImageUrl: String?,
             initialLocalImagePath: String?,
             articleDao: ArticleDao,
@@ -318,7 +419,7 @@ class FeedRepository(
             enforceFilters: Boolean,
             downloadThumbnail: suspend (String) -> String? = { null }
         ) {
-            val scrape = downloadResult.scrapeResult
+            val scrape = downloadResult?.scrapeResult
             val resolvedCategory = if (article.isManuallyOverridden) {
                 article.category
             } else {
@@ -326,32 +427,28 @@ class FeedRepository(
             }
             val resolvedSubcategory = scrape?.subcategory ?: article.subcategory
 
-            val existingTags = article.tags
-                ?.split(",")
-                ?.map { it.trim() }
-                ?.filter { it.isNotEmpty() }
-                ?: emptyList()
-            val mergedTags = (existingTags + (scrape?.tags ?: emptyList())).distinct()
+            val mergedTags = mergeTags(article.tags, scrape?.tags ?: emptyList())
+            val mergedTagsCsv = mergedTags.takeIf { it.isNotEmpty() }?.joinToString(",")
 
             val shouldHideFromStage2 = enforceFilters &&
                 !article.isManuallyOverridden &&
-                scrape?.category != null &&
-                scrape.recipe?.classification != null &&
-                ArticleClassifier.shouldDrop(
+                scrape?.recipe?.classification != null &&
+                (scrape.shouldHide || ArticleClassifier.shouldDrop(
                     category = resolvedCategory,
                     tags = mergedTags,
                     config = scrape.recipe.classification
-                )
+                ))
 
             if (shouldHideFromStage2) {
                 articleDao.updateArticle(
                     article.copy(
                         category = resolvedCategory,
                         subcategory = resolvedSubcategory,
+                        tags = mergedTagsCsv,
                         isHidden = true
                     )
                 )
-            } else if (downloadResult.html != null) {
+            } else if (downloadResult?.html != null) {
                 val content = downloadResult.html
                 var imageUrl = initialImageUrl
                 var localImagePath = initialLocalImagePath
@@ -368,9 +465,27 @@ class FeedRepository(
                     imageUrl = imageUrl,
                     localImagePath = localImagePath,
                     category = resolvedCategory,
-                    subcategory = resolvedSubcategory
+                    subcategory = resolvedSubcategory,
+                    tags = mergedTagsCsv
                 )
                 articleDao.updateArticle(downloaded)
+            } else {
+                // Full-page download failed (e.g. HTTP 403 WAF block); preserve RSS <content:encoded> body if substantive
+                val recipe = scrape?.recipe ?: scraperEngine.findRecipeForUrl(article.url)
+                val sanitizedFallback = ArticleClassifier.applySummaryRules(article.content, recipe)
+                if (isSubstantiveContent(sanitizedFallback)) {
+                    articleDao.updateArticle(
+                        article.copy(
+                            content = sanitizedFallback,
+                            isCached = true,
+                            imageUrl = initialImageUrl,
+                            localImagePath = initialLocalImagePath,
+                            category = resolvedCategory,
+                            subcategory = resolvedSubcategory,
+                            tags = mergedTagsCsv
+                        )
+                    )
+                }
             }
         }
     }

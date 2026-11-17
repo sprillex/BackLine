@@ -1,9 +1,11 @@
 package com.example.offlinebrowser.util
 
 import com.example.offlinebrowser.data.model.ClassificationConfig
+import com.example.offlinebrowser.data.model.ClassificationRule
 import com.example.offlinebrowser.data.model.ClassificationSource
 import com.example.offlinebrowser.data.model.ScraperRecipe
 import com.google.gson.JsonElement
+import org.jsoup.Jsoup
 import java.util.Locale
 
 data class ClassificationResult(
@@ -138,7 +140,10 @@ object ArticleClassifier {
                     }
                 }
 
-                ClassificationSource.JS_VAR_PATH, null -> Unit
+                ClassificationSource.JS_VAR_PATH,
+                ClassificationSource.HTML_REGEX,
+                ClassificationSource.TEXT_REGEX,
+                null -> Unit
             }
         }
 
@@ -166,7 +171,9 @@ object ArticleClassifier {
         existingCategory: String? = null,
         existingSubcategory: String? = null,
         existingTags: List<String> = emptyList(),
-        enforceFilters: Boolean = true
+        enforceFilters: Boolean = true,
+        rawHtml: String? = null,
+        plainText: String? = null
     ): ClassificationResult {
         val config = recipe?.classification
             ?: return ClassificationResult(existingCategory, existingSubcategory, existingTags, false)
@@ -200,14 +207,83 @@ object ArticleClassifier {
         }
 
         val resolvedSubcategory = extractedSubcategory ?: existingSubcategory
-        val shouldHide = enforceFilters && shouldDrop(resolvedCategory, existingTags, config)
+        val tags = linkedSetOf<String>().apply { addAll(existingTags) }
+        if (rawHtml != null || plainText != null) {
+            tags.addAll(evaluateHtmlPageRules(rawHtml.orEmpty(), plainText, config.pageRules.orEmpty()))
+        }
+        val tagList = tags.toList()
+        val shouldHide = enforceFilters && shouldDrop(resolvedCategory, tagList, config)
 
         return ClassificationResult(
             category = resolvedCategory,
             subcategory = resolvedSubcategory,
-            tags = existingTags,
+            tags = tagList,
             shouldHide = shouldHide
         )
+    }
+
+    /**
+     * Evaluates Stage 2 HTML/text regex page rules against the raw downloaded HTML
+     * and/or pre-stripping plain text.
+     */
+    fun evaluatePageHtml(
+        rawHtml: String,
+        plainText: String? = null,
+        recipe: ScraperRecipe?,
+        existingCategory: String? = null,
+        existingSubcategory: String? = null,
+        existingTags: List<String> = emptyList(),
+        enforceFilters: Boolean = true
+    ): ClassificationResult {
+        val config = recipe?.classification
+            ?: return ClassificationResult(existingCategory, existingSubcategory, existingTags, false)
+
+        val tags = linkedSetOf<String>().apply { addAll(existingTags) }
+        tags.addAll(evaluateHtmlPageRules(rawHtml, plainText, config.pageRules.orEmpty()))
+
+        val tagList = tags.toList()
+        val shouldHide = enforceFilters && shouldDrop(existingCategory, tagList, config)
+
+        return ClassificationResult(
+            category = existingCategory,
+            subcategory = existingSubcategory,
+            tags = tagList,
+            shouldHide = shouldHide
+        )
+    }
+
+    private fun evaluateHtmlPageRules(
+        rawHtml: String,
+        plainText: String?,
+        pageRules: List<ClassificationRule>
+    ): List<String> {
+        val matchedTags = linkedSetOf<String>()
+        var cachedPlainText: String? = plainText
+
+        for (rule in pageRules) {
+            val pattern = rule.pattern
+            if (pattern.isNullOrEmpty()) continue
+
+            val targetText = when (rule.source) {
+                ClassificationSource.HTML_REGEX -> rawHtml
+                ClassificationSource.TEXT_REGEX -> {
+                    if (cachedPlainText == null) {
+                        cachedPlainText = Jsoup.parse(rawHtml).text()
+                    }
+                    cachedPlainText
+                }
+                else -> null
+            } ?: continue
+
+            val regex = compileRegex(pattern, rule.flags)
+            if (regex != null && regex.containsMatchIn(targetText)) {
+                val tag = rule.assignTag?.trim()
+                if (!tag.isNullOrEmpty()) {
+                    matchedTags.add(tag)
+                }
+            }
+        }
+        return matchedTags.toList()
     }
 
     fun shouldDrop(

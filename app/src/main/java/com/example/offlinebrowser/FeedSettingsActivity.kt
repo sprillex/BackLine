@@ -1,10 +1,11 @@
 package com.example.offlinebrowser
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
-import android.widget.EditText
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -92,4 +93,20 @@ class FeedSettingsActivity : AppCompatActivity() {
         viewModel.refreshPlugins()
     }
 
+    companion object {
+        fun showDuplicateFeedDialog(
+            context: Context,
+            existingFeed: Feed,
+            onAddAnyway: () -> Unit
+        ) {
+            AlertDialog.Builder(context)
+                .setTitle("Duplicate Feed")
+                .setMessage("This feed URL is already subscribed (${existingFeed.title}). Do you want to add it anyway?")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Add Anyway") { _, _ ->
+                    onAddAnyway()
+                }
+                .show()
+        }
+    }
 }

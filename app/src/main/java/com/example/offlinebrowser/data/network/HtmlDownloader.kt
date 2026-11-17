@@ -2,12 +2,14 @@ package com.example.offlinebrowser.data.network
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
 
 data class HtmlDownloadResult(
     val html: String?,
     val finalUrl: String,
-    val scrapeResult: ScrapeResult? = null
+    val scrapeResult: ScrapeResult? = null,
+    val httpStatusCode: Int? = null
 )
 
 class HtmlDownloader(private val logger: ((String) -> Unit)? = null) {
@@ -63,6 +65,14 @@ class HtmlDownloader(private val logger: ((String) -> Unit)? = null) {
                     html = resolvedHtml,
                     finalUrl = finalUrl,
                     scrapeResult = scrapeResult
+                )
+            } catch (e: HttpStatusException) {
+                logger?.invoke("HTTP ${e.statusCode} while scraping URL $url: ${e.message}")
+                HtmlDownloadResult(
+                    html = null,
+                    finalUrl = url,
+                    scrapeResult = null,
+                    httpStatusCode = e.statusCode
                 )
             } catch (e: Exception) {
                 e.printStackTrace()

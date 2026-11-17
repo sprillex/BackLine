@@ -1,6 +1,7 @@
 package com.example.offlinebrowser.data.repository
 
 import android.content.Context
+import com.example.offlinebrowser.data.local.FeedDao
 import com.example.offlinebrowser.data.local.OfflineDatabase
 import com.example.offlinebrowser.data.model.AppConfig
 import com.example.offlinebrowser.data.model.Feed
@@ -153,26 +154,7 @@ class ConfigRepository(private val context: Context) {
         preferencesRepository.enforcePluginFilters = config.settings.enforcePluginFilters ?: true
 
         // Restore Feeds
-        val existingFeeds = feedDao.getAllFeeds().first().toMutableList()
-
-        config.feeds.forEach { feedConfig ->
-            // Check if exists to preserve ID
-            val existing = existingFeeds.find { it.url == feedConfig.url }
-
-            if (existing != null) {
-                existingFeeds.remove(existing)
-            }
-
-            val feed = Feed(
-                id = existing?.id ?: 0,
-                url = feedConfig.url,
-                title = feedConfig.title,
-                type = try { FeedType.valueOf(feedConfig.type) } catch (e: Exception) { FeedType.RSS },
-                downloadLimit = feedConfig.downloadLimit,
-                category = feedConfig.category
-            )
-            feedDao.insertFeed(feed)
-        }
+        restoreFeeds(config.feeds, feedDao)
 
         // Restore Weather
         val existingWeather = weatherDao.getAllWeather().first().toMutableList()
@@ -196,6 +178,33 @@ class ConfigRepository(private val context: Context) {
                 lastUpdated = 0
             )
             weatherDao.insertWeather(weather)
+        }
+    }
+
+    companion object {
+        internal suspend fun restoreFeeds(feedConfigs: List<FeedConfig>, feedDao: FeedDao) {
+            val existingFeeds = feedDao.getAllFeeds().first()
+            val seenNormalizedUrls = existingFeeds
+                .map { FeedRepository.normalizeFeedUrl(it.url) }
+                .filter { it.isNotEmpty() }
+                .toMutableSet()
+
+            feedConfigs.forEach { feedConfig ->
+                val normalizedUrl = FeedRepository.normalizeFeedUrl(feedConfig.url)
+                if (normalizedUrl.isEmpty() || !seenNormalizedUrls.add(normalizedUrl)) {
+                    return@forEach
+                }
+
+                val feed = Feed(
+                    id = 0,
+                    url = normalizedUrl,
+                    title = feedConfig.title,
+                    type = try { FeedType.valueOf(feedConfig.type) } catch (e: Exception) { FeedType.RSS },
+                    downloadLimit = feedConfig.downloadLimit,
+                    category = feedConfig.category
+                )
+                feedDao.insertFeed(feed)
+            }
         }
     }
 }

@@ -124,16 +124,14 @@ class SettingsActivity : AppCompatActivity() {
         uri?.let {
             CoroutineScope(Dispatchers.IO).launch {
                 try {
-                    val logFile = FileLogger(this@SettingsActivity).logFile
-                    if (logFile.exists()) {
-                         contentResolver.openOutputStream(it)?.use { output ->
-                             logFile.inputStream().use { input ->
-                                 input.copyTo(output)
-                             }
-                         }
-                         withContext(Dispatchers.Main) {
-                             Toast.makeText(this@SettingsActivity, "Logs saved successfully", Toast.LENGTH_SHORT).show()
-                         }
+                    val fileLogger = FileLogger(this@SettingsActivity)
+                    if (fileLogger.logFile.exists() || fileLogger.backupLogFile.exists()) {
+                        contentResolver.openOutputStream(it)?.use { output ->
+                            fileLogger.exportTo(output)
+                        }
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@SettingsActivity, "Logs saved successfully", Toast.LENGTH_SHORT).show()
+                        }
                     } else {
                         withContext(Dispatchers.Main) {
                             Toast.makeText(this@SettingsActivity, "No logs to save", Toast.LENGTH_SHORT).show()

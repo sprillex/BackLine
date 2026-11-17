@@ -401,4 +401,153 @@ class ClassificationPipelineIntegrationTest {
         assertEquals(false, parsed.showHiddenArticles ?: false)
         assertEquals(true, parsed.enforcePluginFilters ?: true)
     }
+
+    @Test
+    fun testOscodaPaywallStage2HidesPersistsTagAndSkipsCachingStub() = runBlocking {
+        val oscoda = loadPluginRecipe("plugins/en/News/oscodaherald.json")
+        val engine = ScraperEngine().apply { loadRecipes(listOf(oscoda)) }
+        val dao = FakeArticleDao()
+
+        val feed = Feed(id = 3, url = "https://www.oscodaherald.com/feed", title = "Oscoda Herald", type = FeedType.RSS, downloadLimit = 5)
+        val rssXml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <rss version="2.0">
+              <channel>
+                <title>Oscoda Herald</title>
+                <link>https://www.oscodaherald.com/</link>
+                <description>Local</description>
+                <item>
+                  <title>Road Commission Approves Plan</title>
+                  <link>https://www.oscodaherald.com/road-plan</link>
+                  <category>News</category>
+                  <description><![CDATA[<p>Short teaser before paywall.</p>]]></description>
+                </item>
+              </channel>
+            </rss>
+        """.trimIndent()
+
+        val item = RssParser().parseStream(feed, ByteArrayInputStream(rssXml.toByteArray())).single()
+        FeedRepository.ingestParsedItem(feed, item, dao, engine, enforceFilters = true)
+
+        val queued = dao.getTopUncachedArticles(3, 5).single()
+        assertFalse(queued.isHidden)
+        assertFalse(queued.isCached)
+
+        val paywalledPage = """
+            <html><body>
+                <h1 class="entry-title">Road Commission Approves Plan</h1>
+                <div class="entry-content">
+                    <p>Short teaser before paywall.</p>
+                    <p>Login to continue reading</p>
+                </div>
+                <div id="checkout_form_wrapper" class="cherryroad-media-paywall">Subscribe now</div>
+            </body></html>
+        """.trimIndent()
+
+        val scrapeResult = engine.processWithMetadata(queued.url, paywalledPage, null, enforceFilters = true)
+        FeedRepository.applyAutoDownloadResult(
+            article = queued,
+            downloadResult = HtmlDownloadResult(scrapeResult?.html, queued.url, scrapeResult),
+            initialImageUrl = queued.imageUrl,
+            initialLocalImagePath = queued.localImagePath,
+            articleDao = dao,
+            scraperEngine = engine,
+            enforceFilters = true
+        )
+
+        val updated = dao.getArticleById(queued.id)!!
+        assertTrue(updated.isHidden)
+        assertEquals("paywalled", updated.tags)
+        assertFalse(updated.isCached)
+        assertEquals("<p>Short teaser before paywall.</p>", updated.content)
+
+        // Subsequent RSS sync must keep Stage 2 paywalled hide status & tag even though isCached is false
+        FeedRepository.ingestParsedItem(feed, item, dao, engine, enforceFilters = true)
+        val afterResync = dao.getArticleById(queued.id)!!
+        assertTrue(afterResync.isHidden)
+        assertTrue(afterResync.tags?.contains("paywalled") == true)
+    }
+
+    @Test
+    fun testRssContentEncodedExtractionAndHttp403FallbackCachesSubstantiveBody() = runBlocking {
+        val mlive = loadPluginRecipe("plugins/en/News/mlive.json")
+        val engine = ScraperEngine().apply { loadRecipes(listOf(mlive)) }
+        val dao = FakeArticleDao()
+
+        val longParagraph = "Michigan lawmakers advanced a comprehensive infrastructure funding bill after months of bipartisan committee hearings in Lansing, outlining bridge repairs and rural road maintenance across northern counties. ".repeat(4)
+        assertTrue(longParagraph.length >= 500)
+
+        val rssXml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+              <channel>
+                <title>MLive</title>
+                <link>https://www.mlive.com/</link>
+                <description>News</description>
+                <item>
+                  <title>Infrastructure Bill Advances</title>
+                  <link>https://www.mlive.com/politics/2026/11/infra-bill.html</link>
+                  <description><![CDATA[<p>Short teaser only.</p>]]></description>
+                  <content:encoded><![CDATA[<p>$longParagraph</p>]]></content:encoded>
+                </item>
+                <item>
+                  <title>Brief Notice</title>
+                  <link>https://www.mlive.com/news/2026/11/brief.html</link>
+                  <description><![CDATA[<p>Short notice without encoded body.</p>]]></description>
+                </item>
+              </channel>
+            </rss>
+        """.trimIndent()
+
+        val feed = Feed(id = 4, url = "https://www.mlive.com/arc/outboundfeeds/rss/", title = "MLive", type = FeedType.RSS, downloadLimit = 5)
+        val parsed = RssParser().parseStream(feed, ByteArrayInputStream(rssXml.toByteArray()))
+        assertEquals(2, parsed.size)
+
+        val longItem = parsed[0]
+        val shortItem = parsed[1]
+
+        // RssParser must prefer <content:encoded> over <description> when available, and fall back to <description>
+        assertTrue(longItem.article.content.contains("bipartisan committee hearings"))
+        assertEquals("<p>Short notice without encoded body.</p>", shortItem.article.content)
+
+        // Ingest marks substantive <content:encoded> item as cached immediately
+        FeedRepository.ingestParsedItem(feed, longItem, dao, engine, enforceFilters = true)
+        FeedRepository.ingestParsedItem(feed, shortItem, dao, engine, enforceFilters = true)
+
+        val ingestedLong = dao.getArticleByUrl(4, longItem.article.url)!!
+        assertTrue(ingestedLong.isCached)
+        assertTrue(ingestedLong.content.contains("bipartisan committee hearings"))
+
+        val ingestedShort = dao.getArticleByUrl(4, shortItem.article.url)!!
+        assertFalse(ingestedShort.isCached)
+
+        // Also verify applyAutoDownloadResult preserves substantive <content:encoded> on HTTP 403 failure
+        dao.insertArticle(ingestedLong.copy(isCached = false))
+        val uncachedLong = dao.getArticleById(ingestedLong.id)!!
+        FeedRepository.applyAutoDownloadResult(
+            article = uncachedLong,
+            downloadResult = HtmlDownloadResult(html = null, finalUrl = uncachedLong.url, scrapeResult = null, httpStatusCode = 403),
+            initialImageUrl = uncachedLong.imageUrl,
+            initialLocalImagePath = uncachedLong.localImagePath,
+            articleDao = dao,
+            scraperEngine = engine,
+            enforceFilters = true
+        )
+        val fallbackUpdated = dao.getArticleById(ingestedLong.id)!!
+        assertTrue(fallbackUpdated.isCached)
+        assertTrue(fallbackUpdated.content.contains("bipartisan committee hearings"))
+
+        // Short teaser without substantive body remains uncached on HTTP 403
+        FeedRepository.applyAutoDownloadResult(
+            article = ingestedShort,
+            downloadResult = HtmlDownloadResult(html = null, finalUrl = ingestedShort.url, scrapeResult = null, httpStatusCode = 403),
+            initialImageUrl = ingestedShort.imageUrl,
+            initialLocalImagePath = ingestedShort.localImagePath,
+            articleDao = dao,
+            scraperEngine = engine,
+            enforceFilters = true
+        )
+        val shortAfter403 = dao.getArticleById(ingestedShort.id)!!
+        assertFalse(shortAfter403.isCached)
+    }
 }

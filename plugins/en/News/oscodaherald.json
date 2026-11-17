@@ -21,6 +21,7 @@
     ".wp-block-pdfemb-pdf-embedder-viewer"
   ],
   "sourceName": "The Oscoda County Herald",
+  "version": 2,
   "summaryTruncateAfter": "Login to continue reading",
   "summaryStripRegexes": [
     "By\\s+[A-Za-z .'-]+?\\S+@\\S+\\.\\S+\\s*",
@@ -45,6 +46,14 @@
         "assignTag": "cartoon"
       }
     ],
+    "pageRules": [
+      {
+        "source": "HTML_REGEX",
+        "pattern": "Login to continue reading|cherryroad-media-paywall",
+        "flags": "i",
+        "assignTag": "paywalled"
+      }
+    ],
     "categoryMap": {
       "news": "Local",
       "classifieds": "Classifieds"
@@ -56,7 +65,8 @@
     ],
     "dropIfTagIn": [
       "pdf_embed",
-      "cartoon"
+      "cartoon",
+      "paywalled"
     ]
   }
 }

@@ -11,6 +11,7 @@ import com.example.offlinebrowser.data.model.FeedType
 import com.example.offlinebrowser.data.model.Weather
 import com.example.offlinebrowser.data.network.HtmlDownloader
 import com.example.offlinebrowser.data.network.RssParser
+import com.example.offlinebrowser.data.repository.AddFeedResult
 import com.example.offlinebrowser.data.repository.ArticleRepository
 import com.example.offlinebrowser.data.repository.FeedRepository
 import com.example.offlinebrowser.data.repository.PreferencesRepository
@@ -133,15 +134,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _searchQuery.value = query
     }
 
-    fun addFeed(url: String, type: FeedType, downloadLimit: Int = 0, category: String? = null, syncNow: Boolean = false, onFeedAdded: ((Long) -> Unit)? = null) {
+    fun addFeed(
+        url: String,
+        type: FeedType,
+        downloadLimit: Int = 0,
+        category: String? = null,
+        syncNow: Boolean = false,
+        allowDuplicate: Boolean = false,
+        onFeedAdded: ((Long) -> Unit)? = null,
+        onDuplicate: ((Feed) -> Unit)? = null
+    ) {
         viewModelScope.launch {
-            val id = feedRepository.addFeed(url, type, downloadLimit, category)
-            onFeedAdded?.invoke(id)
-            if (syncNow) {
-                 val feed = feedRepository.getFeedById(id.toInt())
-                 if (feed != null) {
-                     syncFeed(feed)
-                 }
+            when (val result = feedRepository.addFeed(url, type, downloadLimit, category, allowDuplicate)) {
+                is AddFeedResult.Success -> {
+                    onFeedAdded?.invoke(result.feedId)
+                    if (syncNow) {
+                        val feed = feedRepository.getFeedById(result.feedId.toInt())
+                        if (feed != null) {
+                            syncFeed(feed)
+                        }
+                    }
+                }
+                is AddFeedResult.Duplicate -> {
+                    onDuplicate?.invoke(result.existingFeed)
+                }
             }
         }
     }

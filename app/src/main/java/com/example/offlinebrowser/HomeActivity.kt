@@ -564,13 +564,9 @@ class HomeActivity : AppCompatActivity() {
 
     private fun showDebugLog() {
         lifecycleScope.launch {
-            val logFile = java.io.File(filesDir, "debug_log.txt")
+            val fileLogger = com.example.offlinebrowser.util.FileLogger(this@HomeActivity)
             val content = withContext(Dispatchers.IO) {
-                if (logFile.exists()) {
-                    logFile.readText()
-                } else {
-                    "No logs found."
-                }
+                fileLogger.readTail().ifBlank { "No logs found." }
             }
 
             val textView = TextView(this@HomeActivity).apply {
@@ -588,10 +584,11 @@ class HomeActivity : AppCompatActivity() {
                 .setView(scrollView)
                 .setPositiveButton("Close", null)
                 .setNeutralButton("Clear") { _, _ ->
-                     if (logFile.exists()) {
-                         logFile.delete()
-                         Toast.makeText(this@HomeActivity, "Logs cleared", Toast.LENGTH_SHORT).show()
-                     }
+                    val hadLogs = fileLogger.logFile.exists() || fileLogger.backupLogFile.exists()
+                    fileLogger.clear()
+                    if (hadLogs) {
+                        Toast.makeText(this@HomeActivity, "Logs cleared", Toast.LENGTH_SHORT).show()
+                    }
                 }
                 .show()
         }

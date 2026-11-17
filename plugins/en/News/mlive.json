@@ -22,6 +22,7 @@
     ".newsletter-signup"
   ],
   "sourceName": "MLive",
+  "version": 2,
   "classification": {
     "defaultCategory": "News",
     "rssRules": [

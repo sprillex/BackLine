@@ -17,6 +17,9 @@ interface FeedDao {
     @Query("SELECT * FROM feeds WHERE id = :id")
     suspend fun getFeedById(id: Int): Feed?
 
+    @Query("SELECT * FROM feeds WHERE LOWER(TRIM(url)) = LOWER(TRIM(:url)) LIMIT 1")
+    suspend fun getFeedByUrl(url: String): Feed?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertFeed(feed: Feed): Long
 

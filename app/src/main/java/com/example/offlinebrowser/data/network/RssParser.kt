@@ -18,7 +18,8 @@ data class ParsedFeedItem(
     val categories: List<String> = emptyList(),
     val author: String? = null,
     val rawContentHtml: String = "",
-    val mediaCount: Int = 0
+    val mediaCount: Int = 0,
+    val encodedContentHtml: String = ""
 )
 
 class RssParser(private val logger: ((String) -> Unit)? = null) {
@@ -64,12 +65,13 @@ class RssParser(private val logger: ((String) -> Unit)? = null) {
     fun parseSyndFeed(feed: Feed, syndFeed: SyndFeed): List<ParsedFeedItem> {
         return syndFeed.entries.map { entry ->
             val descriptionHtml = entry.description?.value ?: ""
-            val contentParts = entry.contents?.mapNotNull { it.value } ?: emptyList()
+            val contentParts = entry.contents?.mapNotNull { it.value?.takeIf { v -> v.isNotBlank() } } ?: emptyList()
+            val encodedContentHtml = contentParts.joinToString("\n")
             val rawContentHtml = (listOf(descriptionHtml) + contentParts)
                 .filter { it.isNotBlank() }
                 .distinct()
                 .joinToString("\n")
-            val primaryContent = descriptionHtml.ifBlank { contentParts.firstOrNull() ?: "" }
+            val primaryContent = encodedContentHtml.ifBlank { descriptionHtml }
 
             val categories = entry.categories
                 ?.mapNotNull { it.name?.trim() }
@@ -93,7 +95,8 @@ class RssParser(private val logger: ((String) -> Unit)? = null) {
                 categories = categories,
                 author = author,
                 rawContentHtml = rawContentHtml,
-                mediaCount = countMedia(entry)
+                mediaCount = countMedia(entry),
+                encodedContentHtml = encodedContentHtml
             )
         }
     }

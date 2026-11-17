@@ -76,20 +76,26 @@ class SuggestedFeedsActivity : AppCompatActivity() {
         }
     }
 
-    private fun addSuggestedFeed(suggestedFeed: SuggestedFeed) {
+    private fun addSuggestedFeed(suggestedFeed: SuggestedFeed, allowDuplicate: Boolean = false) {
         viewModel.addFeed(
             url = suggestedFeed.url,
             type = FeedType.RSS, // Assuming RSS for now based on CSV
             downloadLimit = 0,
             category = suggestedFeed.category,
             syncNow = true,
+            allowDuplicate = allowDuplicate,
             onFeedAdded = { feedId ->
+                Toast.makeText(this, "Added ${suggestedFeed.name}", Toast.LENGTH_SHORT).show()
                 val intent = Intent(this, EditFeedActivity::class.java)
                 intent.putExtra("FEED_ID", feedId.toInt())
                 startActivity(intent)
+            },
+            onDuplicate = { existingFeed ->
+                FeedSettingsActivity.showDuplicateFeedDialog(this, existingFeed) {
+                    addSuggestedFeed(suggestedFeed, allowDuplicate = true)
+                }
             }
         )
-        Toast.makeText(this, "Added ${suggestedFeed.name}", Toast.LENGTH_SHORT).show()
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {

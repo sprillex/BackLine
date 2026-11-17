@@ -6,7 +6,9 @@ enum class ClassificationSource {
     RSS_FIELD_EQUALS,
     RSS_FIELD_REGEX,
     RSS_MEDIA_COUNT,
-    JS_VAR_PATH
+    JS_VAR_PATH,
+    HTML_REGEX,
+    TEXT_REGEX
 }
 
 data class ClassificationConfig(
