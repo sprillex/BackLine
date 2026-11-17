@@ -1,19 +1,25 @@
 package com.example.offlinebrowser
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import androidx.webkit.WebSettingsCompat
-import androidx.webkit.WebViewFeature
 import com.example.offlinebrowser.data.local.OfflineDatabase
+import com.example.offlinebrowser.data.model.Article
+import com.example.offlinebrowser.data.network.HtmlDownloader
+import com.example.offlinebrowser.data.network.ImageDownloader
 import com.example.offlinebrowser.data.repository.PreferencesRepository
+import com.example.offlinebrowser.data.repository.ScraperPluginRepository
+import com.example.offlinebrowser.util.NetworkMonitor
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import java.io.ByteArrayInputStream
 import kotlinx.coroutines.Dispatchers
@@ -25,15 +31,21 @@ class ArticleViewerActivity : AppCompatActivity() {
 
     private var currentArticleUrl: String? = null
     private var currentArticleId: Int = -1
+    private var isRetryingDownload = false
 
-
-    private var isDarkMode = false
+    private lateinit var webView: WebView
+    private lateinit var partialBanner: View
+    private lateinit var btnOpenInBrowser: Button
+    private lateinit var btnRetryDownload: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_article_viewer)
 
-        val webView = findViewById<WebView>(R.id.webView)
+        webView = findViewById(R.id.webView)
+        partialBanner = findViewById(R.id.partial_article_banner)
+        btnOpenInBrowser = findViewById(R.id.btn_open_in_browser)
+        btnRetryDownload = findViewById(R.id.btn_retry_download)
         val fabDarkMode = findViewById<FloatingActionButton>(R.id.fab_dark_mode)
 
         // Do not block network images globally; we will filter them in WebViewClient to allow local/cached content
@@ -42,6 +54,22 @@ class ArticleViewerActivity : AppCompatActivity() {
         webView.settings.allowFileAccess = true
 
         webView.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(
+                view: WebView?,
+                request: WebResourceRequest?
+            ): Boolean {
+                val url = request?.url ?: return false
+                if (url.scheme == "app" && url.host == RETRY_DOWNLOAD_HOST) {
+                    retryArticleDownload()
+                    return true
+                }
+                if (url.scheme == "http" || url.scheme == "https") {
+                    openInBrowser(url.toString())
+                    return true
+                }
+                return false
+            }
+
             override fun shouldInterceptRequest(
                 view: WebView?,
                 request: WebResourceRequest?
@@ -59,6 +87,14 @@ class ArticleViewerActivity : AppCompatActivity() {
         val preferencesRepository = PreferencesRepository(this)
         webView.settings.loadsImagesAutomatically = preferencesRepository.showImagesInArticleView
 
+        btnOpenInBrowser.setOnClickListener {
+            openInBrowser(currentArticleUrl)
+        }
+
+        btnRetryDownload.setOnClickListener {
+            retryArticleDownload()
+        }
+
         val articleId = intent.getIntExtra("ARTICLE_ID", -1)
         if (articleId != -1) {
             currentArticleId = articleId
@@ -72,31 +108,47 @@ class ArticleViewerActivity : AppCompatActivity() {
         setupBottomNav()
     }
 
+    private fun openInBrowser(rawUrl: String?) {
+        val targetUrl = rawUrl?.takeIf { it.isNotBlank() } ?: return
+        val sanitizedUrl = HtmlDownloader.sanitizeUrl(targetUrl)
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(sanitizedUrl))
+            startActivity(intent)
+        } catch (_: ActivityNotFoundException) {
+            Toast.makeText(this, "No browser app available", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Unable to open URL: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private fun loadArticleContent(webView: WebView, articleId: Int) {
         val database = OfflineDatabase.getDatabase(this)
         lifecycleScope.launch {
-            val feed = withContext(Dispatchers.IO) {
+            val article = withContext(Dispatchers.IO) {
                 database.articleDao().getArticleById(articleId)
             }
 
-            if (feed != null) {
-                currentArticleUrl = feed.url
-                var content = feed.content
+            if (article != null) {
+                currentArticleUrl = article.url
+                val showPartialBanner = shouldShowPartialBanner(article)
+                partialBanner.visibility = if (showPartialBanner) View.VISIBLE else View.GONE
 
-                if (!feed.summary.isNullOrEmpty()) {
-                    content = injectSummaryHtml(content, feed.summary)
+                var content = article.content
+
+                if (!article.summary.isNullOrEmpty()) {
+                    content = injectSummaryHtml(content, article.summary)
                 }
 
-                if (feed.localImagePath != null) {
+                if (article.localImagePath != null) {
                     try {
                         val doc = Jsoup.parse(content)
                         var changed = false
 
-                        if (feed.imageUrl != null) {
+                        if (article.imageUrl != null) {
                             val images = doc.select("img[src]")
                             for (img in images) {
-                                if (img.attr("src") == feed.imageUrl) {
-                                    img.attr("src", "file://${feed.localImagePath}")
+                                if (img.attr("src") == article.imageUrl) {
+                                    img.attr("src", "file://${article.localImagePath}")
                                     changed = true
                                 }
                             }
@@ -105,7 +157,7 @@ class ArticleViewerActivity : AppCompatActivity() {
                         if (!changed) {
                             val injectedImage = doc.select("img[alt='Article Image']").first()
                             if (injectedImage != null) {
-                                injectedImage.attr("src", "file://${feed.localImagePath}")
+                                injectedImage.attr("src", "file://${article.localImagePath}")
                                 changed = true
                             }
                         }
@@ -115,14 +167,118 @@ class ArticleViewerActivity : AppCompatActivity() {
                         }
                     } catch (e: Exception) {
                         e.printStackTrace()
-                        if (feed.imageUrl != null) {
-                            content = content.replace(feed.imageUrl, "file://${feed.localImagePath}")
+                        if (article.imageUrl != null) {
+                            content = content.replace(article.imageUrl, "file://${article.localImagePath}")
                         }
                     }
                 }
+
+                if (showPartialBanner) {
+                    content = injectPartialFooterHtml(content, article.url)
+                }
+
                 webView.loadDataWithBaseURL("file:///", content, "text/html", "UTF-8", null)
             }
         }
+    }
+
+    private fun retryArticleDownload() {
+        if (currentArticleId == -1 || isRetryingDownload) return
+
+        val prefs = PreferencesRepository(this)
+        val networkMonitor = NetworkMonitor(this)
+        if (prefs.wifiOnly && !networkMonitor.isWifiConnected()) {
+            Toast.makeText(this, "WiFi is required to re-download", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        isRetryingDownload = true
+        btnRetryDownload.isEnabled = false
+        btnRetryDownload.text = "Downloading..."
+        Toast.makeText(this, "Retrying full article download...", Toast.LENGTH_SHORT).show()
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val database = OfflineDatabase.getDatabase(this@ArticleViewerActivity)
+                val article = database.articleDao().getArticleById(currentArticleId)
+                if (article == null) {
+                    withContext(Dispatchers.Main) {
+                        resetRetryButton()
+                    }
+                    return@launch
+                }
+
+                val scraperPluginRepository = ScraperPluginRepository(this@ArticleViewerActivity)
+                val htmlDownloader = HtmlDownloader(context = applicationContext)
+                scraperPluginRepository.ensureDefaultPlugins()
+                htmlDownloader.scraperEngine.loadRecipes(scraperPluginRepository.loadAllRecipes())
+
+                var localImagePath = article.localImagePath
+                var imageUrl = article.imageUrl
+                if (imageUrl != null && localImagePath == null) {
+                    localImagePath = ImageDownloader(this@ArticleViewerActivity).downloadImage(imageUrl)
+                }
+                val imagePathForInjection = if (localImagePath != null) "file://$localImagePath" else imageUrl
+
+                val downloadResult = htmlDownloader.downloadHtmlWithMetadata(
+                    url = article.url,
+                    rssImageUrl = imagePathForInjection,
+                    enforceFilters = prefs.enforcePluginFilters
+                )
+
+                val newHtml = downloadResult?.html
+                if (newHtml != null) {
+                    if (imageUrl == null) {
+                        imageUrl = htmlDownloader.scraperEngine.extractImage(newHtml)
+                        if (imageUrl != null && localImagePath == null) {
+                            localImagePath = ImageDownloader(this@ArticleViewerActivity).downloadImage(imageUrl)
+                        }
+                    }
+
+                    val updatedCategory = if (article.isManuallyOverridden) {
+                        article.category
+                    } else {
+                        downloadResult.scrapeResult?.category ?: article.category
+                    }
+                    val updatedArticle = article.copy(
+                        content = newHtml,
+                        isCached = true,
+                        imageUrl = imageUrl,
+                        localImagePath = localImagePath,
+                        category = updatedCategory,
+                        subcategory = downloadResult.scrapeResult?.subcategory ?: article.subcategory
+                    )
+                    database.articleDao().updateArticle(updatedArticle)
+
+                    withContext(Dispatchers.Main) {
+                        resetRetryButton()
+                        loadArticleContent(webView, article.id)
+                        Toast.makeText(this@ArticleViewerActivity, "Full article downloaded", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        resetRetryButton()
+                        Toast.makeText(
+                            this@ArticleViewerActivity,
+                            "Could not download full article. Open in browser to read.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    resetRetryButton()
+                    Toast.makeText(this@ArticleViewerActivity, "Failed to download article", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun resetRetryButton() {
+        isRetryingDownload = false
+        btnRetryDownload.isEnabled = true
+        btnRetryDownload.setText(R.string.retry_download)
     }
 
     private fun injectSummaryHtml(html: String, summary: String, modelName: String? = null): String {
@@ -182,7 +338,7 @@ class ArticleViewerActivity : AppCompatActivity() {
 
             if (article != null) {
                 if (article.summary.isNullOrEmpty()) {
-                    val pluginRepo = com.example.offlinebrowser.data.repository.ScraperPluginRepository(this@ArticleViewerActivity)
+                    val pluginRepo = ScraperPluginRepository(this@ArticleViewerActivity)
                     val matchingRecipe = pluginRepo.loadAllRecipes().firstOrNull { recipe ->
                         try {
                             Regex(recipe.domainPattern).containsMatchIn(article.url)
@@ -197,14 +353,12 @@ class ArticleViewerActivity : AppCompatActivity() {
                 }
 
                 withContext(Dispatchers.Main) {
-                    val webView = findViewById<WebView>(R.id.webView)
                     loadArticleContent(webView, article.id)
                     Toast.makeText(this@ArticleViewerActivity, "Summary updated", Toast.LENGTH_SHORT).show()
                 }
             }
         }
     }
-
 
     private val importPluginLauncher = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
@@ -215,7 +369,7 @@ class ArticleViewerActivity : AppCompatActivity() {
 
                     if (json != null) {
                         val gson = com.google.gson.Gson()
-                        val recipe = gson.fromJson(json, com.example.offlinebrowser.data.model.ScraperRecipe::class.java)
+                        gson.fromJson(json, com.example.offlinebrowser.data.model.ScraperRecipe::class.java)
 
                         val fileName = "plugin_${System.currentTimeMillis()}.json"
                         val file = java.io.File(filesDir, "plugins/$fileName")
@@ -259,7 +413,7 @@ class ArticleViewerActivity : AppCompatActivity() {
                     3 -> {
                         // Edit plugin
                         lifecycleScope.launch(Dispatchers.IO) {
-                            val repo = com.example.offlinebrowser.data.repository.ScraperPluginRepository(this@ArticleViewerActivity)
+                            val repo = ScraperPluginRepository(this@ArticleViewerActivity)
                             val plugins = repo.loadAllRecipes()
                             val match = plugins.find { Regex(it.domainPattern).containsMatchIn(url) }
 
@@ -295,7 +449,7 @@ class ArticleViewerActivity : AppCompatActivity() {
 
         // Check WiFi settings before downloading
         val prefs = PreferencesRepository(this)
-        val networkMonitor = com.example.offlinebrowser.util.NetworkMonitor(this)
+        val networkMonitor = NetworkMonitor(this)
         if (prefs.wifiOnly && !networkMonitor.isWifiConnected()) {
             Toast.makeText(this, "WiFi is required to re-download", Toast.LENGTH_SHORT).show()
             return
@@ -308,8 +462,8 @@ class ArticleViewerActivity : AppCompatActivity() {
             val article = database.articleDao().getArticleById(currentArticleId)
 
             if (article != null) {
-                val scraperPluginRepository = com.example.offlinebrowser.data.repository.ScraperPluginRepository(this@ArticleViewerActivity)
-                val htmlDownloader = com.example.offlinebrowser.data.network.HtmlDownloader()
+                val scraperPluginRepository = ScraperPluginRepository(this@ArticleViewerActivity)
+                val htmlDownloader = HtmlDownloader(context = applicationContext)
 
                 // Ensure latest plugins are loaded
                 scraperPluginRepository.ensureDefaultPlugins()
@@ -319,13 +473,12 @@ class ArticleViewerActivity : AppCompatActivity() {
                 val newHtml = htmlDownloader.downloadHtml(article.url, article.imageUrl)
 
                 if (newHtml != null) {
-                    val updatedArticle = article.copy(content = newHtml)
+                    val updatedArticle = article.copy(content = newHtml, isCached = true)
                     database.articleDao().updateArticle(updatedArticle)
 
                     withContext(Dispatchers.Main) {
                         Toast.makeText(this@ArticleViewerActivity, "Plugin applied successfully", Toast.LENGTH_SHORT).show()
-                        // Reload activity
-                        recreate()
+                        loadArticleContent(webView, article.id)
                     }
                 } else {
                     withContext(Dispatchers.Main) {
@@ -336,7 +489,6 @@ class ArticleViewerActivity : AppCompatActivity() {
         }
     }
 
-
     private fun setupBottomNav() {
         findViewById<View>(R.id.nav_home).setOnClickListener {
             val intent = Intent(this, HomeActivity::class.java)
@@ -345,10 +497,78 @@ class ArticleViewerActivity : AppCompatActivity() {
             finish()
         }
         findViewById<View>(R.id.nav_gemma).setOnClickListener {
-             triggerGemmaSummarization()
+            triggerGemmaSummarization()
         }
         findViewById<View>(R.id.nav_settings).setOnClickListener {
-             startActivity(Intent(this, FeedSettingsActivity::class.java))
+            startActivity(Intent(this, FeedSettingsActivity::class.java))
+        }
+    }
+
+    companion object {
+        const val RETRY_DOWNLOAD_HOST = "retry-download"
+        const val RETRY_DOWNLOAD_URI = "app://retry-download"
+
+        /**
+         * Determines whether the partial/uncached banner and browser fallback card
+         * should be shown for the given [article].
+         */
+        fun shouldShowPartialBanner(article: Article): Boolean {
+            return shouldShowPartialBanner(article.isCached, article.content)
+        }
+
+        fun shouldShowPartialBanner(isCached: Boolean, content: String): Boolean {
+            if (!isCached) return true
+            if (content.isBlank()) return true
+            return Jsoup.parse(content).text().trim().isEmpty()
+        }
+
+        fun buildPartialFooterHtml(articleUrl: String): String {
+            val sanitized = HtmlDownloader.sanitizeUrl(articleUrl)
+            val escapedUrl = sanitized
+                .replace("&", "&amp;")
+                .replace("\"", "&quot;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+
+            return """
+                <div id="offline-partial-banner" style="background-color: #1E1E1E; color: #E0E0E0; border: 1px solid #333333; border-left: 4px solid #4DA6FF; padding: 14px; margin: 20px 0; border-radius: 8px; font-family: sans-serif;">
+                    <div style="font-weight: bold; font-size: 15px; margin-bottom: 6px; color: #4DA6FF;">Partial Preview Cached</div>
+                    <div style="font-size: 13px; line-height: 1.4; color: #B0B0B0; margin-bottom: 12px;">Only a partial preview is cached offline. Open in your browser to read the full article or retry downloading.</div>
+                    <div style="display: flex; gap: 14px; flex-wrap: wrap;">
+                        <a href="$escapedUrl" style="color: #4DA6FF; font-weight: bold; text-decoration: none; font-size: 14px;">Open full article in browser</a>
+                        <a href="$RETRY_DOWNLOAD_URI" style="color: #00E676; font-weight: bold; text-decoration: none; font-size: 14px;">Retry Download</a>
+                    </div>
+                </div>
+            """.trimIndent()
+        }
+
+        fun injectPartialFooterHtml(html: String, articleUrl: String): String {
+            val footerHtml = buildPartialFooterHtml(articleUrl)
+            if (html.isBlank()) {
+                return """
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="utf-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <style>
+                            body { font-family: sans-serif; line-height: 1.6; padding: 16px; color: #E0E0E0; background-color: #121212; }
+                        </style>
+                    </head>
+                    <body>
+                        $footerHtml
+                    </body>
+                    </html>
+                """.trimIndent()
+            }
+
+            return try {
+                val doc = Jsoup.parse(html)
+                doc.body().append(footerHtml)
+                doc.outerHtml()
+            } catch (_: Exception) {
+                html + footerHtml
+            }
         }
     }
 }

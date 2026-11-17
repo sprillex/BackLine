@@ -52,7 +52,7 @@ class FeedRepository(
     }
 
     private val downloader: HtmlDownloader by lazy {
-        htmlDownloader ?: HtmlDownloader(logCallback)
+        htmlDownloader ?: HtmlDownloader(context = context, logger = logCallback)
     }
 
     val allFeeds: Flow<List<Feed>> = feedDao.getAllFeeds()
@@ -255,8 +255,9 @@ class FeedRepository(
         fun normalizeFeedUrl(rawUrl: String): String {
             val trimmed = rawUrl.trim()
             if (trimmed.isEmpty()) return ""
+            val sanitized = HtmlDownloader.sanitizeUrl(trimmed)
             return try {
-                val uri = URI(trimmed)
+                val uri = URI(sanitized)
                 val scheme = uri.scheme?.lowercase(Locale.ROOT)
                 val host = uri.host?.lowercase(Locale.ROOT)
                 if (scheme != null && host != null) {
@@ -267,10 +268,10 @@ class FeedRepository(
                     val fragment = uri.rawFragment?.let { "#$it" } ?: ""
                     "$scheme://$userInfo$host$port$normalizedPath$query$fragment"
                 } else {
-                    trimmed.trimEnd('/')
+                    sanitized.trimEnd('/')
                 }
             } catch (e: Exception) {
-                trimmed.trimEnd('/')
+                sanitized.trimEnd('/')
             }
         }
 

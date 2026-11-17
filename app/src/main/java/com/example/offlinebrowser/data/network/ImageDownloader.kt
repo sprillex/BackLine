@@ -14,10 +14,11 @@ class ImageDownloader(private val context: Context) {
     suspend fun downloadImage(imageUrl: String): String? {
         return withContext(Dispatchers.IO) {
             try {
-                val url = URL(imageUrl)
+                val sanitizedImageUrl = HtmlDownloader.sanitizeUrl(imageUrl)
+                val url = URL(sanitizedImageUrl)
                 val connection = url.openConnection() as HttpURLConnection
                 connection.doInput = true
-                connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                connection.setRequestProperty("User-Agent", HtmlDownloader.CHROME_ANDROID_USER_AGENT)
                 connection.connect()
 
                 if (connection.responseCode != HttpURLConnection.HTTP_OK) {

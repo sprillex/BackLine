@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Offline Browser</string>
+    <string name="partial_article_title">Partial Preview Cached</string>
+    <string name="partial_article_message">Only a partial preview is cached offline. Open in your browser to read the full article.</string>
+    <string name="open_full_article_in_browser">Open full article in browser</string>
+    <string name="retry_download">Retry Download</string>
 </resources>

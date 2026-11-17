@@ -39,7 +39,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val feedRepository = FeedRepository(application, database.feedDao(), database.articleDao())
 
     // Inject logger into HtmlDownloader for ArticleRepository
-    private val htmlDownloader = HtmlDownloader { message ->
+    private val htmlDownloader = HtmlDownloader(context = application) { message ->
         if (preferencesRepository.detailedDebuggingEnabled) {
              fileLogger.log(message)
         }

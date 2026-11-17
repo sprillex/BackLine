@@ -46,7 +46,7 @@ class PluginCreatorActivity : AppCompatActivity() {
 
     private val gson = GsonBuilder().setPrettyPrinting().create()
     private lateinit var scraperPluginRepository: ScraperPluginRepository
-    private val htmlDownloader = HtmlDownloader()
+    private val htmlDownloader by lazy { HtmlDownloader(context = this) }
 
     private var testUrl: String = ""
     private var htmlCache: String? = null
