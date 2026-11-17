@@ -2,8 +2,12 @@
   "domainPattern": ".*toledoblade\\.com",
   "strategy": "EXTRACT_FROM_JS_VAR",
   "targetIdentifier": "pgStoryZeroJSON",
-  "contentPath": ["articles[0].body"],
-  "titlePath": ["articles[0].title"],
+  "contentPath": [
+    "articles[0].body"
+  ],
+  "titlePath": [
+    "articles[0].title"
+  ],
   "injectRssImage": true,
   "removeSelectors": [
     "iframe",
@@ -14,5 +18,51 @@
     "figure:has(iframe)",
     "div.embed-youtube"
   ],
-  "sourceName": "The Toledo Blade"
+  "sourceName": "The Toledo Blade",
+  "classification": {
+    "defaultCategory": "News",
+    "rssRules": [
+      {
+        "source": "URL_REGEX",
+        "pattern": "^https?://[^/]+/([^/]+)(?:/([^/]+))?/\\d{4}/",
+        "categoryGroup": 1,
+        "subcategoryGroup": 2
+      },
+      {
+        "source": "RSS_MEDIA_COUNT",
+        "minCount": 6,
+        "assignTag": "photo_gallery"
+      },
+      {
+        "source": "RSS_FIELD_REGEX",
+        "field": "title",
+        "pattern": "^photo gallery:",
+        "flags": "i",
+        "assignTag": "photo_gallery"
+      }
+    ],
+    "pageRules": [
+      {
+        "source": "JS_VAR_PATH",
+        "categoryPath": "articles[0].section",
+        "subcategoryPath": "articles[0].subsection"
+      }
+    ],
+    "categoryMap": {
+      "local": "Local",
+      "news": "News",
+      "business": "Business",
+      "sports": "Sports",
+      "opinion": "Opinion",
+      "a-e": "Entertainment"
+    },
+    "dropIfCategoryIn": [
+      "Sports",
+      "Opinion",
+      "Entertainment"
+    ],
+    "dropIfTagIn": [
+      "photo_gallery"
+    ]
+  }
 }

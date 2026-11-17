@@ -21,5 +21,57 @@
     ".share",
     ".newsletter-signup"
   ],
-  "sourceName": "MLive"
+  "sourceName": "MLive",
+  "classification": {
+    "defaultCategory": "News",
+    "rssRules": [
+      {
+        "source": "URL_REGEX",
+        "pattern": "^https?://[^/]+/([^/]+)(?:/([^/]+))?/\\d{4}/\\d{2}/",
+        "categoryGroup": 1,
+        "subcategoryGroup": 2
+      },
+      {
+        "source": "RSS_FIELD_REGEX",
+        "field": "content_html",
+        "pattern": "(pc_aff_link=|skimresources\\.com|irmp=|catena|bettercollective)",
+        "assignTag": "affiliate"
+      }
+    ],
+    "categoryMap": {
+      "news": "News",
+      "politics": "News",
+      "public-interest": "News",
+      "business": "Business",
+      "weather": "Weather",
+      "highschoolsports": "Sports",
+      "sports": "Sports",
+      "wolverines": "Sports",
+      "spartans": "Sports",
+      "lions": "Sports",
+      "tigers": "Sports",
+      "redwings": "Sports",
+      "pistons": "Sports",
+      "sports-betting": "Gambling",
+      "online-casinos": "Gambling",
+      "sweepstakes-casinos": "Gambling",
+      "tv": "Entertainment",
+      "a-e": "Entertainment",
+      "shopping": "Shopping",
+      "life": "Lifestyle",
+      "opinion": "Opinion",
+      "griffins": "Sports"
+    },
+    "dropIfCategoryIn": [
+      "Sports",
+      "Gambling",
+      "Entertainment",
+      "Shopping",
+      "Lifestyle",
+      "Opinion"
+    ],
+    "dropIfTagIn": [
+      "affiliate"
+    ]
+  }
 }
