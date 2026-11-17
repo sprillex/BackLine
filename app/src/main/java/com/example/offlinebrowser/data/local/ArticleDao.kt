@@ -12,17 +12,23 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ArticleDao {
-    @Query("SELECT id, feedId, title, url, publishedDate, isCached, localPath, isFavorite, isRead, imageUrl, localImagePath FROM articles WHERE feedId = :feedId ORDER BY isRead ASC, publishedDate DESC")
+    @Query("SELECT id, feedId, title, url, publishedDate, isCached, localPath, isFavorite, isRead, imageUrl, localImagePath, category, subcategory, tags, isHidden, isManuallyOverridden FROM articles WHERE feedId = :feedId AND isHidden = 0 ORDER BY isRead ASC, publishedDate DESC")
     fun getArticlesForFeed(feedId: Int): Flow<List<ArticleListItem>>
 
-    @Query("SELECT articles.id, articles.feedId, articles.title, articles.url, articles.publishedDate, articles.isCached, articles.localPath, articles.isFavorite, articles.isRead, articles.imageUrl, articles.localImagePath FROM articles INNER JOIN feeds ON articles.feedId = feeds.id WHERE feeds.category = :category ORDER BY articles.isRead ASC, articles.publishedDate DESC")
+    @Query("SELECT id, feedId, title, url, publishedDate, isCached, localPath, isFavorite, isRead, imageUrl, localImagePath, category, subcategory, tags, isHidden, isManuallyOverridden FROM articles WHERE category = :category COLLATE NOCASE AND isHidden = 0 ORDER BY isRead ASC, publishedDate DESC")
     fun getArticlesByCategory(category: String): Flow<List<ArticleListItem>>
 
-    @Query("SELECT id, feedId, title, url, publishedDate, isCached, localPath, isFavorite, isRead, imageUrl, localImagePath FROM articles ORDER BY isRead ASC, publishedDate DESC")
+    @Query("SELECT id, feedId, title, url, publishedDate, isCached, localPath, isFavorite, isRead, imageUrl, localImagePath, category, subcategory, tags, isHidden, isManuallyOverridden FROM articles WHERE isHidden = 0 ORDER BY isRead ASC, publishedDate DESC")
     fun getAllArticles(): Flow<List<ArticleListItem>>
 
-    @Query("SELECT id, feedId, title, url, publishedDate, isCached, localPath, isFavorite, isRead, imageUrl, localImagePath FROM articles WHERE title LIKE :query ORDER BY isRead ASC, publishedDate DESC")
+    @Query("SELECT id, feedId, title, url, publishedDate, isCached, localPath, isFavorite, isRead, imageUrl, localImagePath, category, subcategory, tags, isHidden, isManuallyOverridden FROM articles WHERE isHidden = 0 AND title LIKE :query ORDER BY isRead ASC, publishedDate DESC")
     fun searchArticles(query: String): Flow<List<ArticleListItem>>
+
+    @Query("SELECT id, feedId, title, url, publishedDate, isCached, localPath, isFavorite, isRead, imageUrl, localImagePath, category, subcategory, tags, isHidden, isManuallyOverridden FROM articles WHERE isHidden = 1 ORDER BY publishedDate DESC")
+    fun getHiddenArticles(): Flow<List<ArticleListItem>>
+
+    @Query("SELECT DISTINCT category FROM articles WHERE isHidden = 0 AND category IS NOT NULL AND TRIM(category) != '' ORDER BY category ASC")
+    fun getDistinctVisibleCategories(): Flow<List<String>>
 
     @Query("SELECT * FROM articles WHERE feedId = :feedId AND url = :url LIMIT 1")
     suspend fun getArticleByUrl(feedId: Int, url: String): Article?
@@ -48,12 +54,18 @@ interface ArticleDao {
     @Query("UPDATE articles SET summary = :summary WHERE id = :id")
     suspend fun updateArticleSummary(id: Int, summary: String)
 
+    @Query("UPDATE articles SET isHidden = :isHidden, isManuallyOverridden = :isManuallyOverridden WHERE id = :id")
+    suspend fun updateArticleHiddenStatus(id: Int, isHidden: Boolean, isManuallyOverridden: Boolean)
+
+    @Query("UPDATE articles SET category = :category, isManuallyOverridden = :isManuallyOverridden WHERE id = :id")
+    suspend fun updateArticleCategory(id: Int, category: String?, isManuallyOverridden: Boolean)
+
     @Query("DELETE FROM articles WHERE feedId = :feedId AND publishedDate < :timestamp AND isFavorite = 0")
     suspend fun deleteOldArticles(feedId: Int, timestamp: Long)
 
     @Query("DELETE FROM articles WHERE feedId = :feedId AND isFavorite = 0 AND id NOT IN (SELECT id FROM articles WHERE feedId = :feedId ORDER BY publishedDate DESC LIMIT :limit)")
     suspend fun deleteExcessArticles(feedId: Int, limit: Int)
 
-    @Query("SELECT * FROM articles WHERE feedId = :feedId AND isCached = 0 ORDER BY publishedDate DESC LIMIT :limit")
+    @Query("SELECT * FROM articles WHERE feedId = :feedId AND isCached = 0 AND isHidden = 0 ORDER BY publishedDate DESC LIMIT :limit")
     suspend fun getTopUncachedArticles(feedId: Int, limit: Int): List<Article>
 }

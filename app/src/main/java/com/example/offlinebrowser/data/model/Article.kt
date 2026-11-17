@@ -28,5 +28,10 @@ data class Article(
     val isRead: Boolean = false,
     val imageUrl: String? = null,
     val localImagePath: String? = null,
-    val summary: String? = null
+    val summary: String? = null,
+    val category: String? = null,
+    val subcategory: String? = null,
+    val tags: String? = null,
+    val isHidden: Boolean = false,
+    val isManuallyOverridden: Boolean = false
 )

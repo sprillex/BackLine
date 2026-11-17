@@ -1,6 +1,7 @@
 package com.example.offlinebrowser.util
 
 import com.example.offlinebrowser.data.model.PipelineConfig
+import com.example.offlinebrowser.data.model.ScraperRecipe
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
@@ -9,8 +10,8 @@ class ArticleSummarizationPipeline(
     private val modelRunner: LocalGemmaRunner = DefaultLocalGemmaRunner(),
     private val pipelineConfig: PipelineConfig = PipelineConfigLoader.getDefaultFallbackConfig()
 ) {
-    suspend fun summarize(rawArticleText: String): String = withContext(Dispatchers.Default) {
-        val sanitizedText = sanitizeInput(rawArticleText)
+    suspend fun summarize(rawArticleText: String, recipe: ScraperRecipe? = null): String = withContext(Dispatchers.Default) {
+        val sanitizedText = sanitizeInput(rawArticleText, recipe)
         if (sanitizedText.isBlank()) {
             return@withContext "No article text available to summarize."
         }
@@ -51,17 +52,22 @@ class ArticleSummarizationPipeline(
         return@withContext lastStepOutput
     }
 
-    fun sanitizeInput(rawText: String): String {
+    fun sanitizeInput(rawText: String, recipe: ScraperRecipe? = null): String {
         if (rawText.isBlank()) return ""
 
-        val doc = Jsoup.parse(rawText)
+        val preCleanedText = ArticleClassifier.applySummaryRules(rawText, recipe)
+        if (preCleanedText.isBlank()) return ""
+
+        val doc = Jsoup.parse(preCleanedText)
         doc.select("nav, header, footer, aside, script, style, .poll, .poll-container, form, [class*='poll'], [id*='poll'], [class*='quiz']").remove()
 
         doc.select("p, h1, h2, h3, h4, h5, h6, div, li, tr, dt, dd, section, article").append("\n")
         doc.select("br").append("\n")
 
         val extractedText = doc.body()?.wholeText() ?: doc.wholeText()
-        val rawLines = extractedText.lines().map { it.trim() }.filter { it.isNotEmpty() }
+        val rawLines = extractedText.lines()
+            .map { ArticleClassifier.applyStripRegexes(it.trim(), recipe) }
+            .filter { it.isNotEmpty() }
 
         val filteredLines = rawLines.filterNot { line ->
             val upper = line.uppercase()

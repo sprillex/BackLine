@@ -50,6 +50,14 @@ class PreferencesRepository(context: Context) {
         get() = prefs.getBoolean("show_images_in_article_view", true)
         set(value) = prefs.edit().putBoolean("show_images_in_article_view", value).apply()
 
+    var showHiddenArticles: Boolean
+        get() = prefs.getBoolean("show_hidden_articles", false)
+        set(value) = prefs.edit().putBoolean("show_hidden_articles", value).apply()
+
+    var enforcePluginFilters: Boolean
+        get() = prefs.getBoolean("enforce_plugin_filters", true)
+        set(value) = prefs.edit().putBoolean("enforce_plugin_filters", value).apply()
+
     var gemmaModelPath: String?
         get() = prefs.getString("gemma_model_path", null)
         set(value) = prefs.edit().putString("gemma_model_path", value).apply()

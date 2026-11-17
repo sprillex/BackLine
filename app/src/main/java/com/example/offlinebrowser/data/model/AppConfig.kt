@@ -21,7 +21,11 @@ data class SettingsConfig(
     @SerializedName("feed_limit_days")
     val feedLimitDays: Int,
     @SerializedName("weather_units")
-    val weatherUnits: String
+    val weatherUnits: String,
+    @SerializedName("show_hidden_articles")
+    val showHiddenArticles: Boolean? = false,
+    @SerializedName("enforce_plugin_filters")
+    val enforcePluginFilters: Boolean? = true
 )
 
 data class FeedConfig(

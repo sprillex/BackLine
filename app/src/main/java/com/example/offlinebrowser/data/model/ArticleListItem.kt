@@ -13,5 +13,10 @@ data class ArticleListItem(
     val isFavorite: Boolean,
     val isRead: Boolean,
     val imageUrl: String?,
-    val localImagePath: String?
+    val localImagePath: String?,
+    val category: String? = null,
+    val subcategory: String? = null,
+    val tags: String? = null,
+    val isHidden: Boolean = false,
+    val isManuallyOverridden: Boolean = false
 )

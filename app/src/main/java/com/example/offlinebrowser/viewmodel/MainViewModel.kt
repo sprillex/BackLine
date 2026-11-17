@@ -16,6 +16,7 @@ import com.example.offlinebrowser.data.repository.FeedRepository
 import com.example.offlinebrowser.data.repository.PreferencesRepository
 import com.example.offlinebrowser.data.repository.ScraperPluginRepository
 import com.example.offlinebrowser.data.repository.WeatherRepository
+import com.example.offlinebrowser.util.ArticleClassifier
 import com.example.offlinebrowser.util.NetworkMonitor
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -61,9 +62,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val feeds: StateFlow<List<Feed>> = feedRepository.allFeeds
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val categories: StateFlow<List<String>> = feeds.map { feedList ->
-        feedList.mapNotNull { it.category }.distinct().sorted()
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val categories: StateFlow<List<String>> = articleRepository.getDistinctVisibleCategories()
+        .map { rawList ->
+            val deduped = linkedMapOf<String, String>()
+            for (raw in rawList) {
+                val normalized = ArticleClassifier.normalizeDisplayCategory(raw) ?: continue
+                val key = normalized.lowercase()
+                val existing = deduped[key]
+                // Prefer mixed/Title Case over ALL CAPS or all lower if both existed
+                if (existing == null || (existing == existing.lowercase() || existing == existing.uppercase())) {
+                    deduped[key] = normalized
+                }
+            }
+            deduped.values.sorted()
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val weatherLocations: StateFlow<List<Weather>> = weatherRepository.allWeather
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -77,6 +90,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     sealed class ArticleFilter {
         object All : ArticleFilter()
+        object Hidden : ArticleFilter()
         data class ByCategory(val category: String) : ArticleFilter()
         data class ByFeed(val feedId: Int) : ArticleFilter()
     }
@@ -86,6 +100,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }.flatMapLatest { (filter, query) ->
         val sourceFlow = when (filter) {
             is ArticleFilter.All -> articleRepository.getAllArticles()
+            is ArticleFilter.Hidden -> articleRepository.getHiddenArticles()
             is ArticleFilter.ByCategory -> articleRepository.getArticlesByCategory(filter.category)
             is ArticleFilter.ByFeed -> articleRepository.getArticlesForFeed(filter.feedId)
         }
@@ -100,6 +115,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun filterArticlesByAll() {
         _articleFilter.value = ArticleFilter.All
+    }
+
+    fun filterArticlesByHidden() {
+        _articleFilter.value = ArticleFilter.Hidden
     }
 
     fun filterArticlesByCategory(category: String) {
@@ -197,6 +216,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun toggleArticleRead(article: ArticleListItem) {
         viewModelScope.launch {
             articleRepository.updateArticleReadStatus(article.id, !article.isRead)
+        }
+    }
+
+    fun toggleArticleHidden(article: ArticleListItem) {
+        viewModelScope.launch {
+            articleRepository.updateArticleHiddenStatus(article.id, !article.isHidden, isManuallyOverridden = true)
+        }
+    }
+
+    fun setArticleCategory(article: ArticleListItem, category: String?) {
+        viewModelScope.launch {
+            val normalized = ArticleClassifier.normalizeDisplayCategory(category)
+            articleRepository.updateArticleCategory(article.id, normalized, isManuallyOverridden = true)
         }
     }
 

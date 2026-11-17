@@ -16,6 +16,10 @@ class ArticleRepository(
 
     fun getAllArticles(): Flow<List<ArticleListItem>> = articleDao.getAllArticles()
 
+    fun getHiddenArticles(): Flow<List<ArticleListItem>> = articleDao.getHiddenArticles()
+
+    fun getDistinctVisibleCategories(): Flow<List<String>> = articleDao.getDistinctVisibleCategories()
+
     fun searchArticles(query: String): Flow<List<ArticleListItem>> = articleDao.searchArticles(query)
 
     suspend fun downloadArticleContent(articleItem: ArticleListItem) {
@@ -48,5 +52,13 @@ class ArticleRepository(
 
     suspend fun updateArticleReadStatus(id: Int, isRead: Boolean) {
         articleDao.updateArticleReadStatus(id, isRead)
+    }
+
+    suspend fun updateArticleHiddenStatus(id: Int, isHidden: Boolean, isManuallyOverridden: Boolean = true) {
+        articleDao.updateArticleHiddenStatus(id, isHidden, isManuallyOverridden)
+    }
+
+    suspend fun updateArticleCategory(id: Int, category: String?, isManuallyOverridden: Boolean = true) {
+        articleDao.updateArticleCategory(id, category, isManuallyOverridden)
     }
 }

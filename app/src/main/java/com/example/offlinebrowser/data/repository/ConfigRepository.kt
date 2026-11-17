@@ -130,7 +130,9 @@ class ConfigRepository(private val context: Context) {
             refreshInterval = preferencesRepository.refreshIntervalMinutes,
             feedLimitCount = preferencesRepository.feedLimitCount,
             feedLimitDays = preferencesRepository.feedLimitDays,
-            weatherUnits = preferencesRepository.weatherUnits
+            weatherUnits = preferencesRepository.weatherUnits,
+            showHiddenArticles = preferencesRepository.showHiddenArticles,
+            enforcePluginFilters = preferencesRepository.enforcePluginFilters
         )
 
         return AppConfig(
@@ -147,6 +149,8 @@ class ConfigRepository(private val context: Context) {
         preferencesRepository.feedLimitCount = config.settings.feedLimitCount
         preferencesRepository.feedLimitDays = config.settings.feedLimitDays
         preferencesRepository.weatherUnits = config.settings.weatherUnits
+        preferencesRepository.showHiddenArticles = config.settings.showHiddenArticles ?: false
+        preferencesRepository.enforcePluginFilters = config.settings.enforcePluginFilters ?: true
 
         // Restore Feeds
         val existingFeeds = feedDao.getAllFeeds().first().toMutableList()

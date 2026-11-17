@@ -4,10 +4,24 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 
+data class HtmlDownloadResult(
+    val html: String?,
+    val finalUrl: String,
+    val scrapeResult: ScrapeResult? = null
+)
+
 class HtmlDownloader(private val logger: ((String) -> Unit)? = null) {
     val scraperEngine = ScraperEngine()
 
     suspend fun downloadHtml(url: String, rssImageUrl: String? = null): String? {
+        return downloadHtmlWithMetadata(url, rssImageUrl)?.html
+    }
+
+    suspend fun downloadHtmlWithMetadata(
+        url: String,
+        rssImageUrl: String? = null,
+        enforceFilters: Boolean = true
+    ): HtmlDownloadResult? {
         return withContext(Dispatchers.IO) {
             try {
                 logger?.invoke("Scraping URL: $url")
@@ -25,20 +39,31 @@ class HtmlDownloader(private val logger: ((String) -> Unit)? = null) {
                 logger?.invoke("Successfully scraped URL: $url")
 
                 val html = doc.outerHtml()
-                val finalUrl = doc.location()
+                val finalUrl = doc.location().ifBlank { url }
 
                 // If rssImageUrl is missing, try to find one in the raw HTML so we can inject it
                 val effectiveRssImageUrl = rssImageUrl ?: scraperEngine.extractImage(html)
 
                 // Try to process via ScraperEngine for specific sites like Toledo Blade
-                val scrapedContent = scraperEngine.process(finalUrl, html, effectiveRssImageUrl)
+                val scrapeResult = scraperEngine.processWithMetadata(
+                    url = finalUrl,
+                    html = html,
+                    rssImageUrl = effectiveRssImageUrl,
+                    enforceFilters = enforceFilters
+                )
 
-                if (scrapedContent != null) {
+                val resolvedHtml = if (scrapeResult?.html != null) {
                     logger?.invoke("ScraperEngine successfully processed URL: $url")
-                    scrapedContent
+                    scrapeResult.html
                 } else {
                     html
                 }
+
+                HtmlDownloadResult(
+                    html = resolvedHtml,
+                    finalUrl = finalUrl,
+                    scrapeResult = scrapeResult
+                )
             } catch (e: Exception) {
                 e.printStackTrace()
                 logger?.invoke("Failed to scrape URL $url: ${e.message}")

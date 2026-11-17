@@ -3,6 +3,7 @@ package com.example.offlinebrowser.util
 import android.content.Context
 import com.example.offlinebrowser.data.model.AiSkill
 import com.example.offlinebrowser.data.model.AiSkillRegistry
+import com.example.offlinebrowser.data.model.ScraperRecipe
 import com.example.offlinebrowser.data.model.SkillStepConfig
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
@@ -204,13 +205,14 @@ class AiSkillManager(
     suspend fun executeSkill(
         skill: AiSkill,
         initialInput: String,
-        initialContext: Map<String, String> = emptyMap()
+        initialContext: Map<String, String> = emptyMap(),
+        recipe: ScraperRecipe? = null
     ): String = withContext(Dispatchers.Default) {
         if (skill.steps.isEmpty()) {
             return@withContext "No skill steps configured."
         }
 
-        val sanitizedText = summarizationPipeline.sanitizeInput(initialInput)
+        val sanitizedText = summarizationPipeline.sanitizeInput(initialInput, recipe)
 
         val contextMap = mutableMapOf<String, String>()
         contextMap["RAW_INPUT"] = initialInput

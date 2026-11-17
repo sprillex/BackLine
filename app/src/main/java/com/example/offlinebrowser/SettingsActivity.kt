@@ -187,6 +187,8 @@ class SettingsActivity : AppCompatActivity() {
         val cbDetailedDebugging = findViewById<CheckBox>(R.id.cbDetailedDebugging)
         val cbShowArticleThumbnails = findViewById<CheckBox>(R.id.cbShowArticleThumbnails)
         val cbShowImagesInArticle = findViewById<CheckBox>(R.id.cbShowImagesInArticle)
+        val cbShowHiddenArticles = findViewById<CheckBox>(R.id.cbShowHiddenArticles)
+        val cbEnforcePluginFilters = findViewById<CheckBox>(R.id.cbEnforcePluginFilters)
         val btnDownloadLogs = findViewById<Button>(R.id.btnDownloadLogs)
         val btnAiSettings = findViewById<Button>(R.id.btnAiSettings)
         val etSsids = findViewById<EditText>(R.id.etSsids)
@@ -224,6 +226,8 @@ class SettingsActivity : AppCompatActivity() {
         cbDetailedDebugging.isChecked = preferencesRepository.detailedDebuggingEnabled
         cbShowArticleThumbnails.isChecked = preferencesRepository.showArticleThumbnails
         cbShowImagesInArticle.isChecked = preferencesRepository.showImagesInArticleView
+        cbShowHiddenArticles.isChecked = preferencesRepository.showHiddenArticles
+        cbEnforcePluginFilters.isChecked = preferencesRepository.enforcePluginFilters
         btnDownloadLogs.visibility = if (preferencesRepository.detailedDebuggingEnabled) android.view.View.VISIBLE else android.view.View.GONE
 
         etSsids.setText(preferencesRepository.allowedWifiSsids.joinToString(","))
@@ -247,6 +251,8 @@ class SettingsActivity : AppCompatActivity() {
             preferencesRepository.detailedDebuggingEnabled = cbDetailedDebugging.isChecked
             preferencesRepository.showArticleThumbnails = cbShowArticleThumbnails.isChecked
             preferencesRepository.showImagesInArticleView = cbShowImagesInArticle.isChecked
+            preferencesRepository.showHiddenArticles = cbShowHiddenArticles.isChecked
+            preferencesRepository.enforcePluginFilters = cbEnforcePluginFilters.isChecked
 
             val ssids = etSsids.text.toString().split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
             preferencesRepository.allowedWifiSsids = ssids

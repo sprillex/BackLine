@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.offlinebrowser.R
 import com.example.offlinebrowser.data.model.ArticleListItem
+import com.example.offlinebrowser.util.ArticleClassifier
 import java.net.URI
 
 class ArticleAdapter(
@@ -34,6 +35,7 @@ class ArticleAdapter(
         val ivArticleImage: ImageView = itemView.findViewById(R.id.ivArticleImage)
         val tvTitle: TextView = itemView.findViewById(R.id.tvTitle)
         val tvStatus: TextView = itemView.findViewById(R.id.tvStatus)
+        val tvCategoryBadge: TextView = itemView.findViewById(R.id.tvCategoryBadge)
         val btnDownload: Button = itemView.findViewById(R.id.btnDownload)
     }
 
@@ -46,6 +48,14 @@ class ArticleAdapter(
         val article = getItem(position)
         holder.tvTitle.text = article.title
         holder.tvStatus.text = if (article.isCached) "Cached" else "Online"
+
+        val displayCategory = ArticleClassifier.normalizeDisplayCategory(article.category)
+        if (!displayCategory.isNullOrEmpty()) {
+            holder.tvCategoryBadge.text = displayCategory
+            holder.tvCategoryBadge.visibility = View.VISIBLE
+        } else {
+            holder.tvCategoryBadge.visibility = View.GONE
+        }
 
         // Load Article Image
         // Prefer local path if available (offline support), otherwise fallback to remote URL

@@ -2,19 +2,27 @@ package com.example.offlinebrowser.data.network
 
 import com.example.offlinebrowser.data.model.ExtractionStrategy
 import com.example.offlinebrowser.data.model.ScraperRecipe
-import com.google.gson.Gson
+import com.example.offlinebrowser.util.ArticleClassifier
 import com.google.gson.JsonElement
-import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import java.util.concurrent.CopyOnWriteArrayList
 import org.jsoup.Jsoup
-import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
+
+data class ScrapeResult(
+    val html: String?,
+    val title: String? = null,
+    val category: String? = null,
+    val subcategory: String? = null,
+    val tags: List<String> = emptyList(),
+    val shouldHide: Boolean = false,
+    val recipe: ScraperRecipe? = null,
+    val rawJsonElement: JsonElement? = null
+)
 
 class ScraperEngine {
     // Store pairs of Recipe and its compiled Regex
     private val recipes = CopyOnWriteArrayList<Pair<ScraperRecipe, Regex>>()
-    private val gson = Gson()
 
     fun loadRecipes(newRecipes: List<ScraperRecipe>) {
         recipes.clear()
@@ -33,18 +41,30 @@ class ScraperEngine {
         }
     }
 
-    fun process(url: String, html: String, rssImageUrl: String? = null): String? {
-        // Iterate through the cache of compiled regexes
-        val match = recipes.find { (_, regex) -> regex.containsMatchIn(url) }
-            ?: return null
+    fun findRecipeForUrl(url: String): ScraperRecipe? {
+        return recipes.find { (_, regex) -> regex.containsMatchIn(url) }?.first
+    }
 
-        val recipe = match.first
+    fun process(url: String, html: String, rssImageUrl: String? = null): String? {
+        return processWithMetadata(url, html, rssImageUrl)?.html
+    }
+
+    fun processWithMetadata(
+        url: String,
+        html: String,
+        rssImageUrl: String? = null,
+        enforceFilters: Boolean = true
+    ): ScrapeResult? {
+        val recipe = findRecipeForUrl(url) ?: return null
 
         return try {
             when (recipe.strategy) {
-                ExtractionStrategy.EXTRACT_FROM_JS_VAR -> extractFromJsVar(html, recipe, rssImageUrl)
-                ExtractionStrategy.CSS_SELECTOR -> extractFromCssSelector(html, recipe, rssImageUrl)
-                ExtractionStrategy.XPATH -> extractFromXPath(html, recipe, rssImageUrl)
+                ExtractionStrategy.EXTRACT_FROM_JS_VAR ->
+                    extractFromJsVarWithMetadata(html, recipe, rssImageUrl, enforceFilters)
+                ExtractionStrategy.CSS_SELECTOR ->
+                    extractFromCssSelectorWithMetadata(html, recipe, rssImageUrl)
+                ExtractionStrategy.XPATH ->
+                    extractFromXPathWithMetadata(html, recipe, rssImageUrl)
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -52,7 +72,11 @@ class ScraperEngine {
         }
     }
 
-    private fun extractFromXPath(html: String, recipe: ScraperRecipe, rssImageUrl: String? = null): String? {
+    private fun extractFromXPathWithMetadata(
+        html: String,
+        recipe: ScraperRecipe,
+        rssImageUrl: String? = null
+    ): ScrapeResult? {
         val doc = Jsoup.parse(html)
 
         if (!recipe.removeSelectors.isNullOrEmpty()) {
@@ -78,11 +102,15 @@ class ScraperEngine {
 
         if (bodyElement == null) return null
         val body = bodyElement.html()
-
-        return buildSimpleHtml(title, body, if (recipe.injectRssImage) rssImageUrl else null, recipe.sourceName)
+        val finalHtml = buildSimpleHtml(title, body, if (recipe.injectRssImage) rssImageUrl else null, recipe.sourceName)
+        return ScrapeResult(html = finalHtml, title = title, recipe = recipe)
     }
 
-    private fun extractFromCssSelector(html: String, recipe: ScraperRecipe, rssImageUrl: String? = null): String? {
+    private fun extractFromCssSelectorWithMetadata(
+        html: String,
+        recipe: ScraperRecipe,
+        rssImageUrl: String? = null
+    ): ScrapeResult? {
         val doc = Jsoup.parse(html)
 
         if (!recipe.removeSelectors.isNullOrEmpty()) {
@@ -108,8 +136,8 @@ class ScraperEngine {
 
         if (bodyElement == null) return null
         val body = bodyElement.html()
-
-        return buildSimpleHtml(title, body, if (recipe.injectRssImage) rssImageUrl else null, recipe.sourceName)
+        val finalHtml = buildSimpleHtml(title, body, if (recipe.injectRssImage) rssImageUrl else null, recipe.sourceName)
+        return ScrapeResult(html = finalHtml, title = title, recipe = recipe)
     }
 
     fun extractImage(html: String): String? {
@@ -139,14 +167,20 @@ class ScraperEngine {
         return null
     }
 
-    private fun extractFromJsVar(html: String, recipe: ScraperRecipe, rssImageUrl: String? = null): String? {
+    private fun extractFromJsVarWithMetadata(
+        html: String,
+        recipe: ScraperRecipe,
+        rssImageUrl: String? = null,
+        enforceFilters: Boolean = true
+    ): ScrapeResult? {
+        val targetId = (recipe.targetIdentifier as String?)?.takeIf { it.isNotEmpty() } ?: return null
         // More robust finding of the variable assignment:
         // 1. Find the identifier
-        val idIndex = html.indexOf(recipe.targetIdentifier)
+        val idIndex = html.indexOf(targetId)
         if (idIndex == -1) return null
 
         // 2. Find the '=' assignment operator after the identifier
-        val equalsIndex = html.indexOf("=", idIndex + recipe.targetIdentifier.length)
+        val equalsIndex = html.indexOf("=", idIndex + targetId.length)
         if (equalsIndex == -1) return null
 
         // 3. Find the start of the JSON object '{' after the '='
@@ -190,10 +224,16 @@ class ScraperEngine {
         val jsonString = html.substring(jsonStartIndex, jsonEndIndex)
 
         val jsonElement = JsonParser.parseString(jsonString)
+        val pageClassification = ArticleClassifier.evaluatePageJson(
+            jsonElement = jsonElement,
+            recipe = recipe,
+            enforceFilters = enforceFilters
+        )
+
         var title = "No Title"
         if (!recipe.titlePath.isNullOrEmpty()) {
             for (path in recipe.titlePath) {
-                val found = traversePath(jsonElement, path)
+                val found = ArticleClassifier.traverseJsonPath(jsonElement, path)
                 if (found != null) {
                     title = found
                     break
@@ -203,11 +243,26 @@ class ScraperEngine {
 
         var body: String? = null
         for (path in recipe.contentPath) {
-            body = traversePath(jsonElement, path)
+            body = ArticleClassifier.traverseJsonPath(jsonElement, path)
             if (body != null) break
         }
 
-        if (body == null) return null
+        if (body == null) {
+            return if (pageClassification.category != null || pageClassification.shouldHide) {
+                ScrapeResult(
+                    html = null,
+                    title = title,
+                    category = pageClassification.category,
+                    subcategory = pageClassification.subcategory,
+                    tags = pageClassification.tags,
+                    shouldHide = pageClassification.shouldHide,
+                    recipe = recipe,
+                    rawJsonElement = jsonElement
+                )
+            } else {
+                null
+            }
+        }
 
         var finalBody = body
         if (!recipe.removeSelectors.isNullOrEmpty()) {
@@ -216,7 +271,17 @@ class ScraperEngine {
             finalBody = bodyDoc.body().html()
         }
 
-        return buildSimpleHtml(title, finalBody ?: "", if (recipe.injectRssImage) rssImageUrl else null, recipe.sourceName)
+        val finalHtml = buildSimpleHtml(title, finalBody ?: "", if (recipe.injectRssImage) rssImageUrl else null, recipe.sourceName)
+        return ScrapeResult(
+            html = finalHtml,
+            title = title,
+            category = pageClassification.category,
+            subcategory = pageClassification.subcategory,
+            tags = pageClassification.tags,
+            shouldHide = pageClassification.shouldHide,
+            recipe = recipe,
+            rawJsonElement = jsonElement
+        )
     }
 
     private fun removeElementsAndEmptyParents(root: Element, selectors: List<String>) {
@@ -265,35 +330,7 @@ class ScraperEngine {
     }
 
     private fun traversePath(element: JsonElement, path: String?): String? {
-        if (path == null) return null
-        val parts = path.split(".")
-        var current: JsonElement = element
-
-        for (part in parts) {
-            if (!current.isJsonObject && !current.isJsonArray) return null
-
-            if (part.contains("[")) {
-                // Handle array index e.g. "articles[0]"
-                val name = part.substringBefore("[")
-                val index = part.substringAfter("[").substringBefore("]").toIntOrNull() ?: return null
-
-                if (name.isNotEmpty()) {
-                    if (!current.isJsonObject) return null
-                    current = current.asJsonObject.get(name) ?: return null
-                }
-
-                if (current.isJsonArray && current.asJsonArray.size() > index) {
-                    current = current.asJsonArray.get(index)
-                } else {
-                    return null
-                }
-            } else {
-                if (!current.isJsonObject) return null
-                current = current.asJsonObject.get(part) ?: return null
-            }
-        }
-
-        return if (current.isJsonPrimitive) current.asString else null
+        return ArticleClassifier.traverseJsonPath(element, path)
     }
 
     private fun buildSimpleHtml(title: String, body: String, imageUrl: String? = null, sourceName: String? = null): String {

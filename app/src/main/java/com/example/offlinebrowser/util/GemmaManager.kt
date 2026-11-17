@@ -4,6 +4,7 @@ import android.app.DownloadManager
 import android.content.Context
 import android.net.Uri
 import android.os.Environment
+import com.example.offlinebrowser.data.model.ScraperRecipe
 import com.example.offlinebrowser.data.repository.PreferencesRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -108,12 +109,15 @@ class GemmaManager(
         return downloadId
     }
 
-    suspend fun generateSummary(htmlOrTextContent: String): Pair<String, String> = withContext(Dispatchers.IO) {
+    suspend fun generateSummary(
+        htmlOrTextContent: String,
+        recipe: ScraperRecipe? = null
+    ): Pair<String, String> = withContext(Dispatchers.IO) {
         val skill = aiSkillManager.getSkillById("article_summarizer")
         val summary = if (skill != null) {
-            aiSkillManager.executeSkill(skill, htmlOrTextContent)
+            aiSkillManager.executeSkill(skill, htmlOrTextContent, recipe = recipe)
         } else {
-            summarizationPipeline.summarize(htmlOrTextContent)
+            summarizationPipeline.summarize(htmlOrTextContent, recipe)
         }
         val modelName = getModelName()
 

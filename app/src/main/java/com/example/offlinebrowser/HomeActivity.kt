@@ -98,6 +98,7 @@ class HomeActivity : AppCompatActivity() {
     private var currentViewState: ViewState = ViewState.ARTICLE_LIST
     private var activeCategory: String? = null
     private var activeFeedId: Int = -1
+    private var isHiddenActive: Boolean = false
     private lateinit var articleAdapter: ArticleAdapter
 
     private val requestPermissionLauncher =
@@ -136,7 +137,7 @@ class HomeActivity : AppCompatActivity() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 // If in detailed views, go back to article list (which is the new home)
-                if (currentViewState == ViewState.WEATHER_DETAIL || (currentViewState == ViewState.ARTICLE_LIST && (activeCategory != null || activeFeedId != -1))) {
+                if (currentViewState == ViewState.WEATHER_DETAIL || (currentViewState == ViewState.ARTICLE_LIST && (activeCategory != null || activeFeedId != -1 || isHiddenActive))) {
                     showArticles(null)
                 } else {
                     finish()
@@ -323,9 +324,10 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
-    private fun showArticles(category: String? = null, feedId: Int = -1) {
+    private fun showArticles(category: String? = null, feedId: Int = -1, showHidden: Boolean = false) {
         activeCategory = category
         activeFeedId = feedId
+        isHiddenActive = showHidden
 
         // Clear search view when switching categories/feeds, but don't trigger search again
         svArticles.setOnQueryTextListener(null)
@@ -342,7 +344,9 @@ class HomeActivity : AppCompatActivity() {
             }
         })
 
-        if (category != null) {
+        if (showHidden) {
+            viewModel.filterArticlesByHidden()
+        } else if (category != null) {
             viewModel.filterArticlesByCategory(category)
         } else if (feedId != -1) {
             viewModel.filterArticlesByFeed(feedId)
@@ -366,6 +370,7 @@ class HomeActivity : AppCompatActivity() {
                 rvArticles.visibility = View.GONE
                 activeCategory = null
                 activeFeedId = -1
+                isHiddenActive = false
             }
             ViewState.WEATHER_DETAIL -> {
                 swipeRefreshDashboard.visibility = View.VISIBLE
@@ -377,6 +382,7 @@ class HomeActivity : AppCompatActivity() {
                 rvArticles.visibility = View.GONE
                 activeCategory = null
                 activeFeedId = -1
+                isHiddenActive = false
             }
             ViewState.ARTICLE_LIST -> {
                 swipeRefreshDashboard.visibility = View.GONE
@@ -516,7 +522,7 @@ class HomeActivity : AppCompatActivity() {
         pillContainer.removeAllViews()
 
         // "All" Pill
-        val isAllActive = currentViewState == ViewState.ARTICLE_LIST && activeCategory == null && activeFeedId == -1
+        val isAllActive = currentViewState == ViewState.ARTICLE_LIST && activeCategory == null && activeFeedId == -1 && !isHiddenActive
         addPill("All", isAllActive) {
             showArticles(null)
         }
@@ -536,8 +542,15 @@ class HomeActivity : AppCompatActivity() {
 
         // Category Pills
         currentCategories.forEach { category ->
-            addPill(category, currentViewState == ViewState.ARTICLE_LIST && activeCategory == category) {
+            addPill(category, currentViewState == ViewState.ARTICLE_LIST && !isHiddenActive && activeCategory.equals(category, ignoreCase = true)) {
                  showArticles(category = category)
+            }
+        }
+
+        // "Hidden" Pill
+        if (preferencesRepository.showHiddenArticles) {
+            addPill("Hidden", currentViewState == ViewState.ARTICLE_LIST && isHiddenActive) {
+                showArticles(showHidden = true)
             }
         }
 
@@ -623,6 +636,11 @@ class HomeActivity : AppCompatActivity() {
         if (::articleAdapter.isInitialized) {
             articleAdapter.setShowImages(viewModel.showArticleThumbnails)
         }
+        if (isHiddenActive && !preferencesRepository.showHiddenArticles) {
+            showArticles(null)
+        } else {
+            updatePills()
+        }
     }
 
     private fun updateWeatherVisibility() {
@@ -671,6 +689,14 @@ class HomeActivity : AppCompatActivity() {
             popup.menu.add(0, 2, 0, "Mark as Read")
         }
 
+        if (article.isHidden) {
+            popup.menu.add(0, 3, 0, "Unhide")
+        } else {
+            popup.menu.add(0, 3, 0, "Hide")
+        }
+
+        popup.menu.add(0, 4, 0, "Change Category")
+
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 1 -> { // Toggle Favorite
@@ -681,10 +707,50 @@ class HomeActivity : AppCompatActivity() {
                     viewModel.toggleArticleRead(article)
                     true
                 }
+                3 -> { // Toggle Hidden (manual override)
+                    viewModel.toggleArticleHidden(article)
+                    true
+                }
+                4 -> { // Change Category (manual override)
+                    showChangeCategoryDialog(article)
+                    true
+                }
                 else -> false
             }
         }
         popup.show()
+    }
+
+    private fun showChangeCategoryDialog(article: ArticleListItem) {
+        val options = (currentCategories + "Custom...").distinct()
+        AlertDialog.Builder(this)
+            .setTitle("Change Category")
+            .setItems(options.toTypedArray()) { _, which ->
+                val selected = options[which]
+                if (selected == "Custom...") {
+                    showCustomCategoryInputDialog(article)
+                } else {
+                    viewModel.setArticleCategory(article, selected)
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showCustomCategoryInputDialog(article: ArticleListItem) {
+        val input = android.widget.EditText(this).apply {
+            hint = "Enter category name"
+            setText(article.category ?: "")
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Custom Category")
+            .setView(input)
+            .setPositiveButton("Save") { _, _ ->
+                val newCat = input.text.toString().trim().takeIf { it.isNotEmpty() }
+                viewModel.setArticleCategory(article, newCat)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     @SuppressLint("MissingPermission")

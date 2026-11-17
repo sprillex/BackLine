@@ -13,7 +13,7 @@ import com.example.offlinebrowser.data.model.SuggestedFeed
 import com.example.offlinebrowser.data.model.TrustedServer
 import com.example.offlinebrowser.data.model.Weather
 
-@Database(entities = [Feed::class, Article::class, Weather::class, TrustedServer::class, SuggestedFeed::class], version = 10, exportSchema = false)
+@Database(entities = [Feed::class, Article::class, Weather::class, TrustedServer::class, SuggestedFeed::class], version = 11, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class OfflineDatabase : RoomDatabase() {
     abstract fun feedDao(): FeedDao
@@ -29,6 +29,16 @@ abstract class OfflineDatabase : RoomDatabase() {
         val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE articles ADD COLUMN summary TEXT")
+            }
+        }
+
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE articles ADD COLUMN category TEXT")
+                db.execSQL("ALTER TABLE articles ADD COLUMN subcategory TEXT")
+                db.execSQL("ALTER TABLE articles ADD COLUMN tags TEXT")
+                db.execSQL("ALTER TABLE articles ADD COLUMN isHidden INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE articles ADD COLUMN isManuallyOverridden INTEGER NOT NULL DEFAULT 0")
             }
         }
 
@@ -88,7 +98,7 @@ abstract class OfflineDatabase : RoomDatabase() {
                     OfflineDatabase::class.java,
                     "offline_browser_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
                 .build()
                 INSTANCE = instance
                 instance

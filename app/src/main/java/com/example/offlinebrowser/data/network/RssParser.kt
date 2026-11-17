@@ -2,15 +2,32 @@ package com.example.offlinebrowser.data.network
 
 import com.example.offlinebrowser.data.model.Article
 import com.example.offlinebrowser.data.model.Feed
+import com.rometools.rome.feed.synd.SyndEntry
+import com.rometools.rome.feed.synd.SyndFeed
 import com.rometools.rome.io.SyndFeedInput
 import com.rometools.rome.io.XmlReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.jdom2.Element
+import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 
+data class ParsedFeedItem(
+    val article: Article,
+    val categories: List<String> = emptyList(),
+    val author: String? = null,
+    val rawContentHtml: String = "",
+    val mediaCount: Int = 0
+)
+
 class RssParser(private val logger: ((String) -> Unit)? = null) {
+
     suspend fun fetchFeed(feed: Feed): List<Article> {
+        return fetchFeedItems(feed).map { it.article }
+    }
+
+    suspend fun fetchFeedItems(feed: Feed): List<ParsedFeedItem> {
         return withContext(Dispatchers.IO) {
             try {
                 logger?.invoke("Fetching feed: ${feed.url}")
@@ -27,22 +44,9 @@ class RssParser(private val logger: ((String) -> Unit)? = null) {
                 urlConnection.connectTimeout = 10000
                 urlConnection.readTimeout = 10000
 
-                // Rome's XmlReader handles encoding detection
-                val input = SyndFeedInput()
-                val syndFeed = input.build(XmlReader(urlConnection.inputStream))
-
-                logger?.invoke("Successfully fetched feed: ${feed.url}. Found ${syndFeed.entries.size} entries.")
-
-                syndFeed.entries.map { entry ->
-                    Article(
-                        feedId = feed.id,
-                        title = entry.title ?: "",
-                        url = entry.link ?: "",
-                        content = entry.description?.value ?: "",
-                        publishedDate = entry.publishedDate?.time ?: System.currentTimeMillis(),
-                        imageUrl = extractImageUrl(entry)
-                    )
-                }
+                val items = parseStream(feed, urlConnection.inputStream)
+                logger?.invoke("Successfully fetched feed: ${feed.url}. Found ${items.size} entries.")
+                items
             } catch (e: Exception) {
                 e.printStackTrace()
                 logger?.invoke("Failed to fetch feed ${feed.url}: ${e.message}")
@@ -51,12 +55,111 @@ class RssParser(private val logger: ((String) -> Unit)? = null) {
         }
     }
 
-    private fun extractImageUrl(entry: com.rometools.rome.feed.synd.SyndEntry): String? {
+    fun parseStream(feed: Feed, inputStream: InputStream): List<ParsedFeedItem> {
+        val input = SyndFeedInput()
+        val syndFeed: SyndFeed = input.build(XmlReader(inputStream))
+        return parseSyndFeed(feed, syndFeed)
+    }
+
+    fun parseSyndFeed(feed: Feed, syndFeed: SyndFeed): List<ParsedFeedItem> {
+        return syndFeed.entries.map { entry ->
+            val descriptionHtml = entry.description?.value ?: ""
+            val contentParts = entry.contents?.mapNotNull { it.value } ?: emptyList()
+            val rawContentHtml = (listOf(descriptionHtml) + contentParts)
+                .filter { it.isNotBlank() }
+                .distinct()
+                .joinToString("\n")
+            val primaryContent = descriptionHtml.ifBlank { contentParts.firstOrNull() ?: "" }
+
+            val categories = entry.categories
+                ?.mapNotNull { it.name?.trim() }
+                ?.filter { it.isNotEmpty() }
+                ?: emptyList()
+
+            val author = entry.author?.trim()?.takeIf { it.isNotEmpty() }
+                ?: entry.authors?.firstOrNull()?.name?.trim()?.takeIf { it.isNotEmpty() }
+
+            val article = Article(
+                feedId = feed.id,
+                title = entry.title ?: "",
+                url = entry.link ?: "",
+                content = primaryContent,
+                publishedDate = entry.publishedDate?.time ?: System.currentTimeMillis(),
+                imageUrl = extractImageUrl(entry)
+            )
+
+            ParsedFeedItem(
+                article = article,
+                categories = categories,
+                author = author,
+                rawContentHtml = rawContentHtml,
+                mediaCount = countMedia(entry)
+            )
+        }
+    }
+
+    internal fun countMedia(entry: SyndEntry): Int {
+        val urls = mutableSetOf<String>()
+        var anonymousCount = 0
+
+        entry.enclosures?.forEach { enclosure ->
+            val encUrl = enclosure.url?.trim()
+            if (!encUrl.isNullOrEmpty()) {
+                urls.add(encUrl)
+            } else {
+                anonymousCount++
+            }
+        }
+
+        entry.foreignMarkup?.forEach { element ->
+            collectMediaUrls(element, urls) { anonymousCount++ }
+        }
+
+        return urls.size + anonymousCount
+    }
+
+    private fun collectMediaUrls(
+        element: Element,
+        urls: MutableSet<String>,
+        onAnonymous: () -> Unit
+    ) {
+        val isMediaNs = element.namespacePrefix.equals("media", ignoreCase = true) ||
+            element.namespaceURI?.contains("search.yahoo.com/mrss", ignoreCase = true) == true
+        if (isMediaNs) {
+            when (element.name.lowercase()) {
+                "content", "thumbnail" -> {
+                    val mediaUrl = element.getAttributeValue("url")?.trim()
+                    if (!mediaUrl.isNullOrEmpty()) {
+                        urls.add(mediaUrl)
+                    } else {
+                        onAnonymous()
+                    }
+                    return
+                }
+                "group" -> {
+                    element.children?.forEach { child ->
+                        collectMediaUrls(child, urls, onAnonymous)
+                    }
+                    return
+                }
+            }
+        }
+        element.children?.forEach { child ->
+            collectMediaUrls(child, urls, onAnonymous)
+        }
+    }
+
+    private fun extractImageUrl(entry: SyndEntry): String? {
         // 1. Check enclosures (e.g. <enclosure type="image/..." /> or parsed <media:content>)
         val enclosure = entry.enclosures.firstOrNull { it.type?.startsWith("image/") == true }
         if (enclosure != null) return enclosure.url
 
-        // 2. Fallback: Parse description for <img> tag
+        // 2. Check foreignMarkup media:content / media:thumbnail
+        val mediaUrls = mutableSetOf<String>()
+        entry.foreignMarkup?.forEach { collectMediaUrls(it, mediaUrls) {} }
+        if (mediaUrls.isNotEmpty()) return mediaUrls.first()
+
+        // 3. Fallback: Parse description for <img> tag
         val description = entry.description?.value
         if (description != null) {
             val match = Regex("<img[^>]+src\\s*=\\s*['\"]([^'\"]+)['\"]").find(description)
@@ -65,7 +168,7 @@ class RssParser(private val logger: ((String) -> Unit)? = null) {
             }
         }
 
-        // 3. Fallback: Check contents list (often used for full content in Atom/RSS)
+        // 4. Fallback: Check contents list (often used for full content in Atom/RSS)
         if (entry.contents.isNotEmpty()) {
             for (content in entry.contents) {
                 val value = content.value

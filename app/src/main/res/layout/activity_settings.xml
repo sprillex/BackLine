@@ -34,6 +34,18 @@
             android:layout_height="wrap_content"
             android:text="Show Images in Article" />
 
+        <CheckBox
+            android:id="@+id/cbShowHiddenArticles"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Show Hidden Articles" />
+
+        <CheckBox
+            android:id="@+id/cbEnforcePluginFilters"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Enforce Plugin Filters" />
+
         <Button
             android:id="@+id/btnDownloadLogs"
             android:layout_width="wrap_content"
