@@ -1,459 +1,168 @@
-# Offline Browser API & Interface Reference
+# Offline Browser API & Module Reference
 
-This document provides a comprehensive reference for all external REST APIs, service interfaces, network protocols, and data exchange schemas utilized by the Offline Browser Android Application. For high-level operational documentation, architecture diagrams, prerequisites, and build guides, see [README.md](./README.md).
-
----
-
-## 1. Overview
-
-The Offline Browser application interacts with several external REST services, public content distribution networks (CDNs), and local network server instances to retrieve weather data, downloadable offline knowledge archives (ZIM files), RSS feed subscriptions, scraper plugins, AI skills, and remote LLM optimization capabilities.
-
-### Base URLs & Service Interfaces
-
-| Service Name | Base URL / Host | Protocol | Primary Purpose |
-| :--- | :--- | :--- | :--- |
-| **Open-Meteo API** | `https://api.open-meteo.com/` | HTTPS | Historical and multi-day weather forecasts |
-| **Kiwix Library API** | `https://library.kiwix.org/` | HTTPS | Searching and fetching OPDS catalog entries for ZIM archives |
-| **The Bindery (Local)** | `https://<ip>:<port>/` | HTTPS / Local TLS | Local node content discovery and direct ZIM downloading |
-| **GitHub REST API** | `https://api.github.com/` | HTTPS | Plugin directory tree discovery and catalog browsing |
-| **GitHub Raw CDN** | `https://raw.githubusercontent.com/` | HTTPS | Fetching raw JSON scraper plugins and AI skill registries |
-| **Google Favicon Service** | `https://www.google.com/` | HTTPS | Fetching feed domain favicons |
-| **Gemini AI REST API** | `https://generativelanguage.googleapis.com/` | HTTPS | Remote prompt optimization and AI skill refinement |
-
-### Versioning Conventions
-
-- **Open-Meteo API**: Explicit path versioning (`/v1/forecast`).
-- **Kiwix OPDS API**: Path-based versioning (`/catalog/v2/entries`).
-- **Gemini REST API**: Path versioning (`/v1beta/models/...`).
-- **GitHub REST API**: Default API versioning via headers (`Accept: application/vnd.github.v3+json`).
-- **Internal Configurations**: Schema versioning embedded within JSON fields (`"version": 1`).
+Compact reference for external network endpoints, data exchange schemas, Android Activity/WorkManager contracts, and internal Kotlin APIs. See [ARCHITECTURE.md](./ARCHITECTURE.md) for invariants and [README.md](./README.md) for setup.
 
 ---
 
-## 2. Authentication & Security
+## 1. External Network & REST Endpoints
 
-### Key-Based Authentication
+No authentication tokens are stored or sent in the current codebase; local Bindery nodes use SHA-256 leaf-certificate pinning via `SafeClientFactory` (`FingerprintTrustManager` + `trusted_servers`).
 
-- **Gemini API**: Authenticated via query parameter `?key={GEMINI_API_KEY}` passed to the REST endpoint. The key is managed user-side via `PreferencesRepository` or input in `AiSettingsActivity`.
-
-### TLS Certificate Pinning & Fingerprint Verification
-
-- **The Bindery**: Local server connections utilize self-signed certificates. Trust is established by scanning a QR code containing the server IP, port, and SHA-256 certificate fingerprint. The app stores trusted hosts in `TrustedServerDao` and enforces custom `X509TrustManager` validation via `SecurityModule`.
-
-### Request Headers
-
-- **User-Agent**: External repository requests (e.g., GitHub API and FiveFilters site configs) send custom `User-Agent` headers (`OfflineBrowserApp/1.0`) to avoid rate limiting or generic request rejection.
-- **Accept**: XML or JSON content types (`application/xml`, `application/json`, `application/atom+xml`).
-
----
-
-## 3. Standard Envelopes & Error Handling
-
-### HTTP Status Codes
-
-- `200 OK`: Request succeeded. Response body contains payload (JSON, XML, or binary stream).
-- `201 Created`: Resource successfully created or uploaded.
-- `400 Bad Request`: Invalid parameter formats, missing required parameters, or malformed JSON payloads.
-- `401 Unauthorized`: Missing or invalid API key (e.g., invalid Gemini API Key).
-- `404 Not Found`: Requested resource, repository path, or catalog entry does not exist.
-- `422 Unprocessable Entity`: Request syntax is valid, but internal validation failed (e.g., JSON schema validation error).
-- `500 Internal Server Error`: Remote server error during generation or query execution.
-
-### Generic JSON Error Format
-
-```json
-{
-  "error": {
-    "code": 400,
-    "message": "Invalid location parameters: latitude must be between -90 and 90.",
-    "status": "INVALID_ARGUMENT"
-  }
-}
-```
-
----
-
-## 4. Endpoints by Resource
-
-### 4.1 Weather Forecast (Open-Meteo API)
-
-#### `GET /v1/forecast`
-
-Retrieves multi-day and hourly weather forecasts for a specified geographic coordinate pair.
-
-##### Request Parameters
-
-| Parameter | Type | Required | Default | Description |
+| Service | Method & URL | Request / Headers | Response Schema | Error / Fallback |
 | :--- | :--- | :--- | :--- | :--- |
-| `latitude` | `Double` | **Yes** | — | Latitude coordinate (-90.0 to 90.0). |
-| `longitude` | `Double` | **Yes** | — | Longitude coordinate (-180.0 to 180.0). |
-| `current_weather` | `Boolean` | No | `true` | Includes current weather snapshot. |
-| `daily` | `String` | No | `temperature_2m_max,temperature_2m_min,weathercode` | Comma-separated daily metrics. |
-| `hourly` | `String` | No | `temperature_2m,weathercode` | Comma-separated hourly metrics. |
-| `forecast_days` | `Integer` | No | `7` | Number of forecast days (1 to 16). |
-| `timezone` | `String` | No | `"auto"` | Target timezone string or auto-detect. |
+| **Open-Meteo** | `GET https://api.open-meteo.com/v1/forecast` | Query: `latitude`, `longitude`, `current_weather=true`, `daily`, `hourly`, `forecast_days=7` (`1..16`), `timezone=auto` | `WeatherResponse` JSON stored verbatim in `weather.dataJson` | Caught in `WeatherRepository.updateWeather`; preserves cached row |
+| **Kiwix OPDS** | `GET https://library.kiwix.org/catalog/v2/entries` | Query: `q` | Atom/OPDS XML (`<entry>` with acquisition `<link type="application/x-zim">`) | `Result.failure(e)` from `KiwixRepository.search` |
+| **The Bindery (Local TLS)** | `GET https://<ip>:<port>/` & `GET /{zim_filename}` | Custom `SafeClientFactory` (`OkHttpClient`) pinned against `trusted_servers` | HTML with `div.module` (`h3`, `p`, `a` containing `"Download ZIM"`); binary `.zim` stream | `CertificateException` if untrusted/mismatch; `ZimDownloadWorker` returns `Result.failure` |
+| **GitHub Tree (BackLine)** | `GET https://api.github.com/repos/sprillex/BackLine/git/trees/main?recursive=1` | Default OkHttp headers | `{ sha, tree: [{ path, type, sha, size, url }], truncated }` | Returns `false` in `PluginSearchUtil` |
+| **GitHub Tree (FiveFilters)** | `GET https://api.github.com/repos/fivefilters/ftr-site-config/git/trees/master?recursive=1` | Default OkHttp headers | `{ sha, tree: [{ path, type, ... }] }` | Returns `false` in `PluginSearchUtil` |
+| **GitHub Contents API** | `GET https://api.github.com/repos/{owner}/{repo}/contents/{path}` | `SuggestedFeedRepository` (`rss_feeds` or `fivefilters/ftr-site-config`); `AiSkillManager` (`User-Agent: OfflineBrowserApp/1.0`) | `GitHubContent[]` or single file metadata `{ download_url }` | `IOException` on non-2xx; `AiSkillManager` tries fallback URLs |
+| **GitHub Raw CDN** | `GET https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{path}` | `User-Agent: OfflineBrowserApp/1.0` (for AI skills) | `ScraperRecipe` JSON, FiveFilters `.txt`, CSV feed list, or `AiSkillRegistry` JSON | Falls back to bundled assets / defaults |
+| **Google Favicons** | `GET https://www.google.com/s2/favicons?domain={host}&sz=64` | Loaded by Glide (`ArticleAdapter`, `FeedAdapter`) | PNG icon | Falls back to `R.mipmap.ic_launcher` |
+| **HuggingFace Model CDN** | `GET {gemma_model_url}` | `DownloadManager` or `OkHttpClient` (`GemmaManager`); default `google_gemma-3-1b-it-Q4_K_M.gguf` | Binary `.gguf` / `gemma.bin` | `downloadModelDirect` writes local stub file on offline/HTTP failure |
+| **RSS / Article Pages** | `GET {sanitizedUrl}` | Chrome Android `User-Agent`, `Accept`, `Sec-Fetch-*` headers; `SessionCookieJar` | RSS/Atom XML (`RssParser`) or HTML (`HtmlDownloader`) | `403`/`503` triggers `WebViewFetcher` headless fallback (`15s` timeout) |
 
-##### Success Response (`200 OK`)
-
-```json
-{
-  "latitude": 37.7749,
-  "longitude": -122.4194,
-  "timezone": "America/Los_Angeles",
-  "current_weather": {
-    "temperature": 18.5,
-    "windspeed": 12.3,
-    "winddirection": 240,
-    "weathercode": 1,
-    "time": "2025-02-15T12:00"
-  },
-  "daily": {
-    "time": ["2025-02-15", "2025-02-16", "2025-02-17"],
-    "temperature_2m_max": [20.1, 19.4, 18.0],
-    "temperature_2m_min": [11.2, 10.8, 10.1],
-    "weathercode": [1, 2, 3]
-  },
-  "hourly": {
-    "time": ["2025-02-15T00:00", "2025-02-15T01:00"],
-    "temperature_2m": [13.1, 12.8],
-    "weathercode": [1, 1]
-  }
-}
-```
+### Internal WebView URI Scheme (`ArticleViewerActivity`)
+- `app://retry-download` (`ArticleViewerActivity.RETRY_DOWNLOAD_URI`): Intercepted in `shouldOverrideUrlLoading`; triggers `retryArticleDownload()`.
+- `http://*` / `https://*`: Blocked in `shouldInterceptRequest` (returns empty `text/plain` `200`); link clicks open external browser via `Intent.ACTION_VIEW` after `HtmlDownloader.sanitizeUrl()`.
 
 ---
 
-### 4.2 Kiwix Catalog Search (Kiwix Service)
+## 2. Data Exchange & Configuration Schemas
 
-#### `GET /catalog/v2/entries`
+```typescript
+// Scraper Plugin (plugins/**/*.json, filesDir/plugins/*.json)
+interface ScraperRecipe {
+  domainPattern: string;                  // Regex matched against article URL
+  strategy: "EXTRACT_FROM_JS_VAR" | "CSS_SELECTOR" | "XPATH";
+  targetIdentifier?: string;              // JS global var name for EXTRACT_FROM_JS_VAR (default "")
+  contentPath: string[];                  // Fallback CSS/XPath selectors or dot/bracket JSON paths
+  titlePath?: string[];                   // Fallback title paths
+  injectRssImage?: boolean;               // Default false
+  removeSelectors?: string[];             // CSS or XPath selectors stripped with empty parents
+  sourceName?: string;                    // Optional display header
+  version?: number;                       // Default 1; bundled v2 recipes auto-upgrade v1
+  summaryTruncateAfter?: string;          // Truncate text before marker prior to AI/excerpt
+  summaryStripRegexes?: string[];         // Multiline regexes stripped from summary text
+  classification?: ClassificationConfig;
+}
 
-Searches the central Kiwix library catalog for downloadable ZIM archives using OPDS (Open Publication Distribution System) XML feed format.
+interface ClassificationConfig {
+  defaultCategory?: string;               // Default "News"
+  rssRules?: ClassificationRule[];        // Stage 1: URL_REGEX, RSS_CATEGORIES, RSS_FIELD_EQUALS, RSS_FIELD_REGEX, RSS_MEDIA_COUNT
+  pageRules?: ClassificationRule[];       // Stage 2: JS_VAR_PATH, HTML_REGEX, TEXT_REGEX
+  categoryMap?: Record<string, string>;   // Case-insensitive raw -> canonical category map
+  dropIfCategoryIn?: string[];            // Marks article isHidden=true when enforcePluginFilters=true
+  dropIfTagIn?: string[];
+}
 
-##### Request Parameters
+interface ClassificationRule {
+  source?: "URL_REGEX" | "RSS_CATEGORIES" | "RSS_FIELD_EQUALS" | "RSS_FIELD_REGEX" | "RSS_MEDIA_COUNT" | "JS_VAR_PATH" | "HTML_REGEX" | "TEXT_REGEX";
+  pattern?: string; flags?: string;       // Regex pattern + "i"|"m"|"s"
+  categoryGroup?: number; subcategoryGroup?: number;
+  field?: string; value?: string;         // field: url|link|title|author|creator|content_html|content|description|summary
+  minCount?: number; assignTag?: string;
+  categoryPath?: string; subcategoryPath?: string; // JSON dot/array path for JS_VAR_PATH
+}
 
-| Parameter | Type | Required | Description |
+// AI Skill Registry (aiskills/ai_skills.json, filesDir/ai_skills.json)
+interface AiSkillRegistry { version: number; skills: AiSkill[]; }
+interface AiSkill {
+  id: string; displayName: string; summary: string;
+  targetScreens: string[]; version: number; steps: SkillStepConfig[];
+}
+interface SkillStepConfig {
+  stepId: string; promptTemplate: string; // Placeholders: {{INPUT}}, {{RAW_INPUT}}, {{CLEANED_ARTICLE_TEXT}}, {{STEP_N_OUTPUT}}, {{STEPID}}
+  temperature?: number;                   // Default 0.2
+  maxTokens?: number;                     // Default 150
+  repeatPenalty?: number;                 // Default 1.15
+  stopSequences?: string[];               // Default ["<end_of_turn>"]
+}
+
+// Summary Pipeline Config (assets/summary_pipeline_config.json, filesDir/summary_pipeline_config.json)
+interface PipelineConfig { version: number; steps: SkillStepConfig[]; }
+
+// App Config Export/Import (offline_browser_config.json & config.json inside backup ZIP)
+interface AppConfig {
+  settings: {
+    wifi_only: boolean; refresh_interval: number; feed_limit_count: number;
+    feed_limit_days: number; weather_units: "metric" | "imperial";
+    show_hidden_articles?: boolean; enforce_plugin_filters?: boolean;
+  };
+  feeds: { url: string; title: string; type: "RSS" | "MASTODON" | "HTML"; download_limit: number; category: string | null; }[];
+  weather_locations: { location_name: string; latitude: number; longitude: number; }[];
+}
+
+// Open-Meteo Weather Payload (weather.dataJson)
+interface WeatherResponse {
+  current_weather?: { temperature: number; windspeed: number; winddirection: number; weathercode: number; time: string; };
+  hourly?: { time: string[]; temperature_2m: number[]; weathercode: number[]; };
+  daily?: { time: string[]; temperature_2m_max: number[]; temperature_2m_min: number[]; weathercode: number[]; };
+}
+
+// Bindery QR Payload (scanned in BinderyActivity)
+interface BinderyQrPayload { ip: string; port: number; hash: string; } // SHA-256 cert fingerprint
+```
+
+### Suggested Feeds CSV Schema (`rss_feeds/<lang>/<Category>/*.csv`)
+Header: `name,category,language,rank,url,contentType` (quoted commas supported by `SuggestedFeedRepository.parseRemoteCsv`).
+
+---
+
+## 3. Activity Intents & WorkManager Contracts
+
+| Component | Key / Extra | Type | Direction / Contract |
 | :--- | :--- | :--- | :--- |
-| `q` | `String` | **Yes** | Search term (e.g., `"wikipedia"`, `"ubuntu"`). |
-
-##### Success Response (`200 OK`)
-
-Returns OPDS Atom XML content containing entry links for acquisition:
-
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom" xmlns:opds="http://opds-spec.org/2010/catalog">
-  <title>Kiwix Search Results</title>
-  <entry>
-    <id>urn:uuid:a1b2c3d4-e5f6-7890-1234-56789abcdef0</id>
-    <title>Wikipedia in English</title>
-    <summary>Simple English Wikipedia ZIM bundle</summary>
-    <link rel="http://opds-spec.org/acquisition" href="https://download.kiwix.org/zim/wikipedia/wikipedia_en_simple_all_nopic_2024-01.zim" type="application/x-zim" length="1500000000"/>
-  </entry>
-</feed>
-```
+| `HomeActivity` | `EXTRA_CATEGORY`, `FEED_ID`, `OPEN_WEATHER`, `OPEN_CONTENT` | `String`, `Int`, `Boolean`, `Boolean` | Routes initial/re-delivered `ViewState` and `MainViewModel` filter |
+| `ArticleViewerActivity` | `ARTICLE_ID` | `Int` | Loads `articles` row by PK; `-1` loads nothing |
+| `EditFeedActivity` | `FEED_ID` | `Int` | Loads `feeds` row; calls `finish()` if `-1` or missing |
+| `SettingsActivity` | `EXTRA_ADD_SSID` | `String` | Prompts user to append SSID to `allowed_wifi_ssids` |
+| `PluginCreatorActivity` | `ARTICLE_URL`, `EXISTING_RECIPE_JSON` | `String`, `String` | Pre-populates domain regex and existing `ScraperRecipe` fields |
+| `ZimViewerActivity` | `ZIM_FILE_PATH`, `ZIM_FILE_URI` | `String`, `String` | Opens local path or `/proc/self/fd/<fd>` via `ZimFile` + `ZimReader` |
+| `ZimDownloadWorker` | Input: `url`, `title`; Progress: `progress`, `title`; Output: `error` | `String`, `Int` | Downloads `.zim` via `SafeClientFactory` to `getExternalFilesDir(null)/<title>.zim` |
+| `FileImportWorker` | Input: `source_uri`, `file_name`; Progress: `progress`, `title`; Output: `error` | `String`, `Int` | Copies SAF URI stream to `getExternalFilesDir(null)/<file_name>` |
+| `SyncWorker` | Unique periodic work `"SyncWorker"` | — | Enforces `wifiOnly` & `allowedWifiSsids`; syncs feeds & weather (`Result.retry()` if network unmet/exception) |
 
 ---
 
-### 4.3 The Bindery Local Node Interface
+## 4. Public Kotlin Module Interfaces
 
-#### `GET /`
+### Network & Scraping (`com.example.offlinebrowser.data.network`)
 
-Connects to a local Bindery instance to retrieve an HTML catalog of available ZIM modules.
-
-##### Success Response (`200 OK`)
-
-Returns HTML content parsed with Jsoup to extract `<a href="...">` download links and module labels.
-
-#### `GET /{zim_filename}`
-
-Streams binary `.zim` file content directly from the local Bindery node.
-
-##### Success Response (`200 OK`)
-
-Headers: `Content-Type: application/x-zim` or `application/octet-stream`. Returns binary file stream saved to internal storage by `ZimDownloadWorker`.
-
----
-
-### 4.4 Repository File & Tree Discovery (GitHub API)
-
-#### `GET /repos/{owner}/{repo}/git/trees/{branch}`
-
-Discovers recursive directory structures to automatically find scraper plugins (`.json`) or site configurations (`.txt`).
-
-##### Path Parameters
-
-- `owner`: Repository owner (e.g., `sprillex`, `fivefilters`).
-- `repo`: Repository name (e.g., `BackLine`, `ftr-site-config`).
-- `branch`: Target git branch (e.g., `main`, `master`).
-
-##### Query Parameters
-
-| Parameter | Type | Required | Description |
-| :--- | :--- | :--- | :--- |
-| `recursive` | `Integer` / `String` | No | Set to `1` or `true` for full tree recursion. |
-
-##### Success Response (`200 OK`)
-
-```json
-{
-  "sha": "9b12a831e5f8f...",
-  "tree": [
-    {
-      "path": "plugins/en/Tech/wired.json",
-      "mode": "100644",
-      "type": "blob",
-      "sha": "c1f2e3...",
-      "size": 412,
-      "url": "https://api.github.com/repos/sprillex/BackLine/git/blobs/c1f2e3..."
-    }
-  ],
-  "truncated": false
-}
-```
-
-#### `GET /repos/{owner}/{repo}/contents/{path}`
-
-Lists directory contents or retrieves metadata for a specified path.
-
-##### Success Response (`200 OK`)
-
-```json
-[
-  {
-    "name": "article_summarizer.json",
-    "path": "aiskills/article_summarizer.json",
-    "type": "file",
-    "download_url": "https://raw.githubusercontent.com/sprillex/BackLine/main/aiskills/article_summarizer.json"
-  }
-]
-```
-
----
-
-### 4.5 Gemini Skill Optimization (Google Generative AI)
-
-#### `POST /v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}`
-
-Sends article context, execution outputs, and user critique to refine AI Skill prompt templates for small on-device models.
-
-##### Headers
-
-- `Content-Type: application/json`
-
-##### Request Body Schema
-
-```json
-{
-  "contents": [
-    {
-      "parts": [
-        {
-          "text": "Optimize the prompt template for an AI skill named 'article_summarizer'..."
-        }
-      ]
-    }
-  ],
-  "generationConfig": {
-    "temperature": 0.2,
-    "response_mime_type": "application/json"
-  }
-}
-```
-
-##### Success Response (`200 OK`)
-
-```json
-{
-  "candidates": [
-    {
-      "content": {
-        "parts": [
-          {
-            "text": "{\"id\":\"article_summarizer\",\"displayName\":\"Executive Summary\",\"summary\":\"Refined summary skill\",\"targetScreens\":[\"ArticleViewerActivity\"],\"version\":2,\"steps\":[{\"stepId\":\"extract_concrete_facts\",\"promptTemplate\":\"<start_of_turn>user\\nList 3 specific facts from:\\n{{INPUT}}<end_of_turn>\\n<start_of_turn>model\\n\",\"temperature\":0.15,\"maxTokens\":180,\"repeatPenalty\":1.15,\"stopSequences\":[\"<end_of_turn>\"]}]}"
-          }
-        ]
-      }
-    }
-  ]
-}
-```
-
----
-
-## 5. Data Exchange Schemas & Formats
-
-### 5.1 Scraper Recipe Plugin Schema (`.json`)
-
-Scraper plugins define DOM parsing rules used by `ScraperEngine` to extract full-text content and title elements from article webpages.
-
-```json
-{
-  "domainPattern": "wired.com",
-  "strategy": "CSS_SELECTOR",
-  "targetIdentifier": "",
-  "contentPath": [
-    "div.body__container",
-    "article",
-    "main"
-  ],
-  "titlePath": [
-    "h1[data-testid='ContentHeaderHed']",
-    "h1"
-  ],
-  "injectRssImage": true,
-  "removeSelectors": [
-    "iframe",
-    "script",
-    "div.ad-wrapper",
-    "div.social-share",
-    ".newsletter-signup",
-    ".paywall-element"
-  ],
-  "sourceName": "Wired"
-}
-```
-
-#### Field Specifications
-
-| Field | Type | Required | Description |
-| :--- | :--- | :--- | :--- |
-| `domainPattern` | `String` | **Yes** | Target domain name or regex pattern (e.g., `"techcrunch.com"`). |
-| `strategy` | `Enum` | **Yes** | Extraction strategy: `CSS_SELECTOR`, `EXTRACT_FROM_JS_VAR`, or `XPATH`. |
-| `targetIdentifier` | `String` | **Yes** | JS variable name if strategy is `EXTRACT_FROM_JS_VAR`, otherwise empty string. |
-| `contentPath` | `List<String>` | **Yes** | Ordered list of fallback DOM selection paths for article content body. |
-| `titlePath` | `List<String>` | No | Optional ordered list of fallback DOM selection paths for article title. |
-| `injectRssImage` | `Boolean` | No | Default `false`. If `true`, injects RSS enclosure image into extracted body HTML. |
-| `removeSelectors` | `List<String>` | No | CSS selectors to strip from HTML before rendering (ads, scripts, share buttons). |
-| `sourceName` | `String` | No | Display name header inserted above extracted article content. |
-
----
-
-### 5.2 AI Skill Registry Schema (`ai_skills.json`)
-
-AI Skills define multi-step execution routines for local language models (such as Gemma GGUF via `LocalGemmaRunner`).
-
-```json
-{
-  "version": 1,
-  "skills": [
-    {
-      "id": "article_summarizer",
-      "displayName": "Executive Summary",
-      "summary": "Extracts core entity actions and produces an executive 2-bullet summary.",
-      "targetScreens": [
-        "ArticleViewerActivity"
-      ],
-      "version": 1,
-      "steps": [
-        {
-          "stepId": "extract_concrete_facts",
-          "promptTemplate": "<start_of_turn>user\nList 2 or 3 specific actions or decisions mentioned in the article below:\n\nArticle:\n\"\"\"\n{{INPUT}}\n\"\"\"<end_of_turn>\n<start_of_turn>model\n",
-          "temperature": 0.15,
-          "maxTokens": 180,
-          "repeatPenalty": 1.15,
-          "stopSequences": [
-            "<end_of_turn>"
-          ]
-        },
-        {
-          "stepId": "synthesize_summary",
-          "promptTemplate": "<start_of_turn>user\nRewrite these notes into 2 concise summary bullet points:\n\nNotes:\n{{INPUT}}<end_of_turn>\n<start_of_turn>model\n",
-          "temperature": 0.2,
-          "maxTokens": 120,
-          "repeatPenalty": 1.15,
-          "stopSequences": [
-            "<end_of_turn>"
-          ]
-        }
-      ]
-    }
-  ]
-}
-```
-
-#### Field Specifications
-
-| Field | Type | Required | Description |
-| :--- | :--- | :--- | :--- |
-| `version` | `Integer` | **Yes** | Registry schema version. |
-| `skills` | `List<AiSkill>` | **Yes** | List of registered AI skill definitions. |
-| `id` | `String` | **Yes** | Unique identifier string (e.g., `"article_summarizer"`). |
-| `displayName` | `String` | **Yes** | Human-readable title displayed in application UI. |
-| `summary` | `String` | **Yes** | Brief functional description of the skill. |
-| `targetScreens` | `List<String>` | **Yes** | Screen Activity/Fragment class names where skill applies. |
-| `steps` | `List<SkillStepConfig>` | **Yes** | Sequential execution steps for local or remote model inference. |
-
-##### Step Configuration (`SkillStepConfig`)
-
-| Field | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `stepId` | `String` | — | Unique identifier for step within the skill sequence. |
-| `promptTemplate` | `String` | — | Prompt text template supporting variables like `{{INPUT}}` and `{{CLEANED_ARTICLE_TEXT}}`. |
-| `temperature` | `Float` | `0.2` | Model sampling temperature (lower values yield deterministic output). |
-| `maxTokens` | `Integer` | `150` | Maximum token generation limit for step output. |
-| `repeatPenalty` | `Float` | `1.15` | Repetition penalty factor applied during generation. |
-| `stopSequences` | `List<String>` | `["<end_of_turn>"]` | Stop token sequences indicating generation completion. |
-
----
-
-### 5.3 Summary Pipeline Config Schema (`summary_pipeline_config.json`)
-
-Defines sanitization rules and strip selectors applied during pre-processing of article HTML before passing to SLM models.
-
-```json
-{
-  "version": 1,
-  "sanitizeSelectors": [
-    "nav",
-    "header",
-    "footer",
-    "aside",
-    "script",
-    "style",
-    ".poll",
-    ".poll-container",
-    "form",
-    "[class*='poll']",
-    "[id*='poll']",
-    "[class*='quiz']"
-  ],
-  "ignoreLinesStartingWith": [
-    "POLL",
-    "VOTE",
-    "WHICH KIND OF",
-    "CLICK HERE",
-    "SHARE THIS"
-  ],
-  "maxInputCharacters": 4000
-}
-```
-
----
-
-### 5.4 Suggested Feeds CSV Schema (`.csv`)
-
-Curated RSS/Atom feed lists stored in `rss_feeds/<lang>/<Category>/` utilize comma-separated values matching the header format below:
-
-```csv
-name,category,language,rank,url,contentType
-TechCrunch,Tech,en,1,https://techcrunch.com/feed/,RSS
-Wired Top Stories,Tech,en,2,https://www.wired.com/feed/rss,RSS
-Ars Technica,Tech,en,3,https://feeds.arstechnica.com/arstechnica/index,RSS
-```
-
-| Header Field | Type | Description |
+| Symbol | Signature & Return | Contract / Exceptions |
 | :--- | :--- | :--- |
-| `name` | `String` | Human-readable title of the publication or feed. |
-| `category` | `String` | Target category string (e.g., `Tech`, `News`, `Science`). |
-| `language` | `String` | Two-letter ISO language code (e.g., `en`). |
-| `rank` | `Integer` | Numerical priority sequence (1, 2, 3...). |
-| `url` | `String` | Valid RSS/Atom feed target URL. |
-| `contentType` | `String` | Feed content classification (`RSS`, `ATOM`, or `HTML`). |
+| `HtmlDownloader.downloadHtml` | `suspend fun downloadHtml(url: String, rssImageUrl: String? = null): String?` | Delegates to `downloadHtmlWithMetadata(... )?.html`; returns `null` on failure/block/paywall |
+| `HtmlDownloader.downloadHtmlWithMetadata` | `suspend fun downloadHtmlWithMetadata(url: String, rssImageUrl: String? = null, enforceFilters: Boolean = true): HtmlDownloadResult?` | Sanitizes URL; runs `PrimaryHttpFetcher` on `Dispatchers.IO`; falls back to `WebViewFetcher` on HTTP `403`/`503`; catches `HttpStatusException`/`Exception` |
+| `HtmlDownloader.sanitizeUrl` | `fun sanitizeUrl(rawUrl: String): String` | Encodes unsafe URI chars (`|`, `[`, `]`, spaces, etc.) preserving valid `%XX` and IPv6 brackets |
+| `HtmlDownloader.isBotBlockOrEmptyHtml` | `fun isBotBlockOrEmptyHtml(html: String?): Boolean` | Detects empty DOM or Cloudflare/anti-bot pages (`plainText.length < 1500` + challenge markers) |
+| `ScraperEngine.loadRecipes` / `addRecipe` | `fun loadRecipes(newRecipes: List<ScraperRecipe>)` / `fun addRecipe(recipe: ScraperRecipe)` | Thread-safe `CopyOnWriteArrayList`; catches invalid `Regex` exceptions |
+| `ScraperEngine.processWithMetadata` | `fun processWithMetadata(url: String, html: String, rssImageUrl: String? = null, enforceFilters: Boolean = true): ScrapeResult?` | Matches first `domainPattern`, executes `CSS_SELECTOR`/`XPATH`/`EXTRACT_FROM_JS_VAR`, runs Stage 2 `ArticleClassifier` |
+| `WebViewFetcher.fetchHtml` | `suspend fun fetchHtml(url: String): WebViewFetchResult?` | Runs headless `WebView` on `Dispatchers.Main` (`15_000 ms` timeout, `1_500 ms` settle); always calls `destroy()` |
+| `RssParser.fetchFeedItems` / `parseStream` | `suspend fun fetchFeedItems(feed: Feed): List<ParsedFeedItem>` / `fun parseStream(feed: Feed, inputStream: InputStream): List<ParsedFeedItem>` | Parses RSS/Atom via ROME (`SyndFeedInput`); `fetchFeedItems` catches exceptions and returns `emptyList()` |
+| `FingerprintTrustManager` / `SafeClientFactory` | `fun create(context: Context): OkHttpClient` | Pins leaf cert SHA-256 hex against `trusted_servers`; throws `CertificateException` if untrusted/unknown host |
 
----
+### Repositories (`com.example.offlinebrowser.data.repository`)
 
-## 6. Pagination, Querying, & Limits
+| Symbol | Signature & Return | Contract / Exceptions |
+| :--- | :--- | :--- |
+| `FeedRepository.addFeed` | `suspend fun addFeed(url: String, type: FeedType, downloadLimit: Int = 0, category: String? = null, allowDuplicate: Boolean = false): AddFeedResult` | Normalizes URL (`normalizeFeedUrl`); returns `Success(feedId)` or `Duplicate(existingFeed)` |
+| `FeedRepository.syncFeed` | `suspend fun syncFeed(feed: Feed)` | Ensures bundled plugins loaded; ingests RSS/Mastodon items or HTML feed, applies limits, auto-downloads up to `feed.downloadLimit` |
+| `ArticleRepository.downloadArticleContent` | `suspend fun downloadArticleContent(articleItem: ArticleListItem)` / `(article: Article)` | No-ops if `isCached`; downloads HTML and updates `content`, `isCached=true` |
+| `ScraperPluginRepository.ensureDefaultPlugins` | `suspend fun ensureDefaultPlugins()` | Seeds/upgrades bundled recipes (`version` check) and removes legacy `toledo_blade.json` |
+| `ScraperPluginRepository.loadAllRecipes` | `suspend fun loadAllRecipes(): List<ScraperRecipe>` | Parses all `*.json` in `pluginsDir`; skips malformed files |
+| `ConfigRepository.exportConfig` / `importConfig` | `suspend fun exportConfig(outputStream: OutputStream)` / `importConfig(inputStream: InputStream)` | Serializes/restores `AppConfig` JSON without duplicating normalized feed URLs |
+| `ConfigRepository.exportFullBackup` / `importFullBackup` | `suspend fun exportFullBackup(outputStream: OutputStream)` / `importFullBackup(inputStream: InputStream)` | Reads/writes ZIP containing `config.json` + `plugins/*.json` (basename-sanitized) |
+| `KiwixRepository.search` | `suspend fun search(query: String): Result<List<KiwixBook>>` | Queries Kiwix OPDS XML and wraps errors in `Result.failure` |
 
-- **GitHub Git Trees API**: Query parameter `recursive=1` returns full directory trees in a single response, avoiding multiple HTTP roundtrips.
-- **Background Article Sync**: Configurable per-feed download limit (`auto_download_limit`, default `5` articles per sync cycle) to manage device bandwidth and storage.
-- **Weather Forecast Cache**: Offline weather data is retained in `OfflineDatabase` and cached for up to **10 days** before requiring fresh network re-synchronization.
+### AI, Classification & Utilities (`com.example.offlinebrowser.util`)
+
+| Symbol | Signature & Return | Contract / Exceptions |
+| :--- | :--- | :--- |
+| `ArticleClassifier.evaluateRss` | `fun evaluateRss(...): ClassificationResult` | Stage 1 evaluation (`URL_REGEX`, `RSS_CATEGORIES`, `RSS_FIELD_*`, `RSS_MEDIA_COUNT`, `categoryMap`, `dropIf*`) |
+| `ArticleClassifier.evaluatePageJson` / `evaluatePageHtml` | `fun evaluatePageJson(...): ClassificationResult` / `fun evaluatePageHtml(...): ClassificationResult` | Stage 2 evaluation (`JS_VAR_PATH`, `HTML_REGEX`, `TEXT_REGEX`, `shouldDrop`) |
+| `ArticleClassifier.applySummaryRules` | `fun applySummaryRules(text: String, recipe: ScraperRecipe?): String` | Truncates at `summaryTruncateAfter` and applies `summaryStripRegexes` |
+| `AiSkillManager.executeSkill` | `suspend fun executeSkill(skill: AiSkill, initialInput: String, initialContext: Map<String, String> = emptyMap(), recipe: ScraperRecipe? = null): String` | Sanitizes HTML via `ArticleSummarizationPipeline`, executes multi-step prompts on `Dispatchers.Default`, cleans model turn tags |
+| `AiSkillManager.updateSkillsFromGitHub` | `suspend fun updateSkillsFromGitHub(customUrl: String? = null): Result<Int>` | Fetches remote `ai_skills.json`, persists to `filesDir/ai_skills.json`, updates in-memory `registry` |
+| `GemmaManager.generateSummary` | `suspend fun generateSummary(htmlOrTextContent: String, recipe: ScraperRecipe? = null): Pair<String, String>` | Runs `article_summarizer` skill if enabled, else `ArticleSummarizationPipeline`; returns `(summary, modelName)` |
+| `ArticleSummarizationPipeline.sanitizeInput` | `fun sanitizeInput(rawText: String, recipe: ScraperRecipe? = null): String` | Strips `nav/header/footer/aside/script/style/poll/quiz` & short boilerplate lines (`>=40` chars, fallback `>=20`) |
+| `FileLogger.log` / `readTail` / `exportTo` / `clear` | `fun log(message: String)` / `fun readTail(maxBytes: Int = 65_536, maxLines: Int = 500): String` | Thread-safe (`logLock`) rotating logger capped at `262_144` bytes per file (`debug_log.txt`, `debug_log.1.txt`) |
+| `PluginSearchUtil.searchAndInstallPlugin` | `suspend fun searchAndInstallPlugin(context: Context, urlOrDomain: String): Boolean` | Searches `sprillex/BackLine` JSON plugins, then `fivefilters/ftr-site-config` `.txt` configs; saves to `filesDir/plugins/` |

@@ -1,345 +1,196 @@
-# Offline Browser
+# Offline Browser (BackLine)
 
-An offline-first Android application designed for resilient, zero-connectivity content consumption, featuring offline web browsing, RSS and Mastodon feed aggregation, multi-location weather forecasting, Kiwix and "The Bindery" ZIM archive integration, custom DOM scraper plugin extraction, local HTML importing, and screen-aware on-device AI article summarization.
+An offline-first Android application (`com.example.offlinebrowser`) for zero-connectivity content consumption: RSS/Atom/Mastodon/HTML feed aggregation, two-stage article classification & filtering, custom DOM/JS-var/XPath scraper plugins, Open-Meteo offline weather, Kiwix OPDS & local TLS Bindery ZIM archives, and on-device Gemma AI skill summarization.
+
+- **Architecture Spec (AI Coding Context):** [ARCHITECTURE.md](./ARCHITECTURE.md)
+- **API, Schemas & Module Reference:** [API.md](./API.md)
+- **SBOM & Security Manifest:** [LIBRARIES.md](./LIBRARIES.md)
 
 ---
 
-## 1. Project Overview
+## 1. Overview & Primary Features
 
-Offline Browser is built to ensure seamless digital access in environments with unstable, intermittent, or non-existent network connectivity. Rather than functioning as a transient cache, Offline Browser operates as an autonomous offline content repository, aggregating feeds, scraping articles into clean standalone offline documents, storing multi-day weather predictions, and serving complete offline knowledge modules (ZIM files).
+Offline Browser operates across four decoupled planes:
 
-### Core Capabilities
-
-- **Offline Web & Feed Browsing**: Aggregates RSS, ATOM, and Mastodon user feeds (`https://mastodon.social/@user.rss`), persisting full articles, enclosure images, and metadata locally in Room database storage.
-- **Offline Weather Viewer**: Multi-location meteorological forecasting powered by Open-Meteo, featuring current conditions, hourly metrics, 7-day forecasts, and local 10-day Room database retention.
-- **Offline Knowledge Archives (ZIM Files)**:
-  - **The Bindery Integration**: Direct discovery and high-speed local TLS downloading of `.zim` archive modules from local Bindery nodes via QR code scanning and SHA-256 certificate fingerprint pinning.
-  - **Kiwix OPDS Catalog Search**: Search and acquire offline Wikipedia and specialized knowledge archives directly through the Kiwix OPDS catalog interface.
-  - **Built-in ZIM Reader**: Integrated viewer powered by Zimdroid (`libzim`) for navigating offline `.zim` compressed knowledge archives without third-party external viewers.
-- **On-Device AI & Screen-Aware AI Skills**:
-  - **Local Gemma SLM Execution**: Offline, zero-connectivity article summarization running quantized Gemma GGUF models directly on device via `LocalGemmaRunner`.
-  - **AI Skill Management**: Configurable multi-step AI execution pipelines defined in `ai_skills.json`, editable via `AiSettingsActivity` or synchronized remotely from GitHub repositories.
-  - **Gemini Skill Optimizer**: Developer sandbox and prompt refinement tool powered by `gemini-2.5-flash` for tuning small on-device SLM prompts against article text.
-- **Scraper Plugins & In-App Plugin Creator**:
-  - **DOM Scraping Plugins**: Custom DOM extraction recipes (`.json`) and FiveFilters site configs (`.txt`) that strip paywalls, intrusive scripts, ads, and interactive widgets.
-  - **Automated Plugin Discovery**: Domain matching against the `sprillex/BackLine` and `fivefilters/ftr-site-config` GitHub repositories.
-  - **Interactive Plugin Creator**: On-device visual DOM selector generator allowing users to visually inspect article containers and generate exportable scraping recipes.
-- **Local Document Ingestion**: Recursive importing of offline HTML directories and bundled assets into local database feeds via Android's Storage Access Framework.
-- **Policy-Based Network Sync**: Granular background synchronization schedules, WiFi-only constraints, specific WiFi SSID whitelisting, and per-feed article retention limits.
+1. **Feed Ingestion & Scraping Plane:** Aggregates `RSS`, `MASTODON`, and `HTML` feeds (`RssParser`, `FeedRepository`), runs two-stage classification/filtering (`ArticleClassifier`), and extracts full article bodies via `ScraperEngine` (`CSS_SELECTOR`, `EXTRACT_FROM_JS_VAR`, `XPATH`) with OkHttp + headless `WebViewFetcher` fallback on HTTP `403`/`503`.
+2. **Offline Knowledge Archive Plane:** Searches Kiwix OPDS catalogs (`KiwixRepository`), discovers and downloads `.zim` archives over SHA-256-pinned local TLS from The Bindery (`BinderyActivity`, `SafeClientFactory`, `ZimDownloadWorker`), imports/links local `.zim` files via Storage Access Framework (`LibraryActivity`, `FileImportWorker`), and opens them with Zimdroid (`ZimViewerActivity`).
+3. **On-Device AI & Skills Plane:** Sanitizes article HTML (`ArticleSummarizationPipeline`), executes multi-step `AiSkill` workflows (`AiSkillManager`, `GemmaManager`) via `LocalGemmaRunner` (or `DefaultLocalGemmaRunner` fallback), and syncs/edits skills (`AiSettingsActivity`).
+4. **Weather & Sync Policy Plane:** Persists 1–16 day Open-Meteo forecasts (`WeatherRepository`, `WeatherActivity`) and schedules periodic `WorkManager` sync (`SyncWorker`) gated by WiFi-only and allowed-SSID constraints (`PreferencesRepository`).
 
 ---
 
 ## 2. Prerequisites
 
-### Host Development & Build System Requirements
+### Host Build Environment
+- **Supported OS:** Debian 11/12, Ubuntu 22.04/24.04 LTS, Linux Mint 21/22, DietPi (Debian x86_64/aarch64), macOS 13+, or Windows 10/11 WSL2.
+- **Hardware:** 4+ CPU cores (8 recommended), 8 GB RAM min (16 GB recommended), 10 GB free disk for Android SDK + Gradle caches.
+- **Required Binaries & Toolchains:**
+  - **OpenJDK 17** (`JAVA_HOME` must point to JDK 17; `build.gradle.kts` / `app/build.gradle.kts` target Java 17 and AGP `8.2.0`).
+  - **Android SDK:** `compileSdk = 34`, `minSdk = 24`, `targetSdk = 34`, `build-tools;34.0.0`, `platforms;android-34`, `platform-tools` (`adb`), `cmdline-tools;latest`.
+  - **Utilities:** `git`, `curl`, `unzip`.
 
-- **Supported Operating Systems**:
-  - Linux distributions: Ubuntu (22.04 LTS / 24.04 LTS), Debian (11 / 12), Linux Mint (21 / 22), DietPi (Debian-based x86_64 or aarch64).
-  - macOS (Ventura 13+, Sonoma 14+) with Xcode Command Line Tools.
-  - Windows 10/11 with WSL2 (Ubuntu environment recommended).
-- **Hardware Specifications**:
-  - **CPU**: x86_64 or ARM64 multi-core processor (4 cores minimum, 8 cores recommended).
-  - **Memory (RAM)**: 8 GB minimum (16 GB recommended for Gradle daemon, Android SDK compilation, and emulator execution).
-  - **Disk Space**: 10 GB free disk space for Android SDK, build tools, Gradle caches, and generated APK artifacts.
+### Target Device & Permissions
+- Android 7.0+ (`minSdk 24`), 500 MB+ free storage (extra for `.zim` archives and `.gguf` model weights).
+- Declared in [app/src/main/AndroidManifest.xml](./app/src/main/AndroidManifest.xml):
 
-### Runtime Dependencies
-
-- **Java Development Kit (JDK)**: **OpenJDK 17** is strictly required. Android Gradle Plugin 8.3+ with Android SDK Build Tools 34 and `jlink` require Java 17; builds will encounter toolchain incompatibilities on Java 21+.
-- **Android SDK & Build Tools**:
-  - `compileSdk`: 34 (Android 14)
-  - `minSdk`: 24 (Android 7.0 Nougat)
-  - `targetSdk`: 34 (Android 14)
-  - `buildToolsVersion`: 34.0.0
-  - Android SDK Command-line Tools (`cmdline-tools;latest`)
-  - Android SDK Platform `platforms;android-34`
-  - Android SDK Platform-Tools (`adb`)
-
-### Target Device Requirements
-
-- Physical Android device or Android Virtual Device (AVD) running Android 7.0 (API level 24) or higher.
-- Storage: Minimum 500 MB free space (additional storage required for downloading large Kiwix `.zim` archives or Gemma `.gguf` model weights).
-
-### Required Android Permissions
-
-The application declares the following permissions in `app/src/main/AndroidManifest.xml`:
-
-| Permission | Purpose | Runtime vs Install-time |
+| Permission | Purpose | Grant Type |
 | :--- | :--- | :--- |
-| `android.permission.INTERNET` | Retrieve feeds, weather forecasts, ZIM files, and plugins over network. | Install-time |
-| `android.permission.ACCESS_NETWORK_STATE` | Monitor active network interfaces (cellular, WiFi, offline). | Install-time |
-| `android.permission.ACCESS_WIFI_STATE` | Query WiFi connection status and connected network information. | Install-time |
-| `android.permission.ACCESS_FINE_LOCATION` | Required on Android 8.1+ (API 27+) to retrieve the current WiFi SSID for network whitelisting; also used for local weather geolocation. | Runtime |
-| `android.permission.ACCESS_COARSE_LOCATION` | Approximate location detection for Open-Meteo weather forecasts. | Runtime |
-| `android.permission.FOREGROUND_SERVICE` | Run persistent background data synchronization and file downloading. | Install-time |
-| `android.permission.FOREGROUND_SERVICE_DATA_SYNC` | Android 14+ requirement for WorkManager background data synchronization jobs. | Install-time |
-| `android.permission.POST_NOTIFICATIONS` | Deliver sync completion and download progress alerts (Android 13+). | Runtime |
+| `INTERNET`, `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE` | Feed, weather, Kiwix, Bindery, and GitHub sync + connectivity checks | Install-time |
+| `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION` | WiFi SSID retrieval (`WifiManager` on Android 8.1+) & weather geolocation | Runtime |
+| `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_DATA_SYNC` | WorkManager foreground ZIM downloads/imports (`ZimDownloadWorker`, `FileImportWorker`) | Install-time |
+| `POST_NOTIFICATIONS` | Download/import progress & completion notifications (Android 13+) | Runtime |
 
 ---
 
 ## 3. Installation & Setup
 
-Execute the following commands in sequence on a standard Linux environment (Ubuntu/Debian/Mint/DietPi):
-
-### Step 1: Install System Dependencies & OpenJDK 17
+Non-interactive setup on Debian/Ubuntu/Linux Mint/DietPi:
 
 ```bash
-# Update package repositories and install OpenJDK 17 and base utilities non-interactively
+# 1. Install OpenJDK 17 and CLI utilities
 sudo apt-get update && sudo apt-get install -y \
-    openjdk-17-jdk \
-    git \
-    curl \
-    unzip \
-    libpulse0 \
-    libgl1
+  openjdk-17-jdk git curl unzip
 
-# Set JAVA_HOME and verify Java version
 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-export PATH=$JAVA_HOME/bin:$PATH
+export PATH="$JAVA_HOME/bin:$PATH"
 java -version
-```
 
-### Step 2: Install Android Command-Line Tools (If not already present)
-
-```bash
+# 2. Install Android SDK Command-Line Tools (skip if /opt/android-sdk exists)
 export ANDROID_SDK_ROOT=/opt/android-sdk
-sudo mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
-
-# Download and extract Android Command-Line Tools
-curl -fsSL -o /tmp/cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-sudo unzip -q /tmp/cmdline-tools.zip -d $ANDROID_SDK_ROOT/cmdline-tools
-sudo mv $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools $ANDROID_SDK_ROOT/cmdline-tools/latest
+sudo mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
+curl -fsSL -o /tmp/cmdline-tools.zip \
+  https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+sudo unzip -q /tmp/cmdline-tools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
+sudo mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
 rm -f /tmp/cmdline-tools.zip
 
-# Export Android SDK environment variables
-export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH
+export ANDROID_HOME="$ANDROID_SDK_ROOT"
+export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
 
-# Accept licenses and install Android 34 SDK platform and build tools
 yes | sdkmanager --licenses
 sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-```
 
-### Step 3: Clone the Repository & Initialize Gradle
-
-```bash
-git clone https://github.com/sprillex/BackLine.git
-cd BackLine
-
-# Grant execution rights to Gradle wrapper
+# 3. Verify Gradle wrapper (Gradle 8.7)
 chmod +x gradlew
-
-# Verify Gradle wrapper tasks with OpenJDK 17
-export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-./gradlew tasks
+./gradlew tasks --no-daemon
 ```
+
+> **Note:** No Python virtualenv (`venv`) or `.env` file is required by this Android/Gradle codebase. Optional host SDK discovery can alternatively use a gitignored `local.properties` file containing `sdk.dir=/opt/android-sdk`.
 
 ---
 
 ## 4. Configuration
 
-Offline Browser provides granular runtime configuration via Android `SharedPreferences` (managed by `PreferencesRepository`), internal asset configs, and device-local JSON files.
+### Build & Host Environment Variables
 
-### Configuration Overview & File Locations
-
-| Config Item / File | Path / Key | Default Value | Description |
-| :--- | :--- | :--- | :--- |
-| **Gemma Model URL** | `pref_gemma_model_url` | `https://huggingface.co/bartowski/google_gemma-3-1b-it-GGUF/resolve/main/google_gemma-3-1b-it-Q4_K_M.gguf` | Direct CDN URL for downloading quantized Gemma GGUF model weights. |
-| **Gemma Model File** | `pref_gemma_model_path` | `""` (Unset) | Absolute filesystem path to the downloaded `.gguf` model file on device. |
-| **Gemini API Key** | `pref_gemini_api_key` | `""` (Empty string) | Google Generative AI API key used in `GeminiSkillOptimizer` within the AI Sandbox. |
-| **WiFi Only Sync** | `pref_sync_wifi_only` | `true` | When true, WorkManager background synchronization runs only when connected to unmetered WiFi. |
-| **Whitelisted SSID** | `pref_allowed_wifi_ssid` | `""` (Any WiFi) | Enforces synchronization only when connected to a specific named WiFi SSID. |
-| **Sync Interval** | `pref_sync_interval_hours` | `6` | Periodic sync frequency in hours (e.g., 1, 6, 12, 24) scheduled via `WorkManager`. |
-| **Auto Download Limit** | `auto_download_limit` | `5` | Maximum number of new articles downloaded and scraped per feed per sync cycle. |
-| **AI Skills Registry** | `context.filesDir/ai_skills.json` (Fallback: `assets/ai_skills.json`) | Bundled Registry | Multi-turn prompt templates and inference parameters for on-device AI skills. |
-| **Summary Pipeline Config**| `context.filesDir/summary_pipeline_config.json` (Fallback: `assets/summary_pipeline_config.json`) | Bundled Sanitizer Config | HTML sanitization rules, strip selectors, and input character limits for AI summarization. |
-| **Room Database** | `/data/data/com.example.offlinebrowser/databases/offline_browser.db` | Schema Version 10 | SQLite database containing articles, feeds, weather data, and trusted Bindery servers. |
-
-### Environment Variables (Development & CI)
-
-| Variable | Description | Example |
+| Variable / File | Path / Value | Description |
 | :--- | :--- | :--- |
-| `JAVA_HOME` | Points to OpenJDK 17 installation root. | `/usr/lib/jvm/java-17-openjdk-amd64` |
-| `ANDROID_HOME` or `ANDROID_SDK_ROOT` | Points to Android SDK directory containing `platforms` and `build-tools`. | `/opt/android-sdk` or `$HOME/Android/Sdk` |
-| `PATH` | System PATH containing `$JAVA_HOME/bin` and `$ANDROID_SDK_ROOT/platform-tools`. | `$JAVA_HOME/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH` |
+| `JAVA_HOME` | `/usr/lib/jvm/java-17-openjdk-amd64` | OpenJDK 17 root required by AGP `8.2.0` and Kotlin `1.9.23` |
+| `ANDROID_SDK_ROOT` / `ANDROID_HOME` | `/opt/android-sdk` | Android SDK location (`platforms;android-34`, `build-tools;34.0.0`) |
+| `gradle.properties` | `org.gradle.jvmargs=-Xmx2048m` | Gradle JVM heap, UTF-8 encoding, AndroidX & Jetifier flags |
+| `local.properties` (optional, gitignored) | `sdk.dir=/opt/android-sdk` | Explicit SDK override for Android Studio / Gradle |
+
+### Runtime Preferences (`SharedPreferences`: `offline_browser_prefs`)
+
+Managed by [PreferencesRepository.kt](./app/src/main/java/com/example/offlinebrowser/data/repository/PreferencesRepository.kt):
+
+| Key | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `wifi_only` | `Boolean` | `false` | Require `TRANSPORT_WIFI` / `NetworkType.UNMETERED` for sync & downloads |
+| `allowed_wifi_ssids` | `Set<String>` | `emptySet()` | Whitelisted WiFi SSIDs checked by `SyncWorker` (requires location permission) |
+| `refresh_interval_minutes` | `Long` | `60` | Periodic `SyncWorker` interval in minutes |
+| `feed_limit_count` | `Int` | `50` | Max non-favorite articles retained per feed |
+| `feed_limit_days` | `Int` | `30` | Max age in days for non-favorite articles |
+| `weather_units` | `String` | `"metric"` | `"metric"` (`°C`) or `"imperial"` (`°F`) |
+| `weather_refresh_interval_minutes` | `Long` | `60` | Weather refresh interval (clamped `>= 15`) |
+| `weather_forecast_days` | `Int` | `7` | Open-Meteo forecast days (clamped `1..16`) |
+| `detailed_debugging_enabled` | `Boolean` | `false` | Enables `FileLogger` output & `"Debug"` pill in `HomeActivity` |
+| `show_article_thumbnails` | `Boolean` | `true` | Toggle article thumbnail rendering in `ArticleAdapter` |
+| `show_images_in_article_view` | `Boolean` | `true` | Toggle `loadsImagesAutomatically` in `ArticleViewerActivity` |
+| `show_hidden_articles` | `Boolean` | `false` | Expose `"Hidden"` filter pill in `HomeActivity` |
+| `enforce_plugin_filters` | `Boolean` | `true` | Enforce `dropIfCategoryIn` / `dropIfTagIn` classification rules |
+| `gemma_model_path` | `String?` | `null` | Local path/URI to downloaded Gemma `.gguf` / `gemma.bin` |
+| `gemma_model_url` | `String` | `https://huggingface.co/bartowski/google_gemma-3-1b-it-GGUF/resolve/main/google_gemma-3-1b-it-Q4_K_M.gguf` | Model download URL |
+| `enabled_skill_ids` | `Set<String>?` | `null` | Enabled AI skill IDs (`null` = all enabled) |
+
+### On-Device Storage Paths & Backup Seed Format
+
+- **Room SQLite DB:** `/data/data/com.example.offlinebrowser/databases/offline_browser_database` (Schema v11).
+- **Linked ZIM Prefs:** `SharedPreferences("linked_files_prefs")` key `linked_files_list`.
+- **Internal Files (`context.filesDir`):** `plugins/*.json`, `images/<md5>.jpg`, `models/gemma.bin`, `ai_skills.json`, `summary_pipeline_config.json`, `debug_log.txt`, `debug_log.1.txt`.
+- **External App Files (`getExternalFilesDir(null)`):** Downloaded/imported `.zim` files (`<title>.zim`), `DownloadManager` `Downloads/gemma.bin`.
+- **Exported `offline_browser_config.json` / ZIP `config.json` format** (importable in `SettingsActivity`):
+
+```json
+{
+  "settings": {
+    "wifi_only": true,
+    "refresh_interval": 60,
+    "feed_limit_count": 50,
+    "feed_limit_days": 30,
+    "weather_units": "metric",
+    "show_hidden_articles": false,
+    "enforce_plugin_filters": true
+  },
+  "feeds": [
+    {
+      "url": "https://www.mlive.com/arc/outboundfeeds/rss/?outputType=xml",
+      "title": "MLive",
+      "type": "RSS",
+      "download_limit": 5,
+      "category": "News"
+    }
+  ],
+  "weather_locations": [
+    { "location_name": "Toledo", "latitude": 41.6528, "longitude": -83.5379 }
+  ]
+}
+```
 
 ---
 
 ## 5. Usage Guide
 
-All compilation, testing, deployment, and operational workflows are managed via the Gradle wrapper and Android Debug Bridge (`adb`).
-
-### 1. Compile & Assemble APKs
-
-Compile the project and build the debug APK non-interactively:
+### Build, Test & Deploy Commands
 
 ```bash
-export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-./gradlew assembleDebug --no-daemon
-```
-
-*Expected output log:*
-```text
-BUILD SUCCESSFUL in 42s
-54 actionable tasks: 54 executed
-```
-The compiled output is located at: `app/build/outputs/apk/debug/app-debug.apk`.
-
-### 2. Execute Unit Tests
-
-Run all unit tests across the test suites:
-
-```bash
-export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+# Run pure-JVM unit tests (debug + release)
 ./gradlew test --no-daemon
+
+# Build debug APK -> app/build/outputs/apk/debug/app-debug.apk
+./gradlew assembleDebug --no-daemon
+
+# Install and launch on connected device/emulator
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb shell am start -n com.example.offlinebrowser/.HomeActivity
 ```
 
-*Expected output log:*
+*Observed `./gradlew test --no-daemon` result:*
 ```text
 > Task :app:testDebugUnitTest
 > Task :app:testReleaseUnitTest
 > Task :app:test
-BUILD SUCCESSFUL in 18s
+BUILD SUCCESSFUL in 4m 40s
+54 actionable tasks: 54 executed
 ```
 
-### 3. Deploy to Connected Hardware or Emulator
-
-Install the debug package onto an active device or running emulator:
-
-```bash
-adb install -r app/build/outputs/apk/debug/app-debug.apk
-```
-
-### 4. Launch Application via ADB
-
-Start the primary launcher activity (`HomeActivity`):
-
-```bash
-adb shell am start -n com.example.offlinebrowser/.HomeActivity
-```
-
-*Expected output:*
-```text
-Starting: Intent { cmp=com.example.offlinebrowser/.HomeActivity }
-```
-
-### 5. Inspect Runtime Logs & Telemetry
-
-Monitor live application output, WorkManager sync jobs, and scraper logs:
-
-```bash
-adb logcat -s OfflineBrowser:V ScraperEngine:D GemmaManager:D SyncWorker:D
-```
-
-*Sample execution log:*
-```text
-D/SyncWorker: Starting scheduled sync cycle for all enabled feeds
-D/ScraperEngine: Scraping article url: https://techcrunch.com/article-slug/
-D/ScraperEngine: Matched domain plugin: plugins/en/Tech/techcrunch.json
-D/ScraperEngine: Extracted article title: 'Open Source Advances' with selector 'h1'
-D/ScraperEngine: Extracted content body (4820 bytes), injected RSS enclosure image
-I/SyncWorker: Sync completed: 5 articles updated, 0 errors
-```
+### UI Navigation & Operational Workflows
+- **Home (`HomeActivity`):** Search articles via `sv_articles`, switch category/`Weather`/`Hidden`/`Debug` pills, long-press status dot to whitelist current WiFi SSID, long-press article cards for Favorite/Read/Hide/Change Category, or pull to refresh local DB views.
+- **Reader (`ArticleViewerActivity`):** Displays cached HTML offline; shows `"Partial Preview Cached"` banner (`btn_open_in_browser` / `btn_retry_download`) if uncached/empty; bottom bar triggers Gemma summary (`nav_gemma`) and `Settings` (`nav_settings`); FAB opens Plugin Options (`Create`, `Import`, `Apply`, `Edit`, `Search for Plugin automatically`).
+- **Feed & Content Hub (`FeedSettingsActivity` → `CustomFeedsActivity` / `SuggestedFeedsActivity`):** Subscribe to `RSS`/`MASTODON`/`HTML` feeds, browse curated CSVs in `sprillex/BackLine`, manage plugins (`PluginsActivity`), or open `BinderyActivity` (QR scan + ZIM download), `KiwixSearchActivity`, `LibraryActivity`, and `WeatherActivity`.
+- **Settings & AI (`SettingsActivity` → `AiSettingsActivity`):** Configure sync policy, export/import `offline_browser_config.json` or full `.zip` backup (settings + feeds + weather + `plugins/*.json`), export `debug_log.txt`, download Gemma models, sync `ai_skills.json` from GitHub, and CRUD skills.
 
 ---
 
-## 6. Architecture & Subsystems
+## 6. Troubleshooting
 
-Offline Browser is built using modern Android Jetpack architecture following the Model-View-ViewModel (MVVM) and Unidirectional Data Flow (UDF) patterns.
-
-```
-┌───────────────────────────────────────────────────────────────────────────┐
-│                           Presentation Layer                              │
-│                                                                           │
-│  HomeActivity            ArticleViewerActivity       WeatherActivity      │
-│  PluginsActivity         AiSettingsActivity          BinderyActivity      │
-│  PluginCreatorActivity   KiwixSearchActivity         ZimViewerActivity    │
-└─────────────────────────────────────┬─────────────────────────────────────┘
-                                      │ Observers (StateFlow / LiveData)
-                                      ▼
-┌───────────────────────────────────────────────────────────────────────────┐
-│                            ViewModel Layer                                │
-│                                                                           │
-│                            MainViewModel                                  │
-│         Manages UI State, Filters, Search, Sync Requests, Feed Lists       │
-└─────────────────────────────────────┬─────────────────────────────────────┘
-                                      │ Coroutines / Dispatchers.IO
-                                      ▼
-┌───────────────────────────────────────────────────────────────────────────┐
-│                           Repository Layer                                │
-│                                                                           │
-│   ArticleRepository      FeedRepository          WeatherRepository        │
-│   KiwixRepository        PreferencesRepository   ScraperPluginRepository  │
-└──────────────────┬─────────────────────────────────────┬──────────────────┘
-                   │                                     │
-                   ▼                                     ▼
-┌──────────────────────────────────────┐  ┌─────────────────────────────────┐
-│          Local Data Layer            │  │      Remote Network Layer       │
-│                                      │  │                                 │
-│  OfflineDatabase (Room SQLite v10)   │  │  Retrofit 2 & OkHttp 4 Clients  │
-│    - ArticleDao                      │  │    - Open-Meteo REST Service    │
-│    - FeedDao                         │  │    - Kiwix OPDS XML Service     │
-│    - WeatherDao                      │  │    - GitHub Content & Tree API  │
-│    - TrustedServerDao                │  │    - Google Generative AI REST  │
-│    - SuggestedFeedDao                │  │    - The Bindery Local Node TLS │
-│  SharedPreferences                   │  │  Jsoup Article Scraper Engine   │
-│  Local Filesystem (ZIM, GGUF)        │  │  ROME RSS/Atom Feed Parsers     │
-└──────────────────────────────────────┘  └─────────────────────────────────┘
-                   ▲                                     ▲
-                   │                                     │
-┌──────────────────┴─────────────────────────────────────┴──────────────────┐
-│                         Background & AI Subsystems                        │
-│                                                                           │
-│   WorkManager Execution Engine:                                           │
-│     - SyncWorker (Periodic Feed & Article Polling)                        │
-│     - ZimDownloadWorker (Large Binary ZIM Acquisition)                    │
-│     - FileImportWorker (Asynchronous Local Folder Ingestion)              │
-│                                                                           │
-│   AI & Inference Engine:                                                  │
-│     - GemmaManager (Model Lifecycle, Downloads, Prompt Dispatching)       │
-│     - LocalGemmaRunner & DefaultLocalGemmaRunner (On-Device Inference)    │
-│     - AiSkillManager (Multi-step Skill Execution, Schema Normalization)   │
-│     - GeminiSkillOptimizer (Cloud Prompt Sandbox via gemini-2.5-flash)    │
-│     - ArticleSummarizationPipeline (HTML Pre-sanitization & Fact Filter)  │
-└───────────────────────────────────────────────────────────────────────────┘
-```
-
-### Subsystems Breakdown
-
-1. **Local Data Persistence (`OfflineDatabase`)**:
-   - Built on Room 2.6.1 with schema migration history through version 10.
-   - Migration 9 to 10 adds an optional `summary TEXT` column to the `articles` table for caching generated AI summaries.
-   - Includes full relational entities for `articles`, `feeds`, `weather`, `suggested_feeds`, and `trusted_servers`.
-2. **Scraper Engine (`ScraperEngine`)**:
-   - Executes domain-specific extraction rules defined in JSON plugins.
-   - Evaluates strategies (`CSS_SELECTOR`, `EXTRACT_FROM_JS_VAR`, `XPATH`) with fallback selector chains.
-   - Cleans DOM nodes by stripping ads, scripts, tracking pixels, and interactive widgets.
-3. **Background Sync Engine (`WorkManager`)**:
-   - `SyncWorker`: Scheduled background job that enforces network conditions (metered vs unmetered, WiFi SSID matching) before fetching feed entries and running `ScraperEngine`.
-   - `ZimDownloadWorker`: Manages multi-gigabyte ZIM file streaming and checksum verification.
-   - `FileImportWorker`: Ingests offline HTML file structures in the background using `Dispatchers.IO`.
-4. **On-Device AI Engine (`GemmaManager` & `AiSkillManager`)**:
-   - Abstracted through `LocalGemmaRunner`. If no native binary is present, `DefaultLocalGemmaRunner` provides resilient fallback extraction of context-aware facts.
-   - `ArticleSummarizationPipeline` strips unwanted HTML (`nav`, `header`, `footer`, `aside`, `.poll`, `quiz`) before tokenization.
-   - `AiSkillSandboxBottomSheetDialogFragment` allows live side-by-side prompt tuning and field diffing against `GeminiSkillOptimizer`.
-5. **Security & Custom Trust Management (`SecurityModule`)**:
-   - Manages self-signed certificate validation for local Bindery nodes. Scanned QR codes provide SHA-256 fingerprints checked by an implementation of `X509TrustManager`.
-
----
-
-## 7. Troubleshooting
-
-| Symptom / Error | Root Cause | Actionable Recovery Step |
+| Symptom / Error | Root Cause | Fix |
 | :--- | :--- | :--- |
-| **`Unsupported class file major version 65` or `jlink` build failure** | Gradle execution was initiated with Java 21+ instead of Java 17. | Install OpenJDK 17 and set `export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64` before invoking `./gradlew`. |
-| **`Could not find or load main class` during Gradle invocation** | Missing or corrupted Gradle wrapper jar (`gradle/wrapper/gradle-wrapper.jar`). | Regenerate wrapper via `gradle wrapper` or ensure git tracked assets are intact. |
-| **`SDK location not found`** | `ANDROID_HOME` or `ANDROID_SDK_ROOT` is unset, or `local.properties` is missing. | Export SDK path: `export ANDROID_HOME=/opt/android-sdk` or create `local.properties` with `sdk.dir=/opt/android-sdk`. |
-| **`ZimDownloadWorker` failed: SSL Handshake Exception** | Connecting to a local Bindery instance without trusting its self-signed certificate. | Scan the Bindery server's QR code from `BinderyActivity` to register its SHA-256 fingerprint into `trusted_servers`. |
-| **Feed sync skipped: `Constraints not met`** | Device is on cellular data or an untrusted WiFi network when WiFi-only / SSID whitelisting is active. | Open `SettingsActivity` and either disable "WiFi Only Sync" or add the active network to the allowed SSID whitelist. |
-| **`LocalGemmaRunner: Model file not found`** | Summarization was invoked, but the `.gguf` model file has not been downloaded or selected. | Navigate to `AiSettingsActivity`, select "Download Model" (or manually place a GGUF model in storage), and verify `pref_gemma_model_path`. |
-| **Gemini Skill Optimizer returns `401 Unauthorized`** | Missing or invalid Gemini API key in `PreferencesRepository`. | Provide a valid Google AI Studio API key in `AiSettingsActivity` under "Gemini API Key". |
-| **Article scraper extracts empty body content** | Target website changed its DOM structure, rendering the plugin selectors obsolete. | Launch `PluginCreatorActivity` on the article URL, select the new container element, and export an updated plugin JSON to `plugins/`. |
-
----
-
-## 8. External Interfaces & API Reference
-
-Offline Browser interfaces with external REST endpoints, local Bindery nodes, Kiwix catalog servers, and Google Generative AI services. Complete request parameters, response payloads, error representations, and data exchange schemas are documented in [API.md](./API.md).
+| `Unsupported class file major version 65` or `jlink` error | Gradle invoked under Java 21+ instead of JDK 17 | Set `export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64` and re-run `./gradlew` |
+| `SDK location not found` | `ANDROID_HOME` / `ANDROID_SDK_ROOT` unset and no `local.properties` | Export `ANDROID_HOME=/opt/android-sdk` or add `sdk.dir=/opt/android-sdk` to `local.properties` |
+| `Server <ip>:<port> is not trusted. Please scan QR code to add trust.` | Bindery server missing from `trusted_servers` | Scan the Bindery node QR code (`{"ip","port","hash"}`) in `BinderyActivity` |
+| `Certificate pinning failure. Expected: ..., Found: ...` | Leaf TLS certificate SHA-256 on Bindery node changed | Re-scan updated Bindery QR code in `BinderyActivity` |
+| `SyncWorker` returns `Result.retry()` / skips sync | `wifi_only=true` without WiFi or SSID not in `allowed_wifi_ssids` / missing location permission | Grant `ACCESS_FINE_LOCATION`, connect to whitelisted SSID, or disable `wifi_only` in `SettingsActivity` |
+| `Could not download full article. Open in browser to read.` | Site blocked both OkHttp & `WebViewFetcher` (403/503/bot challenge) or matched `paywalled` filter | Tap `Open full article in browser` or toggle `enforce_plugin_filters` in `SettingsActivity` |
+| `WiFi is required to re-download` | Manual retry/apply plugin invoked off WiFi while `wifi_only=true` | Connect to WiFi or uncheck WiFi-only in `SettingsActivity` |
+| `Failed to update AI Skills: HTTP 404` / network error | GitHub raw/API unreachable or rate-limited | Retry later or paste custom skill JSON directly in `AiSettingsActivity` |
