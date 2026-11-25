@@ -1,8 +1,13 @@
 {
   "domainPattern": ".*wired\\.com",
   "strategy": "CSS_SELECTOR",
-  "contentPath": ["div.body__container"],
-  "titlePath": ["h1[data-testid='ContentHeaderHed']", "h1"],
+  "contentPath": [
+    "div.body__container"
+  ],
+  "titlePath": [
+    "h1[data-testid='ContentHeaderHed']",
+    "h1"
+  ],
   "injectRssImage": true,
   "removeSelectors": [
     "iframe",
@@ -14,5 +19,65 @@
     ".paywall-bar",
     ".ConsumerMarketingUnitThemedWrapper-kjbXjp"
   ],
-  "sourceName": "WIRED"
+  "sourceName": "WIRED",
+  "version": 2,
+  "classification": {
+    "defaultCategory": "Tech",
+    "rssRules": [
+      {
+        "source": "RSS_FIELD_REGEX",
+        "field": "category",
+        "pattern": "^([^/]+?)(?:\\s*/\\s*(.+))?$",
+        "categoryGroup": 1,
+        "subcategoryGroup": 2
+      },
+      {
+        "source": "RSS_FIELD_REGEX",
+        "field": "dc:subject",
+        "pattern": "^coupons$",
+        "flags": "i",
+        "assignTag": "coupon"
+      },
+      {
+        "source": "URL_REGEX",
+        "pattern": "-(?:coupon|promo|discount)-codes?(?:-coupons)?/?$",
+        "flags": "i",
+        "assignTag": "coupon"
+      },
+      {
+        "source": "RSS_FIELD_REGEX",
+        "field": "category",
+        "pattern": "Gear\\s*/\\s*(?:Deals|Buying Guides)",
+        "flags": "i",
+        "assignTag": "commerce"
+      },
+      {
+        "source": "RSS_FIELD_REGEX",
+        "field": "media:keywords",
+        "pattern": "\\b(?:coupons|buying guides|gift guides|Shopping|Deals)\\b",
+        "flags": "i",
+        "assignTag": "commerce"
+      },
+      {
+        "source": "URL_REGEX",
+        "pattern": "^https?://[^/]+/gallery/",
+        "flags": "i",
+        "assignTag": "gallery"
+      }
+    ],
+    "categoryMap": {
+      "business": "Business",
+      "culture": "Culture",
+      "gear": "Gear",
+      "politics": "Politics",
+      "science": "Science",
+      "security": "Security",
+      "the big story": "Feature"
+    },
+    "dropIfCategoryIn": [],
+    "dropIfTagIn": [
+      "coupon",
+      "commerce"
+    ]
+  }
 }
