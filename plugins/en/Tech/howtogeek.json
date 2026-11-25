@@ -20,5 +20,70 @@
     ".share",
     ".newsletter-signup"
   ],
-  "sourceName": "How-To Geek"
+  "sourceName": "How-To Geek",
+  "version": 2,
+  "classification": {
+    "defaultCategory": "Tech",
+    "rssRules": [
+      {
+        "source": "RSS_FIELD_REGEX",
+        "field": "dc:creator",
+        "pattern": "^Sponsored$",
+        "flags": "i",
+        "assignTag": "sponsored"
+      },
+      {
+        "source": "RSS_FIELD_REGEX",
+        "field": "category",
+        "pattern": "^Sponsored$",
+        "flags": "i",
+        "assignTag": "sponsored"
+      },
+      {
+        "source": "RSS_FIELD_REGEX",
+        "field": "dc:creator",
+        "pattern": "Deals Desk",
+        "flags": "i",
+        "assignTag": "deal"
+      },
+      {
+        "source": "RSS_FIELD_REGEX",
+        "field": "category",
+        "pattern": "^Deals$",
+        "flags": "i",
+        "assignTag": "deal"
+      },
+      {
+        "source": "URL_REGEX",
+        "pattern": "-review/?$",
+        "flags": "i",
+        "assignTag": "review"
+      },
+      {
+        "source": "RSS_FIELD_REGEX",
+        "field": "category",
+        "pattern": "^(Single-Board Computers|Homelab|Networking|3D Printing|DIY|Smart Home|Android|Applications|Wearables|Hobbies|Power Tools)$",
+        "flags": "i",
+        "categoryGroup": 1
+      }
+    ],
+    "categoryMap": {
+      "single-board computers": "Homelab & DIY",
+      "homelab": "Homelab & DIY",
+      "3d printing": "Homelab & DIY",
+      "diy": "Homelab & DIY",
+      "smart home": "Smart Home",
+      "networking": "Networking",
+      "android": "Mobile",
+      "wearables": "Mobile",
+      "applications": "Software",
+      "hobbies": "Tech Culture",
+      "power tools": "Hardware"
+    },
+    "dropIfCategoryIn": [],
+    "dropIfTagIn": [
+      "sponsored",
+      "deal"
+    ]
+  }
 }
